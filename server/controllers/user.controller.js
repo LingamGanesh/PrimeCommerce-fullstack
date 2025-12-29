@@ -119,81 +119,97 @@ export async function verifyEmailController(request, response) {
 // ===============================================
 // LOGIN USER
 // ===============================================
+
+
 export async function loginController(request, response) {
   try {
-    const { email, password } = request.body;
+    const { email, password } = request.body
 
-    // Check email + password
+    // 1️⃣ Validate input
     if (!email || !password) {
       return response.status(400).json({
-        message: 'Provide email & password',
+        message: 'Email and password are required',
         error: true,
         success: false
-      });
+      })
     }
 
-    const user = await UserModel.findOne({ email });
+    // 2️⃣ Check user
+    const user = await UserModel.findOne({ email }).select('+password')
 
     if (!user) {
-      return response.status(400).json({
+      return response.status(404).json({
         message: 'User not found',
         error: true,
         success: false
-      });
+      })
     }
 
-    // Check status
+    // 3️⃣ Check account status
     if (user.status !== 'active') {
-      return response.status(400).json({
-        message: 'Contact Admin',
+      return response.status(403).json({
+        message: 'Account is not active. Contact admin.',
         error: true,
         success: false
-      });
+      })
     }
 
-    // Check password
-    const checkPassword = await bcrypt.compare(password, user.password);
+    // 4️⃣ Verify password
+    const isPasswordMatch = await bcrypt.compare(password, user.password)
 
-    if (!checkPassword) {
-      return response.status(400).json({
-        message: 'Incorrect password',
+    if (!isPasswordMatch) {
+      return response.status(401).json({
+        message: 'Invalid email or password',
         error: true,
         success: false
-      });
+      })
     }
 
-    // Generate Tokens
-    const accessToken = await generatedAccessToken(user._id);
-    const refreshToken = await generatedRefreshToken(user._id);
+    // 5️⃣ Generate tokens
+ const accessToken = generatedAccessToken(user._id)
+const refreshToken = await generatedRefreshToken(user._id)
 
+
+ const updateUser = await UserModel.findByIdAndUpdate(user?._id,{
+            last_login_date : new Date()
+        })
+
+
+    // 6️⃣ Cookie options (ENV-safe)
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'None'
-    };
+    }
 
-    // Set Cookies
-    response.cookie('accessToken', accessToken, cookieOptions);
-    response.cookie('refreshToken', refreshToken, cookieOptions);
+    // 7️⃣ Set cookies
+    response.cookie('accessToken', accessToken, cookieOptions)
+    response.cookie('refreshToken', refreshToken, cookieOptions)
 
-    return response.json({
-      message: 'Login Successful',
+    // 8️⃣ Success response
+    return response.status(200).json({
+      message: 'Login successful',
       error: false,
       success: true,
       data: {
+        userId: user._id,
         accessToken,
         refreshToken
       }
-    });
+    })
 
   } catch (error) {
-    return response.status(500).json({
-      message: error.message || error,
-      error: true,
-      success: false
-    });
-  }
+  console.error("LOGIN ERROR 👉", error);
+
+  return response.status(500).json({
+    message: error.message,
+    error: true,
+    success: false
+  });
 }
+
+}
+
 
 // ===============================================
 // LOGOUT USER
@@ -435,8 +451,8 @@ export async function resetpassword(request,response){
             })
         }
 
-        const salt = await bcryptjs.genSalt(10)
-        const hashPassword = await bcryptjs.hash(newPassword,salt)
+        const salt = await bcrypt.genSalt(10)
+        const hashPassword = await bcrypt.hash(newPassword,salt)
 
         const update = await UserModel.findOneAndUpdate(user._id,{
             password : hashPassword
@@ -505,6 +521,31 @@ export async function refreshToken(request,response){
     } catch (error) {
         return response.status(500).json({
             message : error.message || error,
+            error : true,
+            success : false
+        })
+    }
+}
+
+
+//get login user details
+export async function userDetails(request,response){
+    try {
+        const userId  = request.userId
+
+        console.log(userId)
+
+        const user = await UserModel.findById(userId).select('-password -refresh_token')
+
+        return response.json({
+            message : 'user details',
+            data : user,
+            error : false,
+            success : true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message : "Something is wrong",
             error : true,
             success : false
         })
