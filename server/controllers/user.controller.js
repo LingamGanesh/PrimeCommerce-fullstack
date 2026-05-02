@@ -2,12 +2,12 @@ import sendEmail from '../config/sendEmail.js';
 import UserModel from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
 import verifyEmailTemplate from '../utils/verifyEmailTemplate.js';
-import generatedAccessToken from '../utils/generatedAccessToken.js';
 import generatedRefreshToken from '../utils/generatedRefreshToken.js';
 import uploadImageClodinary from '../utils/uploadImageClodinary.js';
 import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
+import generateAccessToken from '../utils/generatedAccessToken.js';
 
 
 // ===============================================
@@ -166,7 +166,7 @@ export async function loginController(request, response) {
     }
 
     // 5️⃣ Generate tokens
- const accessToken = generatedAccessToken(user._id)
+ const accessToken = await generateAccessToken(user._id)
 const refreshToken = await generatedRefreshToken(user._id)
 
 
@@ -529,25 +529,41 @@ export async function refreshToken(request,response){
 
 
 //get login user details
-export async function userDetails(request,response){
-    try {
-        const userId  = request.userId
+export async function userDetails(req, res) {
+  try {
+    const userId = req.userId;
 
-        console.log(userId)
-
-        const user = await UserModel.findById(userId).select('-password -refresh_token')
-
-        return response.json({
-            message : 'user details',
-            data : user,
-            error : false,
-            success : true
-        })
-    } catch (error) {
-        return response.status(500).json({
-            message : "Something is wrong",
-            error : true,
-            success : false
-        })
+    if (!userId) {
+      return res.status(401).json({
+        message: "User ID missing from token",
+        error: true,
+        success: false,
+      });
     }
+
+    const user = await UserModel.findById(userId).select(
+      "-password -refresh_token"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    return res.json({
+      message: "user details",
+      data: user,
+      error: false,
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something is wrong",
+      error: true,
+      success: false,
+    });
+  }
 }

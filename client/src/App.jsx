@@ -13,7 +13,8 @@ import { useDispatch } from 'react-redux'
 function App() {
  const dispatch = useDispatch()
   const fetchUserData = async() =>{
-    const userData = await fetchUserDetails() 
+    const userData = await fetchUserDetails()
+
     dispatch(setUserDetails(userData.data))
   }
 

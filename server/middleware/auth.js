@@ -1,37 +1,37 @@
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 
-const auth = (request, response, next) => {
+const auth = (req, res, next) => {
   try {
     const token =
-      request.cookies?.accessToken ||
-      request.headers?.authorization?.split(" ")[1]
+      req.cookies?.accessToken ||
+      req.headers?.authorization?.split(" ")[1];
 
     if (!token) {
-      return response.status(401).json({
+      return res.status(401).json({
         message: "Token not provided",
         error: true,
-        success: false
-      })
+        success: false,
+      });
     }
 
     const decoded = jwt.verify(
       token,
       process.env.SECRET_KEY_ACCESS_TOKEN
-    )
+    );
 
-    // 🔥 VERY IMPORTANT FIX
-    request.userId = decoded.userId   // ✅ NOT decoded.id
+    // ✅ FIXED LINE
+    req.userId = decoded.id;
 
-    console.log("AUTH USER ID:", request.userId)
+    console.log("AUTH USER ID:", req.userId);
 
-    next()
+    next();
   } catch (error) {
-    return response.status(401).json({
+    return res.status(401).json({
       message: "Unauthorized access",
       error: true,
-      success: false
-    })
+      success: false,
+    });
   }
-}
+};
 
-export default auth
+export default auth;
