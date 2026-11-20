@@ -43,9 +43,9 @@ const Header = () => {
 
         <div className="hidden min-w-[150px] shrink-0 border-l border-gray-200 pl-5 md:block">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">Delivering to</p>
-          <button type="button" className="mt-1 flex items-center gap-1.5 text-left text-sm font-extrabold text-gray-900" onClick={() => navigate("/profile")}>
+          <button type="button" className="mt-1 flex items-center gap-1.5 text-left text-sm font-extrabold text-gray-900" onClick={() => navigate("/dashboard/address")}>
             <FaMapMarkerAlt className="text-[#16833b]" />
-            <span>Your location</span>
+            <span>Add delivery address</span>
             <FaChevronDown className="text-[10px] text-gray-500" />
           </button>
         </div>
@@ -99,7 +99,7 @@ const Header = () => {
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
             <FaMapMarkerAlt className="text-[#16833b]" />
             <span>Delivering to</span>
-            <button type="button" onClick={() => navigate("/profile")} className="font-extrabold text-gray-900">Your location <FaChevronDown className="ml-1 inline text-[9px]" /></button>
+            <button type="button" onClick={() => navigate("/dashboard/address")} className="font-extrabold text-gray-900">Add delivery address <FaChevronDown className="ml-1 inline text-[9px]" /></button>
           </div>
           <Search />
         </div>
@@ -109,7 +109,7 @@ const Header = () => {
         <div className="mx-auto flex max-w-[1440px] items-center gap-7 px-6 py-2.5 text-xs font-semibold text-gray-600 lg:px-8">
           <Link to="/" className={location.pathname === "/" ? "text-[#176b36]" : "transition hover:text-[#176b36]"}>Home</Link>
           <Link to="/search" className="transition hover:text-[#176b36]">Shop all</Link>
-          <Link to="/orders" className="transition hover:text-[#176b36]">My orders</Link>
+          <Link to="/dashboard/myorders" className="transition hover:text-[#176b36]">My orders</Link>
         </div>
       </nav>
     </header>
