@@ -272,27 +272,51 @@ export async function verifyRazorpayPayment(req, res) {
     const payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}`);
     if (payment.order_id !== gatewayOrderId || !["authorized", "captured"].includes(payment.status) || Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100) || payment.currency !== "INR") return res.status(400).json({ success: false, message: "Payment amount, currency or status could not be verified" });
     if (payment.status === "captured") {
-      if (order.payment_status === "expired" || order.inventoryReleased) {
-        await OrderModel.updateOne(
-          { _id: order._id, userId: req.userId, payment_status: "expired", inventoryReleased: true },
-          { $set: { payment_status: "paid_review_required", payment_id: paymentId } }
-        );
-        const latest = await OrderModel.findOne({ _id: order._id, userId: req.userId });
-        if (!latest || !["paid_review_required", "paid"].includes(latest.payment_status)) {
-          return res.status(409).json({ success: false, message: "Payment state changed. Contact support before retrying." });
-        }
-        return res.status(200).json({ success: true, reviewRequired: latest.payment_status === "paid_review_required", paymentStatus: latest.payment_status, message: "Payment received. Order state is being confirmed." });
-      }
-      await OrderModel.updateOne(
-        { _id: order._id, userId: req.userId, inventoryReleased: false, delivery_status: "processing", payment_status: { $in: ["pending", "authorized", "paid"] } },
-        { $set: { payment_status: "paid", payment_id: paymentId } }
+      const paidOrder = await OrderModel.findOneAndUpdate(
+        {
+          _id: order._id, userId: req.userId, paymentMethod: "RAZORPAY",
+          inventoryReleased: false, delivery_status: "processing",
+          payment_status: { $in: ["pending", "authorized", "paid"] }
+        },
+        { $set: { payment_status: "paid", payment_id: paymentId } },
+        { new: true }
       );
+      if (!paidOrder) {
+        // The reservation may have expired while we were verifying with Razorpay.
+        // Record the captured funds for manual reconciliation, never as a normal paid order.
+        const reviewOrder = await OrderModel.findOneAndUpdate(
+          {
+            _id: order._id, userId: req.userId, paymentMethod: "RAZORPAY",
+            payment_status: { $in: ["expired", "pending", "authorized"] },
+            $or: [{ inventoryReleased: true }, { payment_status: "expired" }]
+          },
+          { $set: { payment_status: "paid_review_required", payment_id: paymentId } },
+          { new: true }
+        );
+        if (!reviewOrder) {
+          const current = await OrderModel.findOne({ _id: order._id, userId: req.userId }).select("payment_status payment_id");
+          if (!(current?.payment_status === "paid" && current.payment_id === paymentId)) {
+            return res.status(409).json({ success: false, message: "Payment state changed. Contact support before retrying." });
+          }
+        }
+        if (reviewOrder) {
+          return res.status(200).json({
+            success: true, reviewRequired: true, paymentStatus: reviewOrder.payment_status,
+            message: "Payment received after the reservation expired. Support will review this order."
+          });
+        }
+      }
     } else {
       if (order.payment_status === "expired" || order.inventoryReleased) return res.status(409).json({ success: false, message: "This payment reservation has expired. Please start a new checkout." });
-      await OrderModel.updateOne(
-        { _id: order._id, userId: req.userId, inventoryReleased: false, delivery_status: "processing", payment_status: { $in: ["pending", "authorized"] } },
-        { $set: { payment_status: "authorized", payment_id: paymentId } }
+      const authorizedOrder = await OrderModel.findOneAndUpdate(
+        {
+          _id: order._id, userId: req.userId, inventoryReleased: false,
+          delivery_status: "processing", payment_status: { $in: ["pending", "authorized"] }
+        },
+        { $set: { payment_status: "authorized", payment_id: paymentId } },
+        { new: true }
       );
+      if (!authorizedOrder) return res.status(409).json({ success: false, message: "This payment reservation expired or changed during verification. Please refresh your orders." });
     }
     const latest = await OrderModel.findOne({ _id: order._id, userId: req.userId });
     if (!latest) return res.status(404).json({ success: false, message: "Payment order not found" });
