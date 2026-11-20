@@ -59,6 +59,7 @@ export default function SearchPage() {
       const next = {};
       for (const item of response.data?.data?.items || []) next[item.product.id] = { quantity: item.quantity, cartItemId: item.cartItemId };
       setCart(next);
+      window.dispatchEvent(new Event("cart:updated"));
     } catch { setCart({}); }
   };
 
