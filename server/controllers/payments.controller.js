@@ -356,14 +356,45 @@ export async function handleRazorpayWebhook(req, res) {
       if (!paidEntity || !amountIsValid || !captured || (event.event === "order.paid" && !paidPayment?.id)) {
         return res.status(400).json({ success: false, message: "Webhook payment amount, currency or captured payment ID could not be verified" });
       }
-      const update = {
-        payment_status: order.payment_status === "expired" || order.inventoryReleased ? "paid_review_required" : "paid",
-        payment_id: paidPayment.id
-      };
-      await OrderModel.updateOne(
-        { _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } },
-        { $set: update }
+      // Apply the captured payment against the order's current database state,
+      // not the snapshot read before the gateway lookup. Reservation expiry may
+      // have released stock while this webhook was resolving the payment.
+      if (order.payment_status === "paid" && order.payment_id === paidPayment.id) {
+        return res.json({ success: true, alreadyProcessed: true });
+      }
+
+      const paidOrder = await OrderModel.findOneAndUpdate(
+        {
+          _id: order._id,
+          paymentMethod: "RAZORPAY",
+          payment_status: { $in: ["pending", "authorized"] },
+          inventoryReleased: false,
+          delivery_status: "processing"
+        },
+        { $set: { payment_status: "paid", payment_id: paidPayment.id } },
+        { new: true }
       );
+
+      if (!paidOrder) {
+        // If expiry won the race, preserve the captured payment for manual
+        // reconciliation; never mark a stock-released order as normally paid.
+        const reviewOrder = await OrderModel.findOneAndUpdate(
+          {
+            _id: order._id,
+            paymentMethod: "RAZORPAY",
+            payment_status: { $in: ["expired", "pending", "authorized"] },
+            $or: [{ inventoryReleased: true }, { payment_status: "expired" }]
+          },
+          { $set: { payment_status: "paid_review_required", payment_id: paidPayment.id } },
+          { new: true }
+        );
+        if (!reviewOrder) {
+          const latest = await OrderModel.findById(order._id).select("payment_status payment_id");
+          if (!(latest?.payment_status === "paid" && latest.payment_id === paidPayment.id)) {
+            return res.status(409).json({ success: false, message: "Captured payment could not be matched to the current order state" });
+          }
+        }
+      }
     }
     return res.json({ success: true });
   } catch (error) { return res.status(400).json({ success: false, message: error.message || "Webhook processing failed" }); }
