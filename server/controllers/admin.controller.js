@@ -145,3 +145,62 @@ export async function getAdminSalesReport(req, res) {
     return res.status(500).json({ success: false, message: "Unable to load sales report" });
   }
 }
+
+
+export async function assignFulfilmentRole(req, res) {
+  try {
+    const { userId, role } = req.body || {};
+    if (!mongoose.isValidObjectId(userId) || !["user", "picker", "rider"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Choose a valid customer and staff role" });
+    }
+    const user = await UserModel.findOneAndUpdate(
+      { _id: userId, status: "active", role: { $in: ["user", "picker", "rider"] } },
+      { $set: { role } },
+      { new: true, runValidators: true }
+    ).select("name email mobile role status");
+    if (!user) return res.status(404).json({ success: false, message: "Active customer account not found" });
+    return res.json({ success: true, message: `Account role updated to ${role}`, data: user });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to update staff role" });
+  }
+}
+
+export async function assignOrderPicker(req, res) {
+  try {
+    const { pickerId } = req.body || {};
+    if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(pickerId)) {
+      return res.status(400).json({ success: false, message: "Invalid order or picker id" });
+    }
+    const picker = await UserModel.findOne({ _id: pickerId, role: "picker", status: "active" }).select("_id");
+    if (!picker) return res.status(404).json({ success: false, message: "Active picker account not found" });
+    const order = await OrderModel.findOneAndUpdate(
+      { _id: req.params.id, delivery_status: "processing" },
+      { $set: { pickerId: picker._id, delivery_status: "picking" } },
+      { new: true }
+    );
+    if (!order) return res.status(409).json({ success: false, message: "Only processing orders can be assigned to a picker" });
+    return res.json({ success: true, message: "Picker assigned; order is ready for picking", data: order });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to assign picker" });
+  }
+}
+
+export async function assignOrderRider(req, res) {
+  try {
+    const { riderId } = req.body || {};
+    if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(riderId)) {
+      return res.status(400).json({ success: false, message: "Invalid order or rider id" });
+    }
+    const rider = await UserModel.findOne({ _id: riderId, role: "rider", status: "active" }).select("_id");
+    if (!rider) return res.status(404).json({ success: false, message: "Active rider account not found" });
+    const order = await OrderModel.findOneAndUpdate(
+      { _id: req.params.id, delivery_status: "packed" },
+      { $set: { riderId: rider._id, delivery_status: "rider_assigned" } },
+      { new: true }
+    );
+    if (!order) return res.status(409).json({ success: false, message: "Only packed orders can be assigned to a rider" });
+    return res.json({ success: true, message: "Rider assigned; delivery is ready", data: order });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to assign rider" });
+  }
+}
