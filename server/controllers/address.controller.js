@@ -2,8 +2,10 @@ import mongoose from "mongoose";
 import AddressModel from "../models/address.model.js";
 import UserModel from "../models/user.model.js";
 import { normalizeMobileNumber } from "../utils/mobileNumber.js";
+import { normalizeGeoPoint } from "../utils/geoPoint.js";
 
 const fields = ["address_line", "city", "state", "pincode", "country", "mobile"];
+const optionalTextFields = ["label", "house", "floor", "landmark", "deliveryInstructions"];
 
 export async function listAddresses(req, res) {
   try {
@@ -35,9 +37,30 @@ export async function createAddress(req, res) {
       return res.status(400).json({ success: false, error: true, message: "Enter a valid Indian mobile number (10 digits) and PIN code (6 digits)" });
     }
     payload.mobile = mobile;
+    for (const field of optionalTextFields) {
+      if (req.body[field] !== undefined) {
+        if (typeof req.body[field] !== "string" || req.body[field].length > (field === "deliveryInstructions" ? 500 : 120)) {
+          return res.status(400).json({ success: false, error: true, message: field + " must be valid text" });
+        }
+        payload[field] = req.body[field].trim();
+      }
+    }
+    if (payload.label !== undefined && !["Home", "Work", "Other"].includes(payload.label)) {
+      return res.status(400).json({ success: false, error: true, message: "Address label must be Home, Work or Other" });
+    }
+    try { payload.geo = normalizeGeoPoint(req.body.geo); }
+    catch (error) { return res.status(400).json({ success: false, error: true, message: error.message }); }
+    if (req.body.isDefault !== undefined && typeof req.body.isDefault !== "boolean") {
+      return res.status(400).json({ success: false, error: true, message: "isDefault must be true or false" });
+    }
+    payload.isDefault = req.body.isDefault === true;
     payload.userId = req.userId;
     let address;
     await session.withTransaction(async () => {
+      const existingAddressCount = await AddressModel.countDocuments({ userId: req.userId }).session(session);
+      const makeDefault = payload.isDefault || existingAddressCount === 0;
+      if (makeDefault) await AddressModel.updateMany({ userId: req.userId, isDefault: true }, { $set: { isDefault: false } }, { session });
+      payload.isDefault = makeDefault;
       [address] = await AddressModel.create([payload], { session });
       const userUpdate = await UserModel.updateOne(
         { _id: req.userId },
@@ -62,6 +85,10 @@ export async function deleteAddress(req, res) {
     await session.withTransaction(async () => {
       address = await AddressModel.findOneAndDelete({ _id: req.params.id, userId: req.userId }, { session });
       if (!address) return;
+      if (address.isDefault) {
+        const replacement = await AddressModel.findOne({ userId: req.userId }).sort({ createdAt: -1 }).session(session);
+        if (replacement) await AddressModel.updateOne({ _id: replacement._id, userId: req.userId }, { $set: { isDefault: true } }, { session });
+      }
       await UserModel.updateOne(
         { _id: req.userId },
         { $pull: { address_details: address._id } },
