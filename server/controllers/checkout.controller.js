@@ -61,8 +61,8 @@ export async function createCashOnDeliveryOrder(req, res) {
     });
 
     createdOrder = order;
-    await CartProductModel.deleteMany({ userId: req.userId });
     await UserModel.findByIdAndUpdate(req.userId, { $addToSet: { orderHistory: order._id } });
+    await CartProductModel.deleteMany({ userId: req.userId });
     return res.status(201).json({
       success: true, error: false, message: "Cash on Delivery order placed",
       data: { orderId: order.orderId, orderDbId: order._id, subtotal, total: subtotal, paymentMethod: "COD", paymentStatus: "pending", deliveryStatus: order.delivery_status }
