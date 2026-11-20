@@ -47,7 +47,8 @@ export async function updateAdminOrderStatus(req, res) {
     if (!allowed.includes(status)) return res.status(400).json({ success: false, message: "Unsupported order status" });
     const order = await OrderModel.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-    if (order.delivery_status === "delivered" || order.delivery_status === "cancelled") return res.status(409).json({ success: false, message: "A completed or cancelled order cannot be changed" });
+    const transitions = { processing: ["shipped"], shipped: ["delivered"] };
+    if (!transitions[order.delivery_status]?.includes(status)) return res.status(409).json({ success: false, message: `Cannot move an order from ${order.delivery_status} to ${status}` });
     order.delivery_status = status;
     await order.save();
     return res.json({ success: true, message: "Order status updated", data: order });
