@@ -131,8 +131,11 @@ export async function handleRazorpayWebhook(req, res) {
     const order = await OrderModel.findOne({ razorpayOrderId: gatewayOrderId });
     if (!order) return res.json({ success: true, ignored: true });
     if (event.event === "payment.failed") {
-      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false }, { $set: { payment_status: "failed", inventoryReleased: true, delivery_status: "cancelled", cancelledAt: new Date() } }, { new: true });
-      if (claimed) await restoreOrderStock(claimed);
+      // Razorpay can emit payment.failed for one attempt while the customer
+      // still has other attempts available on the same gateway order. Keep the
+      // order and its stock reservation alive until the reservation expires;
+      // the expiry worker is the single place that releases abandoned stock.
+      return res.json({ success: true, ignored: true, reason: "payment_attempt_failed_reservation_retained" });
     } else {
       const paidEntity = payment || (gatewayOrder ? { amount: gatewayOrder.amount_paid, currency: gatewayOrder.currency, status: gatewayOrder.status, id: null } : null);
       const amountIsValid = isValidRazorpayAmount(paidEntity, Math.round(Number(order.totalAmt) * 100));
