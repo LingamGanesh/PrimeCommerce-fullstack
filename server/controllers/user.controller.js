@@ -542,6 +542,9 @@ export async function refreshToken(request,response){
             { expiresIn: "7d", algorithm: "HS256" }
         );
         const nextHash = crypto.createHash("sha256").update(nextRefreshToken).digest("hex");
+        // Sign both tokens before consuming the current refresh token so a
+        // missing access-token secret cannot strand the user's session.
+        const newAccessToken = await generateAccessToken(user._id, user.tokenVersion || 0);
         const rotated = await UserModel.updateOne(
             { _id: user._id, refresh_token: currentHash, tokenVersion: user.tokenVersion || 0, status: "active" },
             { $set: { refresh_token: nextHash } }
@@ -549,8 +552,6 @@ export async function refreshToken(request,response){
         if (rotated.modifiedCount !== 1) {
             return response.status(401).json({ message: "Refresh token was already used. Please log in again.", error: true, success: false });
         }
-
-        const newAccessToken = await generateAccessToken(user._id, user.tokenVersion || 0);
         const isProduction = process.env.NODE_ENV === "production";
         const cookieOptions = {
             httpOnly: true,
