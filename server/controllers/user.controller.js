@@ -389,14 +389,28 @@ export async function verifyForgotPasswordOtp(request,response){
     const savedHash = Buffer.from(user.forgot_password_otp_hash, "hex");
     const matches = savedHash.length === submittedHash.length && crypto.timingSafeEqual(savedHash, submittedHash);
     if (!matches) {
-      user.forgot_password_attempts += 1;
-      if (user.forgot_password_attempts >= 5) {
-        user.forgot_password_otp_hash = "";
-        user.forgot_password_expiry = null;
+      // Use a conditional atomic increment: parallel guesses must not be able
+      // to overwrite the counter and exceed the five-attempt limit.
+      const attemptUpdate = await UserModel.findOneAndUpdate({
+        _id: user._id,
+        forgot_password_otp_hash: user.forgot_password_otp_hash,
+        forgot_password_expiry: { $gt: new Date() },
+        forgot_password_attempts: { $lt: 5 }
+      }, { $inc: { forgot_password_attempts: 1 } }, { new: true })
+        .select("+forgot_password_attempts");
+      if (!attemptUpdate) {
+        return response.status(429).json({ message: "Too many incorrect attempts or code expired. Request a new code.", error: true, success: false });
       }
-      await user.save();
-      return response.status(user.forgot_password_attempts >= 5 ? 429 : 400).json({
-        message: user.forgot_password_attempts >= 5 ? "Too many incorrect attempts. Request a new code." : "Invalid code",
+      const locked = attemptUpdate.forgot_password_attempts >= 5;
+      if (locked) {
+        await UserModel.updateOne({
+          _id: user._id,
+          forgot_password_otp_hash: user.forgot_password_otp_hash,
+          forgot_password_attempts: { $gte: 5 }
+        }, { $set: { forgot_password_otp_hash: "", forgot_password_expiry: null } });
+      }
+      return response.status(locked ? 429 : 400).json({
+        message: locked ? "Too many incorrect attempts. Request a new code." : "Invalid code",
         error: true,
         success: false
       });
