@@ -27,6 +27,11 @@ export default function AdminDashboard() {
   const [reportPeriod, setReportPeriod] = useState("7d");
   const [report, setReport] = useState(null);
   const [sectionLoading, setSectionLoading] = useState(false);
+  const [fulfilmentStaff, setFulfilmentStaff] = useState([]);
+  const [eligibleCustomers, setEligibleCustomers] = useState([]);
+  const [staffCandidate, setStaffCandidate] = useState("");
+  const [staffRole, setStaffRole] = useState("picker");
+  const [orderAssignees, setOrderAssignees] = useState({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -56,6 +61,44 @@ export default function AdminDashboard() {
     finally { setSectionLoading(false); }
   }, [customerSearch, customerPage]);
 
+  const loadFulfilment = useCallback(async () => {
+    setSectionLoading(true);
+    try {
+      const [staffResponse, customerResponse] = await Promise.all([
+        Axios.get("/api/v1/admin/staff"),
+        Axios.get("/api/v1/admin/customers", { params: { limit: 50, page: 1 } })
+      ]);
+      setFulfilmentStaff(staffResponse.data?.data || []);
+      setEligibleCustomers(customerResponse.data?.data || []);
+    } catch (error) { toast.error(error.response?.data?.message || "Could not load fulfilment team"); }
+    finally { setSectionLoading(false); }
+  }, []);
+
+  const assignRole = async () => {
+    if (!staffCandidate) return toast.error("Select an account first");
+    setBusy(staffCandidate);
+    try {
+      await Axios.post("/api/v1/admin/staff/role", { userId: staffCandidate, role: staffRole });
+      toast.success(`Account promoted to ${staffRole}`);
+      setStaffCandidate("");
+      await loadFulfilment();
+    } catch (error) { toast.error(error.response?.data?.message || "Could not update staff role"); }
+    finally { setBusy(""); }
+  };
+
+  const assignOrder = async (order, role) => {
+    const staffId = orderAssignees[order._id];
+    if (!staffId) return toast.error(`Select a ${role} first`);
+    setBusy(order._id);
+    try {
+      await Axios.patch(`/api/v1/admin/orders/${order._id}/assign-${role}`, { [role === "picker" ? "pickerId" : "riderId"]: staffId });
+      toast.success(`${role === "picker" ? "Picker" : "Rider"} assigned`);
+      await loadData();
+      await loadFulfilment();
+    } catch (error) { toast.error(error.response?.data?.message || `Could not assign ${role}`); }
+    finally { setBusy(""); }
+  };
+
   const loadReport = useCallback(async () => {
     setSectionLoading(true);
     try {
@@ -68,7 +111,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (section === "customers") loadCustomers();
     if (section === "reports") loadReport();
-  }, [section, loadCustomers, loadReport]);
+    if (section === "fulfilment") loadFulfilment();
+  }, [section, loadCustomers, loadReport, loadFulfilment]);
 
   const updateStock = async (product) => {
     const value = Number(stockDraft[product._id] ?? product.stock);
@@ -94,7 +138,7 @@ export default function AdminDashboard() {
   };
 
   const signOut = () => { dispatch(logout()); localStorage.clear(); navigate("/login"); };
-  const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }];
+  const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }, { id: "fulfilment", label: "Picker & rider", icon: "⇢" }];
   const metrics = [
     { label: "Total orders", value: overview?.orders ?? "—", note: "All recorded orders", icon: "▣" },
     { label: "Gross paid revenue", value: money(overview?.revenue), note: "Paid / completed payments", icon: "₹" },
@@ -125,6 +169,11 @@ export default function AdminDashboard() {
             {section === "catalog" && <AdminCatalog products={products} onRefresh={loadData} />}
             {section === "orders" && <section className="rounded-2xl border border-slate-200 bg-white p-5"><div className="mb-5"><h2 className="text-lg font-extrabold text-slate-900">Order management</h2><p className="text-sm text-slate-500">Review orders and update the current fulfilment status.</p></div><div className="space-y-3">{orders.map((order) => <div key={order._id} className="flex flex-col justify-between gap-3 rounded-xl border border-slate-100 p-4 lg:flex-row lg:items-center"><div className="min-w-0"><p className="font-bold text-slate-900">Order #{order.orderId || String(order._id).slice(-7)}</p><p className="mt-1 text-xs text-slate-500">{order.userId?.name || "Customer"} · {order.userId?.email || "—"}</p><p className="mt-1 text-xs text-slate-400">{dateLabel(order.createdAt)} · {order.payment_status || "pending"} payment</p></div><div className="flex flex-wrap items-center gap-3"><span className="font-extrabold text-slate-900">{money(order.totalAmt)}</span><span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusTone(order.delivery_status)}`}>{order.delivery_status || "processing"}</span><select aria-label="Update order status" disabled={busy === order._id || ["delivered", "cancelled"].includes(order.delivery_status)} value={order.delivery_status || "processing"} onChange={(event) => updateOrder(order._id, event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:bg-slate-100"><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option></select></div></div>)}{!orders.length && <p className="py-10 text-center text-sm text-slate-400">No orders found.</p>}</div></section>}
 
+
+            {section === "fulfilment" && <section className="space-y-5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-extrabold text-slate-900">Fulfilment team</h2><p className="mb-4 text-sm text-slate-500">Promote an existing active customer account to picker or rider. They will sign in with their existing credentials.</p><div className="flex flex-wrap gap-3"><select value={staffCandidate} onChange={(event) => setStaffCandidate(event.target.value)} className="min-w-[220px] flex-1 rounded-xl border border-slate-200 px-3 py-3 text-sm"><option value="">Choose existing customer</option>{eligibleCustomers.map((customer) => <option key={customer._id} value={customer._id}>{customer.name} · {customer.email}</option>}</select><select value={staffRole} onChange={(event) => setStaffRole(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm"><option value="picker">Picker</option><option value="rider">Rider</option><option value="user">Remove staff role</option></select><button disabled={!staffCandidate || busy === staffCandidate} onClick={assignRole} className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{busy === staffCandidate ? "Saving…" : "Save role"}</button></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{fulfilmentStaff.map((member) => <div key={member._id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3"><div><p className="font-bold text-slate-800">{member.name}</p><p className="text-xs text-slate-500">{member.email}</p></div><span className="rounded-full bg-lime-100 px-3 py-1 text-xs font-bold capitalize text-lime-800">{member.role}</span></div>)}{!fulfilmentStaff.length && <p className="text-sm text-slate-400">No active pickers or riders assigned yet.</p>}</div></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-extrabold text-slate-900">Order dispatch</h2><p className="mb-4 text-sm text-slate-500">Assign a picker to a processing order. Once packed, assign a rider for delivery.</p><div className="space-y-3">{orders.filter((order) => !["delivered", "cancelled"].includes(order.delivery_status)).map((order) => { const status = order.delivery_status || "processing"; const pickerOptions = fulfilmentStaff.filter((member) => member.role === "picker"); const riderOptions = fulfilmentStaff.filter((member) => member.role === "rider"); return <div key={order._id} className="rounded-xl border border-slate-100 p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p className="font-bold text-slate-900">#{order.orderId || String(order._id).slice(-7)}</p><p className="text-xs text-slate-500">{order.userId?.name || "Customer"} · {money(order.totalAmt)}</p></div><span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusTone(status)}`}>{String(status).replaceAll("_", " ")}</span></div>{status === "processing" && <div className="flex flex-wrap gap-2"><select value={orderAssignees[order._id] || ""} onChange={(event) => setOrderAssignees((current) => ({ ...current, [order._id]: event.target.value }))} className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Choose picker</option>{pickerOptions.map((member) => <option key={member._id} value={member._id}>{member.name}</option>)}</select><button disabled={busy === order._id || !pickerOptions.length} onClick={() => assignOrder(order, "picker")} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Assign picker</button></div>}{status === "packed" && <div className="flex flex-wrap gap-2"><select value={orderAssignees[order._id] || ""} onChange={(event) => setOrderAssignees((current) => ({ ...current, [order._id]: event.target.value }))} className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Choose rider</option>{riderOptions.map((member) => <option key={member._id} value={member._id}>{member.name}</option>)}</select><button disabled={busy === order._id || !riderOptions.length} onClick={() => assignOrder(order, "rider")} className="rounded-lg bg-lime-400 px-4 py-2 text-sm font-extrabold text-slate-950 disabled:opacity-40">Assign rider</button></div>}{["picking", "rider_assigned", "picked_up", "out_for_delivery"].includes(status) && <p className="text-xs text-slate-500">Assigned staff: {order.pickerId?.name || (order.pickerId ? "Picker assigned" : "—")} {order.riderId?.name || (order.riderId ? "· Rider assigned" : "")}</p>}</div>; })}{!orders.some((order) => !["delivered", "cancelled"].includes(order.delivery_status)) && <p className="py-8 text-center text-sm text-slate-400">No orders waiting for dispatch.</p>}</div></div>
+            </section>}
             {section === "customers" && <section className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-extrabold text-slate-900">Customer management</h2><p className="text-sm text-slate-500">Search customers and review account and paid-order activity. Sensitive authentication fields are never returned.</p></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{customerPagination.total || 0} customers</span></div>
               <div className="mb-4 flex flex-wrap gap-3"><input value={customerSearch} onChange={(event) => { setCustomerSearch(event.target.value); setCustomerPage(1); }} placeholder="Search name, email or mobile…" className="w-full max-w-md rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500" /><button onClick={loadCustomers} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Search</button></div>
