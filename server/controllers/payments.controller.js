@@ -35,20 +35,16 @@ const getCartSnapshot = async (userId) => {
     const lineTotal = roundMoney(unitPrice * row.quantity); subtotal = roundMoney(subtotal + lineTotal);
     items.push({ productId: product._id, name: product.name, image: product.image || [], unit: product.unit, unitPrice, quantity: row.quantity, lineTotal });
   }
-  return { items, subtotal };
+  return { items, subtotal, cartRowIds: rows.map(row => row._id) };
 };
-const reserveStock = async (items) => {
-  const reserved = [];
-  try {
-    for (const item of items) {
-      const product = await ProductModel.findOneAndUpdate({ _id: item.productId, publish: true, stock: { $gte: item.quantity } }, { $inc: { stock: -item.quantity } }, { new: true });
-      if (!product) throw new Error(`Insufficient stock for ${item.name}. Please update your cart.`);
-      reserved.push(item);
-    }
-    return reserved;
-  } catch (error) {
-    await Promise.all(reserved.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })));
-    throw error;
+const reserveStock = async (items, session) => {
+  for (const item of items) {
+    const product = await ProductModel.findOneAndUpdate(
+      { _id: item.productId, publish: true, stock: { $gte: item.quantity } },
+      { $inc: { stock: -item.quantity } },
+      { new: true, session }
+    );
+    if (!product) throw new Error(`Insufficient stock for ${item.name}. Please update your cart.`);
   }
 };
 const restoreOrderStock = async (order, session) => {
@@ -79,32 +75,55 @@ const restoreOrderStock = async (order, session) => {
 };
 
 export async function createRazorpayOrder(req, res) {
-  let reserved = []; let savedOrder = null;
+  const session = await mongoose.startSession();
   try {
-    // Recover stock from expired reservations when a new online checkout is attempted.
+    // Recover stock from expired reservations before starting another online checkout.
     await expireRazorpayReservations();
     const { addressId } = req.body;
     if (!mongoose.isValidObjectId(addressId)) return res.status(400).json({ success: false, message: "Select a valid delivery address" });
     const address = await AddressModel.findOne({ _id: addressId, userId: req.userId }).lean();
     if (!address) return res.status(404).json({ success: false, message: "Delivery address not found" });
-    const { items, subtotal } = await getCartSnapshot(req.userId);
-    reserved = await reserveStock(items);
+    const { items, subtotal, cartRowIds } = await getCartSnapshot(req.userId);
     const orderId = "PC" + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString("hex").toUpperCase();
-    const gatewayOrder = await gatewayRequest("/orders", { method: "POST", body: JSON.stringify({ amount: Math.round(subtotal * 100), currency: "INR", receipt: orderId, notes: { customerId: String(req.userId) } }) });
-    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
-    savedOrder = await OrderModel.create({
-      userId: req.userId, orderId, product_details: JSON.stringify(items), payment_id: "", payment_status: "pending",
-      paymentMethod: "RAZORPAY", razorpayOrderId: gatewayOrder.id, paymentReservationExpiresAt: expiresAt, inventoryReleased: false,
-      delivery_address: { address_line: address.address_line, city: address.city, state: address.state, pincode: address.pincode, country: address.country, mobile: address.mobile },
-      delivery_status: "processing", subTotalAmt: subtotal, totalAmt: subtotal
+
+    // Create the gateway order before opening the DB transaction. A DB conflict may
+    // leave an unused gateway order, but can never duplicate a charge or reserve stock.
+    const gatewayOrder = await gatewayRequest("/orders", {
+      method: "POST",
+      body: JSON.stringify({ amount: Math.round(subtotal * 100), currency: "INR", receipt: orderId, notes: { customerId: String(req.userId) } })
     });
-    await UserModel.findByIdAndUpdate(req.userId, { $addToSet: { orderHistory: savedOrder._id } });
-    await CartProductModel.deleteMany({ userId: req.userId });
-    return res.status(201).json({ success: true, data: { orderDbId: savedOrder._id, orderId, razorpayOrderId: gatewayOrder.id, amount: gatewayOrder.amount, currency: gatewayOrder.currency, keyId: process.env.RAZORPAY_KEY_ID, expiresAt } });
+    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+    let responseData;
+
+    await session.withTransaction(async () => {
+      await reserveStock(items, session);
+      const [savedOrder] = await OrderModel.create([{
+        userId: req.userId, orderId, product_details: JSON.stringify(items), payment_id: "", payment_status: "pending",
+        paymentMethod: "RAZORPAY", razorpayOrderId: gatewayOrder.id, paymentReservationExpiresAt: expiresAt, inventoryReleased: false,
+        delivery_address: { address_line: address.address_line, city: address.city, state: address.state, pincode: address.pincode, country: address.country, mobile: address.mobile },
+        delivery_status: "processing", subTotalAmt: subtotal, totalAmt: subtotal
+      }], { session });
+      await UserModel.updateOne({ _id: req.userId }, { $addToSet: { orderHistory: savedOrder._id } }, { session });
+
+      // Only the transaction that successfully consumes the complete cart may place
+      // the order. A competing checkout aborts and rolls back all stock decrements.
+      const deleted = await CartProductModel.deleteMany({ _id: { $in: cartRowIds }, userId: req.userId }, { session });
+      if (deleted.deletedCount !== cartRowIds.length) throw new Error("Your cart changed during checkout. Please review it and try again.");
+
+      responseData = {
+        orderDbId: savedOrder._id, orderId, razorpayOrderId: gatewayOrder.id,
+        amount: gatewayOrder.amount, currency: gatewayOrder.currency,
+        keyId: process.env.RAZORPAY_KEY_ID, expiresAt
+      };
+    });
+
+    if (!responseData) throw new Error("Unable to start online payment");
+    return res.status(201).json({ success: true, data: responseData });
   } catch (error) {
-    if (savedOrder?._id) { await OrderModel.deleteOne({ _id: savedOrder._id }); await UserModel.findByIdAndUpdate(req.userId, { $pull: { orderHistory: savedOrder._id } }); }
-    if (reserved.length) await Promise.all(reserved.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })));
-    return res.status(400).json({ success: false, message: error.message || "Unable to start online payment" });
+    const conflict = /cart changed|cart is empty/i.test(error.message);
+    return res.status(conflict ? 409 : 400).json({ success: false, message: error.message || "Unable to start online payment" });
+  } finally {
+    await session.endSession();
   }
 }
 
