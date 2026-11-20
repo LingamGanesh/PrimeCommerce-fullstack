@@ -6,43 +6,17 @@ const Axios = axios.create({
     withCredentials: true,
 });
 
-// ================= TOKEN ATTACH =================
-Axios.interceptors.request.use(
-    (config) => {
-        const accessToken = localStorage.getItem("accesstoken");
-
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
-        }
-
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
-
-// ================= REFRESH LOGIC =================
-const refreshAccessToken = async (refreshToken) => {
+// Authentication is carried by HttpOnly cookies; never read tokens from localStorage.
+const refreshAccessToken = async () => {
     try {
         const response = await axios.post(
             `${baseUrl}${SummaryApi.refreshToken.url}`,
             {},
-            {
-                headers: {
-                    Authorization: `Bearer ${refreshToken}`,
-                },
-            }
+            { withCredentials: true }
         );
-
-        const newAccessToken = response?.data?.data?.accessToken;
-
-        if (newAccessToken) {
-            localStorage.setItem("accesstoken", newAccessToken);
-        }
-
-        return newAccessToken;
-    } catch (error) {
-        console.log("Refresh token failed:", error);
-        return null;
+        return response?.data?.success === true;
+    } catch {
+        return false;
     }
 };
 
@@ -61,7 +35,6 @@ Axios.interceptors.response.use(
                 const newAccessToken = await refreshAccessToken(refreshToken);
 
                 if (newAccessToken) {
-                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                     return Axios(originalRequest);
                 }
             }
