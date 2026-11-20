@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js";
+import { canCustomerCancelOrder, canRequestFullRazorpayRefund } from "../utils/orderPolicy.js";
 
 async function restoreReservedInventory(order) {
   let items = [];
@@ -14,9 +15,9 @@ export async function cancelMyOrder(req, res) {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
     const order = await OrderModel.findOne({ _id: req.params.id, userId: req.userId });
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-    if (order.delivery_status !== "processing") return res.status(409).json({ success: false, message: "Orders can only be cancelled before picker assignment" });
+    if (!canCustomerCancelOrder(order)) return res.status(409).json({ success: false, message: "Orders can only be cancelled before picker assignment" });
     if (order.paymentMethod === "RAZORPAY") {
-      if (order.payment_status !== "paid" || !order.payment_id) return res.status(409).json({ success: false, message: "Only captured online payments can be refunded. Contact support for this payment state." });
+      if (!canRequestFullRazorpayRefund(order)) return res.status(409).json({ success: false, message: "Only captured online payments without a previous refund request can be refunded. Contact support for this payment state." });
       const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", payment_status: "paid", refund_status: "not_required" }, { $set: { refund_status: "initiating" } }, { new: true });
       if (!claimed) return res.status(409).json({ success: false, message: "Cancellation or refund is already being processed" });
       try {
