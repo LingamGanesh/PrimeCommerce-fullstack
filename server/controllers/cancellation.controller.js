@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js";
-import crypto from "node:crypto";
 
 async function restoreReservedInventory(order) {
   let items = [];
