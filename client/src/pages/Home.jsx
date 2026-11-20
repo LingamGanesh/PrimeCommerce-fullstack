@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import Axios from "../utils/Axios";
 
@@ -22,10 +23,7 @@ const visualFor = (value = "") => {
   return match ? { emoji: match[1], color: match[2] } : { emoji: "🛍️", color: "bg-stone-50" };
 };
 
-function readCart() {
-  try { return JSON.parse(localStorage.getItem("quick-commerce-cart") || "{}"); }
-  catch { return {}; }
-}
+function readCart() { return {}; }
 
 function ProductCard({ product, quantity, onAdd, onChange }) {
   const visual = visualFor(product.name + " " + (product.categoryName || ""));
@@ -58,6 +56,7 @@ function ProductCard({ product, quantity, onAdd, onChange }) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const user = useSelector((state) => state.user);
   const [cart, setCart] = useState(readCart);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -65,6 +64,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [cartBusy, setCartBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -85,8 +85,18 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
-  const cartCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-  const cartTotal = products.reduce((sum, product) => sum + product.price * (cart[product.id] || 0), 0);
+  const refreshCart = async () => {
+    if (!user?._id) { setCart({}); return; }
+    try {
+      const response = await Axios.get("/api/v1/cart");
+      const next = {};
+      for (const item of response.data?.data?.items || []) next[item.product.id] = { quantity: item.quantity, cartItemId: item.cartItemId };
+      setCart(next);
+    } catch { setCart({}); }
+  };
+  useEffect(() => { refreshCart(); }, [user?._id]);
+  const cartCount = Object.values(cart).reduce((sum, entry) => sum + entry.quantity, 0);
+  const cartTotal = products.reduce((sum, product) => sum + product.price * (cart[product.id]?.quantity || 0), 0);
   const visibleProducts = useMemo(() => products.filter((product) => {
     const categoryIds = (product.categoryId || []).map((category) => typeof category === "object" ? category?._id : category);
     const matchesCategory = activeCategory === "All" || categoryIds.includes(activeCategory);
@@ -94,15 +104,30 @@ export default function Home() {
     return matchesCategory && (!query || product.name.toLowerCase().includes(query) || (product.categoryName || "").toLowerCase().includes(query));
   }), [products, activeCategory, search]);
 
-  const updateCart = (id, delta) => {
-    setCart((current) => {
-      const next = { ...current, [id]: Math.max(0, (current[id] || 0) + delta) };
-      if (!next[id]) delete next[id];
-      localStorage.setItem("quick-commerce-cart", JSON.stringify(next));
-      return next;
-    });
+  const updateCart = async (id, delta) => {
+    if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
+    const entry = cart[id];
+    if (!entry) return;
+    setCartBusy(true);
+    try {
+      const quantity = Math.max(0, entry.quantity + delta);
+      if (quantity === 0) await Axios.delete("/api/v1/cart/items/" + entry.cartItemId);
+      else await Axios.patch("/api/v1/cart/items/" + entry.cartItemId, { quantity });
+      await refreshCart();
+    } catch (error) { toast.error(error.response?.data?.message || "Unable to update cart"); }
+    finally { setCartBusy(false); }
   };
-  const addProduct = (product) => { updateCart(product.id, 1); toast.success(`${product.name} added to cart`); };
+  const addProduct = async (product) => {
+    if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
+    if (cartBusy) return;
+    setCartBusy(true);
+    try {
+      await Axios.post("/api/v1/cart/items", { productId: product.id, quantity: 1 });
+      await refreshCart();
+      toast.success(product.name + " added to cart");
+    } catch (error) { toast.error(error.response?.data?.message || "Unable to add product"); }
+    finally { setCartBusy(false); }
+  };
 
   return (
     <div className="min-h-screen bg-[#fafaf7] pb-28 text-gray-900">
@@ -144,7 +169,7 @@ export default function Home() {
           </div>
           {loading ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"><div className="h-56 animate-pulse rounded-2xl bg-gray-200" /><div className="h-56 animate-pulse rounded-2xl bg-gray-200" /><div className="h-56 animate-pulse rounded-2xl bg-gray-200" /></div>
           : loadError ? <div className="rounded-2xl bg-white p-10 text-center"><p className="text-3xl">⚠️</p><h3 className="mt-2 font-bold">Store catalogue is unavailable</h3><p className="mt-1 text-sm text-gray-500">Please check the server connection and try again.</p><button onClick={() => window.location.reload()} className="mt-4 rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">Retry</button></div>
-          : visibleProducts.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id] || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
+          : visibleProducts.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
           : <div className="rounded-2xl bg-white p-10 text-center"><p className="text-3xl">🛍️</p><h3 className="mt-2 font-bold">{search ? "No products found" : "Your store is getting ready"}</h3><p className="mt-1 text-sm text-gray-500">{search ? "Try another product or category." : "Products added by your store admin will appear here."}</p></div>}
         </section>
         <section className="mb-8 rounded-2xl bg-white p-5 text-center shadow-sm sm:p-8"><p className="text-xs font-bold uppercase tracking-widest text-green-700">Shopping made simple</p><h2 className="mt-2 text-xl font-extrabold">A better way to stock up</h2><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">Browse essentials, add what you need and review your basket before checkout.</p><Link to="/search" className="mt-4 inline-flex rounded-xl bg-green-700 px-5 py-3 text-sm font-bold text-white hover:bg-green-800">Explore products</Link></section>
