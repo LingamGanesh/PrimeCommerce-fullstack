@@ -108,7 +108,7 @@ export async function loginController(request, response) {
     }
 
     // 2️⃣ Check user
-    const user = await UserModel.findOne({ email }).select('+password +email_verification_token_hash')
+    const user = await UserModel.findOne({ email }).select('+password +email_verification_token_hash +tokenVersion')
 
     if (!user) {
       return response.status(401).json({
@@ -151,7 +151,7 @@ export async function loginController(request, response) {
     }
 
     // 5️⃣ Generate tokens
- const accessToken = await generateAccessToken(user._id)
+ const accessToken = await generateAccessToken(user._id, user.tokenVersion || 0)
 const refreshToken = await generatedRefreshToken(user._id)
 
 
@@ -213,7 +213,7 @@ export async function logoutController(request, response) {
     response.clearCookie("accessToken", cookieOptions);
     response.clearCookie("refreshToken", cookieOptions);
     if (request.userId) {
-      await UserModel.findByIdAndUpdate(request.userId, { refresh_token: "" });
+      await UserModel.findByIdAndUpdate(request.userId, { $set: { refresh_token: "" }, $inc: { tokenVersion: 1 } });
     }
 
     return response.status(200).json({
@@ -267,7 +267,7 @@ export async  function uploadAvatar(request,response){
 export async function updateUserDetails(request, response) {
   try {
     const userId = request.userId;
-    const currentUser = await UserModel.findById(userId).select("+refresh_token");
+    const currentUser = await UserModel.findById(userId).select("+refresh_token +tokenVersion");
     if (!currentUser) return response.status(404).json({ message: "User not found", error: true, success: false });
 
     const { name, email, mobile, password } = request.body || {};
@@ -305,6 +305,7 @@ export async function updateUserDetails(request, response) {
       }
       updates.password = await bcrypt.hash(String(password), 12);
       updates.refresh_token = "";
+      updates.tokenVersion = (currentUser.tokenVersion || 0) + 1;
     }
 
     if (!Object.keys(updates).length) {
@@ -488,7 +489,8 @@ export async function resetpassword(request,response){
                     password: hashPassword,
                     password_reset_token_hash: "",
                     password_reset_expires_at: null,
-                    refresh_token: ""
+                    refresh_token: "",
+                    tokenVersion: (user.tokenVersion || 0) + 1
                 }
             },
             { new: true }
@@ -520,12 +522,12 @@ export async function refreshToken(request,response){
         }
         const decoded = jwt.verify(refreshToken, refreshSecret, { algorithms: ["HS256"] });
         const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshTokenHash }).select("+refresh_token");
+        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshTokenHash }).select("+refresh_token +tokenVersion");
         if (!user || user.status !== "active") {
             return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
         }
 
-        const newAccessToken = await generateAccessToken(user._id);
+        const newAccessToken = await generateAccessToken(user._id, user.tokenVersion || 0);
         const isProduction = process.env.NODE_ENV === "production";
         response.cookie("accessToken", newAccessToken, {
             httpOnly: true,
