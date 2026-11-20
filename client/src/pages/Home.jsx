@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -85,7 +85,7 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     if (!user?._id) { setCart({}); return; }
     try {
       const response = await Axios.get("/api/v1/cart");
@@ -94,8 +94,8 @@ export default function Home() {
       setCart(next);
       window.dispatchEvent(new Event("cart:updated"));
     } catch { setCart({}); }
-  };
-  useEffect(() => { refreshCart(); }, [user?._id]);
+  }, [user?._id]);
+  useEffect(() => { refreshCart(); }, [refreshCart]);
   const cartCount = Object.values(cart).reduce((sum, entry) => sum + entry.quantity, 0);
   const cartTotal = products.reduce((sum, product) => sum + product.price * (cart[product.id]?.quantity || 0), 0);
   const visibleProducts = useMemo(() => products.filter((product) => {
