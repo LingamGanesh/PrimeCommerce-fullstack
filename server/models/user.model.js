@@ -69,6 +69,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    passwordResetVerifiedUntil: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     role: {
       type: String, // e.g., 'user', 'admin'
       enum: ["user", "admin", "picker", "rider"],
