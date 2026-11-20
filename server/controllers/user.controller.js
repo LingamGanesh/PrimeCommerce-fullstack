@@ -237,6 +237,9 @@ export async  function uploadAvatar(request,response){
     try {
         const userId = request.userId // auth middlware
         const image = request.file  // multer middleware
+        if (!image) {
+          return response.status(400).json({ message: "Choose an image to upload", error: true, success: false });
+        }
 
         const upload = await uploadImageClodinary(image)
         
