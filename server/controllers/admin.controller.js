@@ -42,7 +42,7 @@ export async function listAdminOrders(req, res) {
 export async function updateAdminOrderStatus(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
-    const allowed = ["processing", "shipped", "delivered", "cancelled"];
+    const allowed = ["processing", "shipped", "delivered"];
     const status = String(req.body.delivery_status || "");
     if (!allowed.includes(status)) return res.status(400).json({ success: false, message: "Unsupported order status" });
     const order = await OrderModel.findById(req.params.id);
