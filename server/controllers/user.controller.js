@@ -256,6 +256,10 @@ export async function updateUserDetails(request,response){
 
         let hashPassword = ""
 
+        if(password && (String(password).length < 8 || String(password).length > 128)){
+            return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false });
+        }
+
         if(password){
             const salt = await bcrypt.genSalt(10)
             hashPassword = await bcrypt.hash(password,salt)
@@ -265,7 +269,7 @@ export async function updateUserDetails(request,response){
             ...(name && { name : name }),
             ...(email && { email : email }),
             ...(mobile && { mobile : mobile }),
-            ...(password && { password : hashPassword })
+            ...(password && { password : hashPassword, refresh_token: "" })
         })
 
         return response.json({
@@ -443,10 +447,9 @@ export async function refreshToken(request,response){
         });
 
         return response.json({
-            message: "New access token generated",
+            message: "Session refreshed",
             error: false,
-            success: true,
-            data: { accessToken: newAccessToken }
+            success: true
         });
     } catch (error) {
         return response.status(401).json({ message: "Refresh token is invalid or expired", error: true, success: false });
