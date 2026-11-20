@@ -86,8 +86,8 @@ The GitHub Actions workflow runs frontend install/lint/build and backend install
 ## Customer management and sales analytics (current phase)
 
 - Admin-only `GET /api/v1/admin/customers` supports bounded pagination (up to 50 per page) and search by customer name, email or exact numeric mobile. It returns only safe profile fields and never selects password hashes, refresh tokens or password-reset fields.
-- Customer rows include order count and paid spend, where paid spend counts only `paid` or `completed` payment statuses.
-- Admin-only `GET /api/v1/admin/reports/sales?period=7d|30d|90d` returns daily paid revenue, paid-order counts, total order counts and fulfilment status totals for the selected period. Unpaid COD orders are not represented as paid revenue.
+- Customer rows include order count and paid spend, where paid spend counts only non-cancelled orders with `paid` or `completed` payment status.
+- Admin-only `GET /api/v1/admin/reports/sales?period=7d|30d|90d` returns daily paid revenue, paid-order counts, non-cancelled order totals and fulfilment status totals for the selected period; cancelled/refunded orders are excluded from paid revenue. Unpaid COD orders are not represented as paid revenue.
 - The admin workspace includes a paginated customer search table and sales report with period selection, daily revenue bars and fulfilment status breakdown.
 - These reports are operational summaries, not a financial ledger; refunds, chargebacks, tax, delivery fees and settlement reconciliation are not yet modelled.
 
