@@ -58,11 +58,17 @@ export async function registerUserController(request, response) {
       html: verifyEmailTemplate({ name, url: verifyEmailUrl })
     });
 
+    const safeUser = savedUser.toObject();
+    delete safeUser.password;
+    delete safeUser.refresh_token;
+    delete safeUser.forgot_password_otp;
+    delete safeUser.forgot_password_expiry;
+
     return response.status(201).json({
       message: 'User registered successfully! Please check your email to verify.',
       success: true,
       error: false,
-      data: savedUser
+      data: safeUser
     });
 
   } catch (error) {
@@ -244,8 +250,15 @@ export async function logoutController(request, response) {
 // upload Avthar
 export async  function uploadAvatar(request,response){
     try {
-        const userId = request.userId // auth middlware
-        const image = request.file  // multer middleware
+        const userId = request.userId;
+        const image = request.file;
+        if (!image) {
+            return response.status(400).json({
+                message: "Please select an image to upload",
+                error: true,
+                success: false
+            });
+        }
 
         const upload = await uploadImageClodinary(image)
         
@@ -282,8 +295,8 @@ export async function updateUserDetails(request,response){
         let hashPassword = ""
 
         if(password){
-            const salt = await bcryptjs.genSalt(10)
-            hashPassword = await bcryptjs.hash(password,salt)
+            const salt = await bcrypt.genSalt(10)
+            hashPassword = await bcrypt.hash(password,salt)
         }
 
         const updateUser = await UserModel.updateOne({ _id : userId},{
@@ -402,9 +415,10 @@ export async function verifyForgotPasswordOtp(request,response){
         //if otp is not expired
         //otp === user.forgot_password_otp
 
-        const updateUser = await UserModel.findByIdAndUpdate(user?._id,{
-            forgot_password_otp : "",
-            forgot_password_expiry : ""
+        const updateUser = await UserModel.findByIdAndUpdate(user._id, {
+            forgot_password_otp: "",
+            forgot_password_expiry: null,
+            passwordResetVerifiedUntil: new Date(Date.now() + 10 * 60 * 1000)
         })
         
         return response.json({
@@ -427,36 +441,57 @@ export async function resetpassword(request,response){
     try {
         const { email , newPassword, confirmPassword } = request.body 
 
-        if(!email || !newPassword || !confirmPassword){
+        if (!email || !newPassword || !confirmPassword) {
             return response.status(400).json({
-                message : "provide required fields email, newPassword, confirmPassword"
-            })
+                message: "Provide email, newPassword and confirmPassword",
+                error: true,
+                success: false
+            });
         }
 
-        const user = await UserModel.findOne({ email })
-
-        if(!user){
+        if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 128) {
             return response.status(400).json({
-                message : "Email is not available",
-                error : true,
-                success : false
-            })
+                message: "Password must be between 8 and 128 characters",
+                error: true,
+                success: false
+            });
         }
 
-        if(newPassword !== confirmPassword){
+        if (newPassword !== confirmPassword) {
             return response.status(400).json({
-                message : "newPassword and confirmPassword must be same.",
-                error : true,
-                success : false,
-            })
+                message: "New password and confirmation must match",
+                error: true,
+                success: false
+            });
         }
 
-        const salt = await bcrypt.genSalt(10)
-        const hashPassword = await bcrypt.hash(newPassword,salt)
+        const user = await UserModel.findOne({
+            email: String(email).trim().toLowerCase(),
+            passwordResetVerifiedUntil: { $gt: new Date() }
+        }).select("+passwordResetVerifiedUntil");
 
-        const update = await UserModel.findOneAndUpdate(user._id,{
-            password : hashPassword
-        })
+        if (!user) {
+            return response.status(403).json({
+                message: "Verify a valid password-reset OTP before resetting your password",
+                error: true,
+                success: false
+            });
+        }
+
+        const hashPassword = await bcrypt.hash(newPassword, 12);
+        const update = await UserModel.findOneAndUpdate(
+            { _id: user._id, passwordResetVerifiedUntil: { $gt: new Date() } },
+            { $set: { password: hashPassword, passwordResetVerifiedUntil: null } },
+            { new: true }
+        );
+
+        if (!update) {
+            return response.status(403).json({
+                message: "Password reset verification expired or was already used",
+                error: true,
+                success: false
+            });
+        }
 
         return response.json({
             message : "Password updated successfully.",
