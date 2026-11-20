@@ -177,10 +177,12 @@ const refreshToken = await generatedRefreshToken(user._id)
 
 
     // 6️⃣ Cookie options (ENV-safe)
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None'
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/"
     }
 
     // 7️⃣ Set cookies
@@ -218,10 +220,12 @@ const refreshToken = await generatedRefreshToken(user._id)
 export async function logoutController(request, response) {
   try {
     // Clear both tokens
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/"
     };
 
     response.clearCookie("accessToken", cookieOptions);
@@ -456,10 +460,12 @@ export async function refreshToken(request,response){
 
         const newAccessToken = await generateAccessToken(userId)
 
+        const isProduction = process.env.NODE_ENV === "production";
         const cookiesOption = {
-            httpOnly : true,
-            secure : true,
-            sameSite : "None"
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            path: "/"
         }
 
         response.cookie('accessToken',newAccessToken,cookiesOption)
