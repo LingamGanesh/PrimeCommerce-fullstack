@@ -1,5 +1,18 @@
 import mongoose from "mongoose";
 
+const geoPointSchema = new mongoose.Schema({
+  type: { type: String, enum: ["Point"], default: "Point" },
+  coordinates: {
+    type: [Number],
+    required: true,
+    validate: {
+      validator: coordinates => Array.isArray(coordinates) && coordinates.length === 2 && coordinates.every(Number.isFinite)
+        && coordinates[0] >= -180 && coordinates[0] <= 180 && coordinates[1] >= -90 && coordinates[1] <= 90,
+      message: "GeoJSON coordinates must be [longitude, latitude] within valid ranges"
+    }
+  }
+}, { _id: false });
+
 const addressSchema = new mongoose.Schema(
   {
     address_line: {
@@ -42,10 +55,7 @@ const addressSchema = new mongoose.Schema(
     house: { type: String, trim: true, default: "" },
     floor: { type: String, trim: true, default: "" },
     landmark: { type: String, trim: true, default: "" },
-    geo: {
-      type: { type: String, enum: ["Point"], default: "Point" },
-      coordinates: { type: [Number], default: undefined }
-    },
+    geo: { type: geoPointSchema, default: undefined },
     isDefault: { type: Boolean, default: false, index: true },
     deliveryInstructions: { type: String, trim: true, maxlength: 500, default: "" },
   },
@@ -53,6 +63,8 @@ const addressSchema = new mongoose.Schema(
     timestamps: true, // adds createdAt and updatedAt
   }
 );
+
+addressSchema.index({ geo: "2dsphere" });
 
 const AddressModel = mongoose.model("Address", addressSchema);
 
