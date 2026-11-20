@@ -26,27 +26,40 @@ export async function registerUserController(request, response) {
       return response.status(409).json({ message: "Email is already registered", error: true, success: false });
     }
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    // Production always requires email verification. Local development can
+    // register and test login without a configured email provider; opt in to
+    // verification locally with EMAIL_VERIFICATION_REQUIRED=true.
+    const emailVerificationRequired = process.env.NODE_ENV === "production"
+      || process.env.EMAIL_VERIFICATION_REQUIRED === "true";
+    const verificationToken = emailVerificationRequired
+      ? crypto.randomBytes(32).toString("hex")
+      : "";
     const newUser = await UserModel.create({
       name,
       email,
       password: await bcrypt.hash(password, 12),
-      verify_email: false,
-      email_verification_token_hash: crypto.createHash("sha256").update(verificationToken).digest("hex"),
-      email_verification_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      verify_email: !emailVerificationRequired,
+      email_verification_token_hash: verificationToken
+        ? crypto.createHash("sha256").update(verificationToken).digest("hex")
+        : "",
+      email_verification_expires_at: verificationToken
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : null
     });
 
-    const frontendUrl = String(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
-    const verifyEmailUrl = frontendUrl + "/verify-email?token=" + encodeURIComponent(verificationToken);
-    try {
-      await sendEmail({
-        sendTo: email,
-        subject: "Verify your email - PrimeCommerce",
-        html: verifyEmailTemplate({ name, url: verifyEmailUrl })
-      });
-    } catch (emailError) {
-      await UserModel.deleteOne({ _id: newUser._id });
-      throw emailError;
+    if (emailVerificationRequired) {
+      const frontendUrl = String(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+      const verifyEmailUrl = frontendUrl + "/verify-email?token=" + encodeURIComponent(verificationToken);
+      try {
+        await sendEmail({
+          sendTo: email,
+          subject: "Verify your email - PrimeCommerce",
+          html: verifyEmailTemplate({ name, url: verifyEmailUrl })
+        });
+      } catch (emailError) {
+        await UserModel.deleteOne({ _id: newUser._id });
+        throw emailError;
+      }
     }
 
     return response.status(201).json({
@@ -139,16 +152,20 @@ export async function loginController(request, response) {
       })
     }
 
-    if (!user.verify_email && user.email_verification_token_hash) {
+    if (!user.verify_email && user.email_verification_token_hash && process.env.NODE_ENV === "production") {
       return response.status(403).json({
         message: "Please verify your email address before logging in.",
         error: true,
         success: false
       })
     }
-    // Existing accounts created before email verification was introduced have no token to verify.
-    if (!user.verify_email && !user.email_verification_token_hash) {
-      await UserModel.updateOne({ _id: user._id }, { $set: { verify_email: true } });
+    // In local development, allow existing test accounts to log in even if
+    // email delivery was unavailable when they registered. Production remains strict.
+    if (!user.verify_email && process.env.NODE_ENV !== "production") {
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $set: { verify_email: true, email_verification_token_hash: "", email_verification_expires_at: null } }
+      );
     }
 
     // 5️⃣ Generate tokens
