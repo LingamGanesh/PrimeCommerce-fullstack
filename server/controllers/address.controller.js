@@ -77,6 +77,80 @@ export async function createAddress(req, res) {
   }
 }
 
+export async function updateAddress(req, res) {
+  const session = await mongoose.startSession();
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid address id" });
+    let updatedAddress;
+    await session.withTransaction(async () => {
+      const current = await AddressModel.findOne({ _id: req.params.id, userId: req.userId }).session(session);
+      if (!current) return;
+
+      const updates = {};
+      const unset = {};
+      const maxLengths = { address_line: 250, city: 80, state: 80, pincode: 6, country: 80 };
+      for (const field of ["address_line", "city", "state", "pincode", "country"]) {
+        if (req.body[field] === undefined) continue;
+        if (typeof req.body[field] !== "string" || !req.body[field].trim() || req.body[field].trim().length > maxLengths[field]) {
+          throw Object.assign(new Error(field + " is invalid"), { statusCode: 400 });
+        }
+        updates[field] = req.body[field].trim();
+      }
+      if (updates.pincode !== undefined && !/^[1-9]\\d{5}$/.test(updates.pincode)) {
+        throw Object.assign(new Error("Enter a valid six-digit Indian PIN code"), { statusCode: 400 });
+      }
+      if (req.body.mobile !== undefined) {
+        const mobile = normalizeMobileNumber(req.body.mobile);
+        if (!/^[6-9]\\d{9}$/.test(mobile)) throw Object.assign(new Error("Enter a valid Indian mobile number"), { statusCode: 400 });
+        updates.mobile = mobile;
+      }
+      for (const field of optionalTextFields) {
+        if (req.body[field] === undefined) continue;
+        const maxLength = field === "deliveryInstructions" ? 500 : 120;
+        if (typeof req.body[field] !== "string" || req.body[field].length > maxLength) {
+          throw Object.assign(new Error(field + " must be valid text"), { statusCode: 400 });
+        }
+        updates[field] = req.body[field].trim();
+      }
+      if (updates.label !== undefined && !["Home", "Work", "Other"].includes(updates.label)) {
+        throw Object.assign(new Error("Address label must be Home, Work or Other"), { statusCode: 400 });
+      }
+      if (req.body.geo !== undefined) {
+        if (req.body.geo === null) unset.geo = "";
+        else {
+          try { updates.geo = normalizeGeoPoint(req.body.geo); }
+          catch (error) { throw Object.assign(error, { statusCode: 400 }); }
+        }
+      }
+      if (req.body.isDefault !== undefined && typeof req.body.isDefault !== "boolean") {
+        throw Object.assign(new Error("isDefault must be true or false"), { statusCode: 400 });
+      }
+      if (req.body.isDefault === true) {
+        await AddressModel.updateMany({ userId: req.userId, isDefault: true }, { $set: { isDefault: false } }, { session });
+        updates.isDefault = true;
+      } else if (req.body.isDefault === false && current.isDefault) {
+        const replacement = await AddressModel.findOne({ userId: req.userId, _id: { $ne: current._id } }).sort({ createdAt: -1 }).session(session);
+        if (replacement) await AddressModel.updateOne({ _id: replacement._id, userId: req.userId }, { $set: { isDefault: true } }, { session });
+        else updates.isDefault = true;
+      }
+      if (!Object.keys(updates).length && !Object.keys(unset).length) {
+        throw Object.assign(new Error("No address changes were provided"), { statusCode: 400 });
+      }
+      const update = {};
+      if (Object.keys(updates).length) update.$set = updates;
+      if (Object.keys(unset).length) update.$unset = unset;
+      updatedAddress = await AddressModel.findOneAndUpdate({ _id: current._id, userId: req.userId }, update, { new: true, runValidators: true, session });
+    });
+    if (!updatedAddress) return res.status(404).json({ success: false, error: true, message: "Address not found" });
+    return res.json({ success: true, error: false, message: "Address updated", data: updatedAddress });
+  } catch (error) {
+    const status = Number.isInteger(error.statusCode) ? error.statusCode : 503;
+    return res.status(status).json({ success: false, error: true, message: status === 503 ? "Unable to safely update address. Please retry." : error.message });
+  } finally {
+    await session.endSession();
+  }
+}
+
 export async function deleteAddress(req, res) {
   const session = await mongoose.startSession();
   try {
