@@ -86,7 +86,7 @@ export async function listAdminCustomers(req, res) {
     const orderCounts = customerIds.length
       ? await OrderModel.aggregate([
           { $match: { userId: { $in: customerIds } } },
-          { $group: { _id: "$userId", orders: { $sum: 1 }, spend: { $sum: { $cond: [{ $in: ["$payment_status", ["paid", "completed"]] }, "$totalAmt", 0] } } } }
+          { $group: { _id: "$userId", orders: { $sum: 1 }, spend: { $sum: { $cond: [{ $and: [{ $in: ["$payment_status", ["paid", "completed"]] }, { $ne: ["$delivery_status", "cancelled"] }] }, "$totalAmt", 0] } } } }
         ])
       : [];
     const stats = new Map(orderCounts.map((entry) => [String(entry._id), entry]));
@@ -111,7 +111,7 @@ export async function getAdminSalesReport(req, res) {
     start.setUTCDate(start.getUTCDate() - (days - 1));
     const [daily, statuses, totals] = await Promise.all([
       OrderModel.aggregate([
-        { $match: { createdAt: { $gte: start }, payment_status: { $in: ["paid", "completed"] } } },
+        { $match: { createdAt: { $gte: start }, delivery_status: { $ne: "cancelled" }, payment_status: { $in: ["paid", "completed"] } } },
         { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, revenue: { $sum: "$totalAmt" }, orders: { $sum: 1 } } },
         { $sort: { _id: 1 } }
       ]),
@@ -121,7 +121,7 @@ export async function getAdminSalesReport(req, res) {
         { $sort: { count: -1 } }
       ]),
       OrderModel.aggregate([
-        { $match: { createdAt: { $gte: start } } },
+        { $match: { createdAt: { $gte: start }, delivery_status: { $ne: "cancelled" } } },
         { $group: { _id: null, orderCount: { $sum: 1 }, paidRevenue: { $sum: { $cond: [{ $in: ["$payment_status", ["paid", "completed"]] }, "$totalAmt", 0] } }, paidOrders: { $sum: { $cond: [{ $in: ["$payment_status", ["paid", "completed"]] }, 1, 0] } } } }
       ])
     ]);
