@@ -44,7 +44,7 @@ export default function AdminDashboard() {
     if (!Number.isInteger(value) || value < 0) return toast.error("Stock must be a whole number, 0 or higher");
     setBusy(product._id);
     try {
-      await Axios.patch(`/api/v1/catalog/admin/products/${product._id}`, { stock: value });
+      await Axios.patch(`/api/v1/admin/products/${product._id}`, { stock: value });
       toast.success("Inventory updated");
       setStockDraft((current) => ({ ...current, [product._id]: String(value) }));
       await loadData();
