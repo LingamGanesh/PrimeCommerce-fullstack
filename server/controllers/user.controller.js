@@ -55,6 +55,9 @@ export async function registerUserController(request, response) {
       data: { _id: newUser._id, name: newUser.name, email: newUser.email, verify_email: false }
     });
   } catch (error) {
+    if (error?.code === 11000) {
+      return response.status(409).json({ message: "Email is already registered", error: true, success: false });
+    }
     return response.status(500).json({
       message: error.message || "Unable to register account",
       error: true,
