@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import helmet from "helmet";
+import mongoose from "mongoose";
 import connectDB from "./config/connectDB.js";
 import userRouter from "./routes/user.routes.js";
 import catalogRouter from "./routes/catalog.routes.js";
@@ -20,6 +21,18 @@ import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers
 dotenv.config();
 
 const app = express();
+
+if (process.env.NODE_ENV === "production") {
+  const requiredSecrets = ["SECRET_KEY_ACCESS_TOKEN", "SECRET_KEY_REFRESH_TOKEN"];
+  for (const name of requiredSecrets) {
+    if (!process.env[name] || process.env[name].length < 32) {
+      throw new Error(`${name} must be configured with at least 32 characters in production`);
+    }
+  }
+  if (process.env.SECRET_KEY_ACCESS_TOKEN === process.env.SECRET_KEY_REFRESH_TOKEN) {
+    throw new Error("Access-token and refresh-token secrets must be different");
+  }
+}
 const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "")
   .split(",")
   .map(origin => origin.trim().replace(/\/$/, ""))
@@ -46,6 +59,10 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.get("/", (req, res) => res.json({ message: "Server is running" }));
+app.get("/healthz", (req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  return res.status(databaseReady ? 200 : 503).json({ status: databaseReady ? "ok" : "unavailable", database: databaseReady ? "connected" : "disconnected" });
+});
 app.use("/api/user", userRouter);
 app.use("/api/v1", catalogRouter);
 app.use("/api/v1/cart", cartRouter);
