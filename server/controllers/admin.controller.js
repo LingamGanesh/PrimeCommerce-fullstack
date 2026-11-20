@@ -69,7 +69,7 @@ export async function listAdminCustomers(req, res) {
         { name: { $regex: escaped, $options: "i" } },
         { email: { $regex: escaped, $options: "i" } }
       ];
-      if (/^\\d+$/.test(search)) filter.$or.push({ mobile: Number(search) });
+      if (/^\d+$/.test(search)) filter.$or.push({ mobile: Number(search) });
     }
     const [customers, total] = await Promise.all([
       UserModel.find(filter)
