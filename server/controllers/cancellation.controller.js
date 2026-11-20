@@ -27,6 +27,51 @@ async function restoreReservedInventory(order, session) {
   }
 }
 
+async function finalizeRazorpayRefund(orderId, refund) {
+  if (!refund?.id || !refund?.payment_id) throw new Error("Refund response is missing its identifiers");
+  const session = await mongoose.startSession();
+  let finalized;
+  try {
+    await session.withTransaction(async () => {
+      const order = await OrderModel.findOneAndUpdate(
+        {
+          _id: orderId,
+          paymentMethod: "RAZORPAY",
+          payment_status: "paid",
+          delivery_status: "processing",
+          inventoryReleased: false,
+          refund_status: { $in: ["initiating", "pending"] }
+        },
+        {
+          $set: {
+            refund_status: refund.status === "processed" ? "processed" : "pending",
+            refund_id: refund.id,
+            refund_amount: Number(refund.amount || 0) / 100,
+            delivery_status: "cancelled",
+            cancelledAt: new Date(),
+            inventoryReleased: true
+          }
+        },
+        { new: true, session }
+      );
+      if (order) {
+        await restoreReservedInventory(order, session);
+        finalized = order;
+      } else {
+        const existing = await OrderModel.findById(orderId).session(session);
+        if (existing?.inventoryReleased && existing?.refund_id === refund.id && existing?.delivery_status === "cancelled") {
+          finalized = existing;
+        } else {
+          throw new Error("Refund was accepted but order state needs support reconciliation");
+        }
+      }
+    });
+    return finalized;
+  } finally {
+    await session.endSession();
+  }
+}
+
 export async function cancelMyOrder(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
@@ -47,13 +92,18 @@ export async function cancelMyOrder(req, res) {
         });
         const refund = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(refund.error?.description || "Refund request failed");
-        await OrderModel.updateOne({ _id: order._id, refund_status: "initiating" }, { $set: { refund_status: refund.status === "processed" ? "processed" : "pending" } });
-        const updated = await OrderModel.findOneAndUpdate({ _id: order._id, delivery_status: "processing", refund_status: { $in: ["initiating", "pending", "processed", "failed"] } }, { $set: { refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100, delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } }, { new: true });
-        if (!updated) return res.status(409).json({ success: false, message: "Refund was accepted but order state needs support reconciliation" });
-        await restoreReservedInventory(updated);
+        const updated = await finalizeRazorpayRefund(order._id, refund);
         return res.json({ success: true, message: "Order cancelled. Your Razorpay refund status is being tracked.", data: { orderId: updated.orderId, refundStatus: updated.refund_status, refundId: updated.refund_id } });
       } catch (error) {
-        await OrderModel.updateOne({ _id: order._id, refund_status: "initiating" }, { $set: { refund_status: "failed" } });
+        // A timeout can occur after Razorpay accepted the refund. Keep the claim
+        // recoverable; the signed refund webhook reconciles the final state.
+        if (/Refund was accepted but order state/.test(error.message)) {
+          return res.status(202).json({ success: true, message: "Refund may have been accepted. Order reconciliation is pending; please do not retry the cancellation." });
+        }
+        await OrderModel.updateOne(
+          { _id: order._id, refund_status: "initiating", inventoryReleased: false },
+          { $set: { refund_status: "failed" } }
+        );
         return res.status(502).json({ success: false, message: error.message || "Refund could not be initiated. Contact support before retrying." });
       }
     }
