@@ -70,8 +70,8 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - `GET /api/v1/admin/overview` returns customer, published-product, category, order, paid-revenue and low-stock counts plus recent orders.
 - `GET /api/v1/admin/products` and `GET /api/v1/admin/orders` provide admin-only inventory and order lists (latest 100).
 - `PATCH /api/v1/admin/products/:id` uses the existing catalog admin endpoint for stock updates.
-- `PATCH /api/v1/admin/orders/:id/status` allows processing, shipped and delivered status changes. Terminal cancellation/refund is intentionally not exposed in this UI because stock restoration and payment refunds are not implemented.
-- Product creation/editing, customer management, picker/rider operations and periodic delivery tracking are implemented. Payment refunds and audit logs remain future work.
+- `PATCH /api/v1/admin/orders/:id/status` allows processing, shipped and delivered status changes. Customer cancellation is handled through the customer-owned cancellation endpoint and is limited to pre-picker orders; the admin legacy status endpoint does not expose cancellation.
+- Product creation/editing, customer management, picker/rider operations, periodic delivery tracking, customer cancellation and Razorpay full-refund monitoring are implemented. Audit logs and automated refund retry/reconciliation remain future work.
 
 
 ## Admin catalogue management (current phase)
@@ -135,7 +135,7 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Configure all three Razorpay environment variables in the server deployment and register the webhook URL `/api/v1/payments/razorpay/webhook` for `payment.captured`, `order.paid` and `payment.failed`. Never commit live/test secrets.
 - Admin picker/rider assignment and the legacy admin fulfilment transition now reject Razorpay orders until payment is `paid` or `completed`; COD remains eligible at placement.
 - Run `npm test` from `server/` for regression tests covering webhook HMAC validation, exact INR amount checks and the online-payment fulfilment gate. The four pure unit tests pass in an isolated Node test run; full repository install/build and live Razorpay sandbox integration have not been run.
-- This integration still requires sandbox end-to-end testing, deployment configuration, refund automation, webhook delivery monitoring and reconciliation for late/duplicate/exceptional payment states before production use. Razorpay REST API is called with Node built-in `fetch`; no SDK dependency was added.
+- This integration still requires sandbox end-to-end testing, deployment configuration, webhook delivery monitoring and reconciliation for late/duplicate/exceptional payment and refund states before production use. Failed refunds require manual follow-up; automated retries and partial refunds are not implemented. Razorpay REST API is called with Node built-in `fetch`; no SDK dependency was added.
 
 
 ## Customer cancellation and refund operations
@@ -146,3 +146,12 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Razorpay `refund.processed` and `refund.failed` signed webhook events update refund status. The customer order history displays cancellation/refund state and the admin workspace includes a refund-monitoring section.
 - Refund initiation failure or an exceptional database update after the gateway accepted a refund needs support reconciliation. Failed refunds require manual follow-up; partial refunds, retry tooling, refund ledger exports and automated reconciliation are not implemented.
 - Stock is released on cancellation; inventory restore is a sequence of per-product updates rather than a multi-document MongoDB transaction. Monitor exceptional failures and reconcile stock before production.
+
+
+## Customer support tickets (current phase)
+
+- Authenticated customers can create a support ticket with a subject, message and optional order reference using `POST /api/v1/support`; the server verifies that a linked order belongs to the signed-in customer.
+- Customers can list their own tickets with `GET /api/v1/support/mine`. Ticket records include status and the latest admin reply.
+- Admin-only `GET /api/v1/admin/support` lists the bounded support queue with safe customer and order summaries. `PATCH /api/v1/admin/support/:id` updates ticket status (`open`, `in_progress`, `resolved`, `closed`) and the latest reply.
+- The customer Support page and admin Support inbox are available. The current schema stores the latest admin reply rather than a full conversation/audit trail; email/SMS notifications and reply history are future work.
+- The pure Node test suite covers payment security and order cancellation/refund eligibility rules. Six unit tests passed in an isolated Node test run; the complete repository test/install/build and live gateway integration still need to be run in a checked-out deployment environment.
