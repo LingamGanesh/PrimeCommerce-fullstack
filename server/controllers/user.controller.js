@@ -176,11 +176,13 @@ const refreshToken = await generatedRefreshToken(user._id)
 
 
     // 6️⃣ Cookie options (ENV-safe)
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None'
-    }
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
+    };
 
     // 7️⃣ Set cookies
     response.cookie('accessToken', accessToken, cookieOptions)
@@ -217,10 +219,12 @@ const refreshToken = await generatedRefreshToken(user._id)
 export async function logoutController(request, response) {
   try {
     // Clear both tokens
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
     };
 
     response.clearCookie("accessToken", cookieOptions);
@@ -282,7 +286,7 @@ export async function updateUserDetails(request,response){
         let hashPassword = ""
 
         if(password){
-            const salt = await bcryptjs.genSalt(10)
+            const salt = await bcrypt.genSalt(10)
             hashPassword = await bcryptjs.hash(password,salt)
         }
 
@@ -326,11 +330,11 @@ export async function forgotPasswordController(request,response) {
         }
 
         const otp = generatedOtp()
-        const expireTime = new Date() + 60 * 60 * 1000 // 1hr
+        const expireTime = new Date(Date.now() + 60 * 60 * 1000) // 1hr
 
         const update = await UserModel.findByIdAndUpdate(user._id,{
             forgot_password_otp : otp,
-            forgot_password_expiry : new Date(expireTime).toISOString()
+            forgot_password_expiry : expireTime
         })
 
         await sendEmail({
@@ -454,7 +458,7 @@ export async function resetpassword(request,response){
         const salt = await bcrypt.genSalt(10)
         const hashPassword = await bcrypt.hash(newPassword,salt)
 
-        const update = await UserModel.findOneAndUpdate(user._id,{
+        const update = await UserModel.findOneAndUpdate({ _id: user._id },{
             password : hashPassword
         })
 
@@ -496,15 +500,17 @@ export async function refreshToken(request,response){
             })
         }
 
-        const userId = verifyToken?._id
+        const userId = verifyToken?.id
 
-        const newAccessToken = await generatedAccessToken(userId)
+        const newAccessToken = await generateAccessToken(userId)
 
+        const isProduction = process.env.NODE_ENV === "production";
         const cookiesOption = {
-            httpOnly : true,
-            secure : true,
-            sameSite : "None"
-        }
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            path: "/",
+        };
 
         response.cookie('accessToken',newAccessToken,cookiesOption)
 
