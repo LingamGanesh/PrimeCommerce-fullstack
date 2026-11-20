@@ -1,130 +1,117 @@
-import React, { useState } from "react";
-import { FaShoppingCart, FaUserCircle, FaArrowAltCircleLeft } from "react-icons/fa";
-import { IoMdArrowDropupCircle, IoMdArrowDropdownCircle } from "react-icons/io";
-import logo from "../assets/logo.png";
-import Search from "./Search";
+import { useEffect, useState } from "react";
+import { FaShoppingBasket, FaUserCircle, FaChevronDown, FaMapMarkerAlt } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import useMobile from "../hooks/useMobile";
 import { useSelector } from "react-redux";
-import { useEffect } from "react";
 import Axios from "../utils/Axios";
 import { Usermenu } from "./Usermenu";
+import Search from "./Search";
+import logo from "../assets/logo.png";
 
 const Header = () => {
-  const [isMobile] = useMobile();
   const location = useLocation();
   const navigate = useNavigate();
-
-  const [openMenu, setOpenMenu] = useState(false);
   const user = useSelector((state) => state.user);
+  const [openMenu, setOpenMenu] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  useEffect(() => { if (user?._id) Axios.get("/api/v1/cart").then(r => setCartCount(r.data?.data?.itemCount || 0)).catch(() => setCartCount(0)); else setCartCount(0); }, [user?._id, location.pathname]);
-  const isSearchPage = location.pathname === "/search";
 
-  const toggleMenu = () => setOpenMenu((prev) => !prev);
+  useEffect(() => {
+    let active = true;
+    if (!user?._id) {
+      setCartCount(0);
+      return () => { active = false; };
+    }
+    Axios.get("/api/v1/cart")
+      .then((response) => {
+        if (active) setCartCount(response.data?.data?.itemCount || 0);
+      })
+      .catch(() => {
+        if (active) setCartCount(0);
+      });
+    return () => { active = false; };
+  }, [user?._id, location.pathname]);
+
+  useEffect(() => {
+    setOpenMenu(false);
+  }, [location.pathname]);
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
+    <header className="sticky top-0 z-50 border-b border-[#eee9df] bg-white">
+      <div className="mx-auto flex max-w-[1440px] items-center gap-4 px-4 py-3 sm:px-6 lg:gap-8 lg:px-8">
+        <Link to="/" aria-label="Go to homepage" className="flex shrink-0 items-center">
+          <img src={logo} alt="PrimeCommerce" className="h-10 w-auto max-w-[132px] object-contain sm:h-12 sm:max-w-[156px]" />
+        </Link>
 
-      {/* ================= SEARCH PAGE ================= */}
-      {(isSearchPage && isMobile) && (
-        <div className="h-20 max-w-7xl mx-auto px-4 flex items-center gap-3">
-
-          <button onClick={() => navigate(-1)}>
-            <FaArrowAltCircleLeft size={24} />
-          </button>
-
-          <Link to="/">
-            <img src={logo} width={120} alt="logo" />
-          </Link>
-
-          <div className="flex-1">
-            <Search />
-          </div>
-
-          {/* ONLY ICON IN MOBILE */}
-          <button onClick={toggleMenu}>
-            <FaUserCircle size={26} />
+        <div className="hidden min-w-[150px] shrink-0 border-l border-gray-200 pl-5 md:block">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">Delivering to</p>
+          <button type="button" className="mt-1 flex items-center gap-1.5 text-left text-sm font-extrabold text-gray-900" onClick={() => navigate("/profile")}>
+            <FaMapMarkerAlt className="text-[#16833b]" />
+            <span>Your location</span>
+            <FaChevronDown className="text-[10px] text-gray-500" />
           </button>
         </div>
-      )}
 
-      {/* ================= MAIN HEADER ================= */}
-      {!(isSearchPage && isMobile) && (
-        <>
-          <div className="h-20 max-w-7xl mx-auto px-4 flex items-center justify-between">
+        <div className="hidden min-w-0 flex-1 md:block">
+          <Search />
+        </div>
 
-            {/* LOGO */}
-            <Link to="/">
-              <img src={logo} width={160} alt="logo" />
-            </Link>
-
-            {/* SEARCH */}
-            <div className="hidden lg:block w-1/2">
-              <Search />
-            </div>
-
-            {/* RIGHT SIDE */}
-            <div className="flex items-center gap-5">
-
-              {/* ================= DESKTOP USER ================= */}
-              <div className="relative hidden lg:block">
-
+        <div className="ml-auto flex shrink-0 items-center gap-3 sm:gap-5">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenMenu((value) => !value)}
+              aria-expanded={openMenu}
+              aria-label={user?._id ? "Open account menu" : "Login"}
+              className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-gray-700 transition hover:bg-[#f7f7f2]"
+            >
+              <FaUserCircle className="text-xl text-gray-700 sm:text-2xl" />
+              <span className="hidden lg:inline">{user?._id ? "Account" : "Login"}</span>
+              <FaChevronDown className="hidden text-[10px] lg:inline" />
+            </button>
+            {openMenu && (
+              <div className="absolute right-0 top-[calc(100%+12px)] z-[60] min-w-[210px]">
                 {user?._id ? (
-                  <div
-                    onClick={toggleMenu}
-                    className="flex items-center gap-2 cursor-pointer select-none"
-                  >
-                    <FaUserCircle size={22} />
-                    <p>Account</p>
-
-                    {openMenu ? (
-                      <IoMdArrowDropupCircle />
-                    ) : (
-                      <IoMdArrowDropdownCircle />
-                    )}
-                  </div>
+                  <Usermenu />
                 ) : (
-                  <Link to="/login" className="text-gray-700">
-                    Login
-                  </Link>
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-xl">
+                    <p className="mb-3 text-sm font-semibold text-gray-800">Welcome to PrimeCommerce</p>
+                    <Link to="/login" className="block rounded-xl bg-[#176b36] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-[#10572b]">Login / Sign up</Link>
+                  </div>
                 )}
-
               </div>
-
-              {/* ================= MOBILE USER ICON ONLY ================= */}
-              <button
-                className="lg:hidden"
-                onClick={toggleMenu}
-              >
-                <FaUserCircle size={26} />
-              </button>
-
-              {/* CART */}
-              <button onClick={() => navigate("/cart")} className="relative text-gray-700" aria-label="Open shopping cart">
-                <FaShoppingCart size={20} />
-                {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs min-w-5 h-5 px-1 flex items-center justify-center rounded-full">{cartCount}</span>}
-              </button>
-
-            </div>
+            )}
           </div>
 
-          {/* ================= GLOBAL DROPDOWN (ONE PLACE) ================= */}
-          {openMenu && (
-            <div className="absolute right-4 top-20 z-50">
-              {user?._id ? (
-                <Usermenu />
-              ) : (
-                <div className="bg-white shadow-md p-4 rounded-xl">
-                  <Link to="/login" className="text-blue-600 font-medium">
-                    Login to continue
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
+          <button
+            type="button"
+            onClick={() => navigate("/cart")}
+            aria-label={`Open cart, ${cartCount} items`}
+            className="relative flex items-center gap-2 rounded-xl bg-[#176b36] px-3 py-2.5 text-white shadow-sm transition hover:bg-[#10572b] sm:px-4"
+          >
+            <FaShoppingBasket className="text-lg" />
+            <span className="hidden text-sm font-bold sm:inline">Cart</span>
+            {cartCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#f6c945] px-1 text-[10px] font-extrabold text-gray-900">{cartCount}</span>}
+          </button>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100 bg-[#fffdf7] md:hidden">
+        <div className="mx-auto max-w-[1440px] px-4 py-2.5">
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
+            <FaMapMarkerAlt className="text-[#16833b]" />
+            <span>Delivering to</span>
+            <button type="button" onClick={() => navigate("/profile")} className="font-extrabold text-gray-900">Your location <FaChevronDown className="ml-1 inline text-[9px]" /></button>
+          </div>
+          <Search />
+        </div>
+      </div>
+
+      <nav aria-label="Main navigation" className="hidden border-t border-gray-100 bg-[#fffdf7] md:block">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-7 px-6 py-2.5 text-xs font-semibold text-gray-600 lg:px-8">
+          <Link to="/" className={location.pathname === "/" ? "text-[#176b36]" : "transition hover:text-[#176b36]"}>Home</Link>
+          <Link to="/search" className="transition hover:text-[#176b36]">Shop all</Link>
+          <Link to="/orders" className="transition hover:text-[#176b36]">My orders</Link>
+        </div>
+      </nav>
     </header>
   );
 };
