@@ -472,7 +472,7 @@ export async function resetpassword(request,response){
             email,
             password_reset_token_hash: resetTokenHash,
             password_reset_expires_at: { $gt: new Date() }
-        }).select("+password_reset_token_hash +password_reset_expires_at")
+        }).select("+password_reset_token_hash +password_reset_expires_at +tokenVersion")
         if (!user) {
             return response.status(400).json({ message: "Password reset session is invalid or expired. Verify your OTP again.", error: true, success: false })
         }
