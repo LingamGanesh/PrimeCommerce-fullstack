@@ -50,9 +50,7 @@ const Login = () => {
       if (response.data?.success) {
 
         toast.success(response.data.message)
-         localStorage.setItem('accesstoken',response.data.data.accessToken)
-            localStorage.setItem('refreshtoken',response.data.data.refreshToken)
-            const userDetails =  await fetchUserDetails()
+        const userDetails =  await fetchUserDetails()
             dispatch(setUserDetails(userDetails.data))
         navigate(userDetails.data?.role === 'admin' ? '/admin' : userDetails.data?.role === 'picker' ? '/picker' : userDetails.data?.role === 'rider' ? '/rider' : '/')
       }
