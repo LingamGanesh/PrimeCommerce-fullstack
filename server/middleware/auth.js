@@ -2,9 +2,9 @@ import jwt from "jsonwebtoken";
 
 const auth = (req, res, next) => {
   try {
-    const token =
-      req.cookies?.accessToken ||
-      req.headers?.authorization?.split(" ")[1];
+    const authorization = req.headers?.authorization || "";
+    const bearerToken = /^Bearer\\s+(.+)$/i.exec(authorization)?.[1];
+    const token = req.cookies?.accessToken || bearerToken;
 
     if (!token) {
       return res.status(401).json({
@@ -23,7 +23,7 @@ const auth = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
     req.userId = decoded.id;
     next();
   } catch (error) {
