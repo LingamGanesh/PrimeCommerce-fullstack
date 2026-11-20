@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
+      select: false,
     },
     avatar: {
       type: String,
@@ -29,6 +30,7 @@ const userSchema = new mongoose.Schema(
     refresh_token: {
       type: String,
       default: "",
+      select: false,
     },
     verify_email: {
       type: Boolean,
@@ -64,6 +66,27 @@ const userSchema = new mongoose.Schema(
     forgot_password_otp: {
       type: String,
       default: "",
+      select: false,
+    },
+    forgot_password_otp_hash: {
+      type: String,
+      default: "",
+      select: false,
+    },
+    forgot_password_attempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    email_verification_token_hash: {
+      type: String,
+      default: "",
+      select: false,
+    },
+    email_verification_expires_at: {
+      type: Date,
+      default: null,
+      select: false,
     },
     forgot_password_expiry: {
       type: Date,
