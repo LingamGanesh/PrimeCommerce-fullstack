@@ -444,7 +444,11 @@ export async function refreshToken(request,response){
             return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
         }
 
-        const decoded = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
+        const refreshSecret = process.env.SECRET_KEY_REFRESH_TOKEN || process.env.JWT_SECRET;
+        if (!refreshSecret) {
+            return response.status(500).json({ message: "Refresh-token secret is not configured", error: true, success: false });
+        }
+        const decoded = jwt.verify(refreshToken, refreshSecret);
         const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshToken }).select("+refresh_token");
         if (!user || user.status !== "active") {
             return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
