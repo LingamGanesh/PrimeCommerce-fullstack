@@ -7,6 +7,7 @@ let connectionPromise;
 
 async function connectDB() {
   if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (mongoose.connection.readyState !== 2) connectionPromise = null;
   if (!process.env.MONGODB_URI) {
     throw new Error("Please provide MONGODB_URI in the deployment environment");
   }
