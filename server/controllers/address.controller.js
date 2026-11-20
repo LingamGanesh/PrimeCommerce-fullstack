@@ -17,15 +17,20 @@ export async function createAddress(req, res) {
   try {
     const payload = {};
     for (const field of fields) payload[field] = req.body[field];
+    const maxLengths = { address_line: 250, city: 80, state: 80, pincode: 6, country: 80 };
     for (const field of ["address_line", "city", "state", "pincode", "country"]) {
       if (typeof payload[field] !== "string" || !payload[field].trim()) {
         return res.status(400).json({ success: false, error: true, message: field + " is required" });
       }
       payload[field] = payload[field].trim();
+      if (payload[field].length > maxLengths[field]) {
+        return res.status(400).json({ success: false, error: true, message: field + " is too long" });
+      }
     }
     const mobile = String(payload.mobile ?? "").replace(/\D/g, "");
-    if (!/^\d{10}$/.test(mobile) || !/^\d{6}$/.test(payload.pincode)) {
-      return res.status(400).json({ success: false, error: true, message: "Enter a valid 10-digit mobile number and 6-digit pincode" });
+    // This checkout currently accepts Indian six-digit PIN codes and mobile numbers.
+    if (!/^[6-9]\d{9}$/.test(mobile) || !/^[1-9]\d{5}$/.test(payload.pincode)) {
+      return res.status(400).json({ success: false, error: true, message: "Enter a valid Indian mobile number (10 digits) and PIN code (6 digits)" });
     }
     payload.mobile = Number(mobile);
     payload.userId = req.userId;
