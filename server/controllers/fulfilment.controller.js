@@ -102,6 +102,7 @@ export async function verifyDeliveryOtp(req, res) {
       return res.status(400).json({ success: false, message: `Incorrect OTP. ${5 - order.deliveryOtpAttempts} attempts remaining.` });
     }
     order.delivery_status = "delivered";
+    if (order.paymentMethod === "COD") order.payment_status = "paid";
     order.deliveredAt = new Date();
     order.riderLocation = { lat: null, lng: null, updatedAt: null };
     order.deliveryOtpHash = null;
