@@ -12,12 +12,13 @@ const passwordOtpLimiter = createRateLimiter({ name: "password-otp", windowMs: 1
 const passwordResetLimiter = createRateLimiter({ name: "password-reset", windowMs: 15 * 60 * 1000, max: 10 });
 const emailVerificationLimiter = createRateLimiter({ name: "email-verification", windowMs: 60 * 60 * 1000, max: 10 });
 const refreshTokenLimiter = createRateLimiter({ name: "refresh-token", windowMs: 15 * 60 * 1000, max: 20 });
+const avatarUploadLimiter = createRateLimiter({ name: "avatar-upload", windowMs: 60 * 60 * 1000, max: 10 });
 
 userRouter.post('/register', registrationLimiter, registerUserController);
 userRouter.post('/verify-email',emailVerificationLimiter,verifyEmailController)
 userRouter.post('/login',loginLimiter,loginController)
 userRouter.post('/logout', auth, logoutController)
-userRouter.put('/upload-avatar',auth,upload.single('avatar'),uploadAvatar)
+userRouter.put('/upload-avatar',auth,avatarUploadLimiter,upload.single('avatar'),uploadAvatar)
 userRouter.put('/update-user',auth,updateUserDetails)
 userRouter.post('/forgot-password', forgotPasswordLimiter, forgotPasswordController)
 userRouter.put('/verify-forgot-password',passwordOtpLimiter,verifyForgotPasswordOtp)
