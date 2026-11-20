@@ -52,8 +52,8 @@ export default function AdminCatalog({ products = [], onRefresh }) {
     event.preventDefault(); if (!categoryName.trim()) return toast.error("Enter category name");
     setSaving(true);
     try {
-      if (editingCategory) await Axios.patch(`/api/v1/catalog/admin/categories/${editingCategory}`, { name: categoryName.trim(), image: categoryImage });
-      else await Axios.post("/api/v1/catalog/admin/categories", { name: categoryName.trim(), image: categoryImage });
+      if (editingCategory) await Axios.patch(`/api/v1/admin/categories/${editingCategory}`, { name: categoryName.trim(), image: categoryImage });
+      else await Axios.post("/api/v1/admin/categories", { name: categoryName.trim(), image: categoryImage });
       toast.success(editingCategory ? "Category updated" : "Category added"); setCategoryName(""); setCategoryImage(""); setEditingCategory(null); await loadTaxonomy();
     } catch (error) { toast.error(error.response?.data?.message || "Could not save category"); }
     finally { setSaving(false); }
@@ -62,14 +62,14 @@ export default function AdminCatalog({ products = [], onRefresh }) {
   const saveSubcategory = async (event) => {
     event.preventDefault(); if (!subName.trim() || !subCategoryId) return toast.error("Enter a name and choose a parent category");
     setSaving(true);
-    try { await Axios.post("/api/v1/catalog/admin/subcategories", { name: subName.trim(), categoryId: [subCategoryId] }); toast.success("Subcategory added"); setSubName(""); await loadTaxonomy(); }
+    try { await Axios.post("/api/v1/admin/subcategories", { name: subName.trim(), categoryId: [subCategoryId] }); toast.success("Subcategory added"); setSubName(""); await loadTaxonomy(); }
     catch (error) { toast.error(error.response?.data?.message || "Could not add subcategory"); }
     finally { setSaving(false); }
   };
 
   const archive = async (product) => {
     if (!window.confirm(`Unpublish ${product.name}? It will no longer appear in the customer catalogue.`)) return;
-    try { await Axios.delete(`/api/v1/catalog/admin/products/${product._id}`); toast.success("Product unpublished"); await onRefresh?.(); }
+    try { await Axios.delete(`/api/v1/admin/products/${product._id}`); toast.success("Product unpublished"); await onRefresh?.(); }
     catch (error) { toast.error(error.response?.data?.message || "Could not unpublish product"); }
   };
 
