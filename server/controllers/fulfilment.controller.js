@@ -20,7 +20,7 @@ export async function listPickerOrders(req, res) {
 
 export async function updatePickerOrder(req, res) {
   try {
-    if (!mongoose.isValidObjectId(req.params.id) || req.body.delivery_status !== "packed") {
+    if (!mongoose.isValidObjectId(req.params.id) || req.body?.delivery_status !== "packed") {
       return res.status(400).json({ success: false, message: "Picker can only mark an assigned order as packed" });
     }
     const order = await OrderModel.findOneAndUpdate(
@@ -52,7 +52,7 @@ export async function updateRiderOrder(req, res) {
       picked_up: { next: "out_for_delivery", from: "picked_up" },
       out_for_delivery: { next: "delivered", from: "out_for_delivery" }
     };
-    const transition = transitions[req.body.delivery_status];
+    const transition = transitions[req.body?.delivery_status];
     if (!mongoose.isValidObjectId(req.params.id) || !transition) {
       return res.status(400).json({ success: false, message: "Unsupported delivery update" });
     }
