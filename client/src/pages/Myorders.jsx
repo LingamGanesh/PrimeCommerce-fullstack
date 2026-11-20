@@ -16,6 +16,7 @@ export default function Myorders() {
   const [deliveryOtp, setDeliveryOtp] = useState(null);
   const [otpLoading, setOtpLoading] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState("");
+  const [retryingOrder, setRetryingOrder] = useState("");
 
   useEffect(() => {
     Axios.get("/api/v1/orders/mine")
@@ -58,6 +59,62 @@ export default function Myorders() {
     } finally { setOtpLoading(false); }
   };
 
+  const retryPayment = async (order) => {
+    setRetryingOrder(order.id);
+    try {
+      if (!window.Razorpay) {
+        await new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-razorpay-checkout]');
+          if (existing) {
+            existing.addEventListener("load", resolve, { once: true });
+            existing.addEventListener("error", () => reject(new Error("Unable to load payment checkout")), { once: true });
+            return;
+          }
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.async = true;
+          script.dataset.razorpayCheckout = "true";
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Unable to load payment checkout"));
+          document.body.appendChild(script);
+        });
+      }
+      if (!window.Razorpay) throw new Error("Payment checkout is unavailable");
+      const response = await Axios.post(`/api/v1/payments/razorpay/${order.id}/retry`);
+      const paymentOrder = response.data?.data;
+      if (!paymentOrder?.keyId || !paymentOrder?.razorpayOrderId) throw new Error("Payment retry details are incomplete");
+      const checkout = new window.Razorpay({
+        key: paymentOrder.keyId,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency,
+        name: "PrimeCommerce",
+        description: `Payment for order ${paymentOrder.orderId}`,
+        order_id: paymentOrder.razorpayOrderId,
+        prefill: { contact: paymentOrder.contact || "" },
+        theme: { color: "#15803d" },
+        handler: async (gatewayResponse) => {
+          try {
+            const verified = await Axios.post("/api/v1/payments/razorpay/verify", gatewayResponse);
+            toast.success(verified.data?.message || "Payment response verified");
+            const refreshed = await Axios.get("/api/v1/orders/mine");
+            setOrders(refreshed.data?.data || []);
+          } catch (error) {
+            toast.error(error.response?.data?.message || "Payment verification failed. Contact support before retrying.");
+          } finally { setRetryingOrder(""); }
+        },
+        modal: { ondismiss: () => setRetryingOrder("") }
+      });
+      checkout.on("payment.failed", (event) => {
+        toast.error(event.error?.description || "Payment attempt failed. You can retry while the reservation is active.");
+        setRetryingOrder("");
+      });
+      checkout.open();
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Unable to retry payment");
+      setRetryingOrder("");
+    }
+  };
+
   const cancelOrder = async (order) => {
     if (!window.confirm(`Cancel order ${order.orderId}? ${order.paymentMethod === "RAZORPAY" ? "A full refund will be requested." : "Reserved stock will be released."}`)) return;
     setCancellingOrder(order.id);
@@ -92,6 +149,7 @@ export default function Myorders() {
             <div className="mt-4 space-y-2">{order.items.map((item,index) => <div key={String(item.productId) + index} className="flex justify-between gap-3 text-sm"><span className="text-gray-600">{item.name} × {item.quantity}</span><strong>₹{Number(item.lineTotal || 0).toFixed(2)}</strong></div>)}</div>
             <div className="mt-4 flex flex-wrap justify-between gap-3 border-t pt-3 text-sm"><span className="text-gray-500">{order.paymentMethod === "RAZORPAY" ? "Razorpay" : "Cash on Delivery"} · Payment {order.paymentStatus}{order.refundStatus && order.refundStatus !== "not_required" ? ` · Refund ${order.refundStatus}` : ""}</span><strong>Total ₹{Number(order.total || 0).toFixed(2)}</strong></div>
             <p className="mt-2 text-xs text-gray-500">Deliver to: {order.address?.address_line}, {order.address?.city}, {order.address?.state} - {order.address?.pincode}</p>
+            {order.paymentMethod === "RAZORPAY" && ["pending", "authorized"].includes(order.paymentStatus) && order.deliveryStatus === "processing" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-xs text-amber-900">Your online payment is not confirmed yet. You can retry using the existing payment reservation while it remains active.</p><button disabled={retryingOrder === order.id} onClick={() => retryPayment(order)} className="mt-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{retryingOrder === order.id ? "Opening secure checkout…" : "Retry payment"}</button></div>}
             {order.deliveryStatus === "processing" && <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-gray-500">{order.paymentMethod === "RAZORPAY" && !["paid", "completed"].includes(order.paymentStatus) ? "Online payment is pending; cancellation becomes available after payment is confirmed." : "Cancellation is available before picker assignment."}</span>{(order.paymentMethod !== "RAZORPAY" || ["paid", "completed"].includes(order.paymentStatus)) && <button disabled={cancellingOrder === order.id} onClick={() => cancelOrder(order)} className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">{cancellingOrder === order.id ? "Cancelling…" : "Cancel order"}</button>}</div>}
             {order.refundStatus && order.refundStatus !== "not_required" && <p className="mt-2 text-xs font-medium text-indigo-700">Refund status: {order.refundStatus}{order.refundAmount ? ` · ₹${Number(order.refundAmount).toFixed(2)}` : ""}</p>}
             {activeTrackingStatuses.includes(order.deliveryStatus) && <div className="mt-4"><button onClick={() => openTracking(order.id)} className="rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">{trackingOrderId === order.id ? "Hide live tracking" : "Track delivery"}</button>
