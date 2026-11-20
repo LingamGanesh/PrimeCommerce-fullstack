@@ -74,6 +74,54 @@ const restoreOrderStock = async (order, session) => {
   }
 };
 
+async function reconcileRazorpayRefund(refund, eventName) {
+  if (!refund?.id || !refund?.payment_id) return null;
+  const failed = eventName === "refund.failed";
+  if (failed) {
+    await OrderModel.updateOne(
+      { payment_id: refund.payment_id, refund_status: { $in: ["initiating", "pending", "failed"] }, inventoryReleased: false },
+      { $set: { refund_status: "failed", refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100 } }
+    );
+    return;
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const order = await OrderModel.findOneAndUpdate(
+        {
+          payment_id: refund.payment_id,
+          paymentMethod: "RAZORPAY",
+          payment_status: "paid",
+          delivery_status: "processing",
+          inventoryReleased: false,
+          refund_status: { $in: ["initiating", "pending", "failed"] }
+        },
+        {
+          $set: {
+            refund_status: "processed",
+            refund_id: refund.id,
+            refund_amount: Number(refund.amount || 0) / 100,
+            delivery_status: "cancelled",
+            cancelledAt: new Date(),
+            inventoryReleased: true
+          }
+        },
+        { new: true, session }
+      );
+      if (order) {
+        await restoreOrderStock(order, session);
+        return;
+      }
+      const existing = await OrderModel.findOne({ payment_id: refund.payment_id }).session(session);
+      if (existing?.inventoryReleased && existing?.refund_id === refund.id && existing?.delivery_status === "cancelled") return;
+      throw new Error("Refund webhook could not be reconciled with an active cancellation");
+    });
+  } finally {
+    await session.endSession();
+  }
+}
+
 export async function createRazorpayOrder(req, res) {
   const session = await mongoose.startSession();
   try {
@@ -157,10 +205,8 @@ export async function handleRazorpayWebhook(req, res) {
     const event = JSON.parse(req.body.toString("utf8"));
     if (["refund.processed", "refund.failed"].includes(event.event)) {
       const refund = event.payload?.refund?.entity;
-      if (!refund?.payment_id) return res.json({ success: true, ignored: true });
-      const refundOrder = await OrderModel.findOne({ payment_id: refund.payment_id, refund_status: { $in: ["initiating", "pending", "failed"] } });
-      if (!refundOrder) return res.json({ success: true, ignored: true });
-      await OrderModel.updateOne({ _id: refundOrder._id, refund_status: { $in: ["initiating", "pending", "failed"] } }, { $set: { refund_status: event.event === "refund.processed" ? "processed" : "failed", refund_id: refund.id || refundOrder.refund_id } });
+      if (!refund?.payment_id || !refund?.id) return res.json({ success: true, ignored: true });
+      await reconcileRazorpayRefund(refund, event.event);
       return res.json({ success: true });
     }
     if (!["payment.captured", "order.paid", "payment.failed"].includes(event.event)) return res.json({ success: true, ignored: true });
