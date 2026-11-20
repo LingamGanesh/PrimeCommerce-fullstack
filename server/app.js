@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import helmet from "helmet";
@@ -18,19 +17,15 @@ import paymentsRouter from "./routes/payments.routes.js";
 import supportRouter from "./routes/support.routes.js";
 import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers/payments.controller.js";
 
-dotenv.config();
-
 const app = express();
 
-// Production deployments run behind one trusted hosting proxy (Vercel/Render).
-// Enable Express IP resolution so account/IP rate limits use the client address.
 if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
 if (process.env.NODE_ENV === "production") {
   const requiredSecrets = ["SECRET_KEY_ACCESS_TOKEN", "SECRET_KEY_REFRESH_TOKEN"];
   for (const name of requiredSecrets) {
     if (!process.env[name] || process.env[name].length < 32) {
-      throw new Error(`${name} must be configured with at least 32 characters in production`);
+      throw new Error(\`\${name} must be configured with at least 32 characters in production\`);
     }
   }
   if (process.env.SECRET_KEY_ACCESS_TOKEN === process.env.SECRET_KEY_REFRESH_TOKEN) {
@@ -59,8 +54,24 @@ app.use(cors({
   }
 }));
 
-// Connect once per warm function instance; connectDB reuses an active Mongoose connection.
-app.use(async (req, res, next) => {
+app.use(cookieParser());
+app.use(morgan("combined"));
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
+// Liveness is independent of MongoDB; use /readyz for database readiness.
+app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok" }));
+
+app.get("/readyz", (_req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  return res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? "ok" : "unavailable",
+    database: databaseReady ? "connected" : "disconnected"
+  });
+});
+
+app.get("/", (_req, res) => res.json({ message: "Server is running" }));
+
+app.use(async (_req, res, next) => {
   try {
     await connectDB();
     next();
@@ -72,26 +83,12 @@ app.use(async (req, res, next) => {
 
 // Razorpay requires the exact raw request body for webhook signature verification.
 app.post("/api/v1/payments/razorpay/webhook", express.raw({ type: "application/json" }), handleRazorpayWebhook);
-
 app.use(express.json());
-app.use(cookieParser());
-app.use(morgan("combined"));
-app.use(helmet({ crossOriginResourcePolicy: false }));
 
-app.get("/", (req, res) => res.json({ message: "Server is running" }));
-app.get("/healthz", (req, res) => {
-  const databaseReady = mongoose.connection.readyState === 1;
-  return res.status(databaseReady ? 200 : 503).json({
-    status: databaseReady ? "ok" : "unavailable",
-    database: databaseReady ? "connected" : "disconnected"
-  });
-});
-
-// Protect the reservation cleanup endpoint; Vercel Cron sends CRON_SECRET as a Bearer token.
 app.get("/api/cron/expire-reservations", async (req, res) => {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return res.status(503).json({ success: false, message: "Reservation cleanup scheduler is not configured" });
-  if (req.headers.authorization !== `Bearer ${cronSecret}`) {
+  if (req.headers.authorization !== \`Bearer \${cronSecret}\`) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
   try {
