@@ -230,6 +230,9 @@ export async function logoutController(request, response) {
 
     response.clearCookie("accessToken", cookieOptions);
     response.clearCookie("refreshToken", cookieOptions);
+    if (request.userId) {
+      await UserModel.findByIdAndUpdate(request.userId, { refresh_token: "" });
+    }
 
     return response.status(200).json({
       message: "Logged out successfully",
@@ -436,56 +439,34 @@ export async function resetpassword(request,response){
 //refresh token controler
 export async function refreshToken(request,response){
     try {
-        const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
-
-        if(!refreshToken){
-            return response.status(401).json({
-                message : "Invalid token",
-                error  : true,
-                success : false
-            })
+        const refreshToken = request.cookies.refreshToken || request.headers?.authorization?.split(" ")[1];
+        if (!refreshToken) {
+            return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
         }
 
-        const verifyToken = await jwt.verify(refreshToken,process.env.SECRET_KEY_REFRESH_TOKEN)
-
-        if(!verifyToken){
-            return response.status(401).json({
-                message : "token is expired",
-                error : true,
-                success : false
-            })
+        const decoded = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
+        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshToken }).select("+refresh_token");
+        if (!user || user.status !== "active") {
+            return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
         }
 
-        const userId = verifyToken?._id
-
-        const newAccessToken = await generateAccessToken(userId)
-
+        const newAccessToken = await generateAccessToken(user._id);
         const isProduction = process.env.NODE_ENV === "production";
-        const cookiesOption = {
+        response.cookie("accessToken", newAccessToken, {
             httpOnly: true,
             secure: isProduction,
             sameSite: isProduction ? "none" : "lax",
             path: "/"
-        }
-
-        response.cookie('accessToken',newAccessToken,cookiesOption)
+        });
 
         return response.json({
-            message : "New Access token generated",
-            error : false,
-            success : true,
-            data : {
-                accessToken : newAccessToken
-            }
-        })
-
-
+            message: "New access token generated",
+            error: false,
+            success: true,
+            data: { accessToken: newAccessToken }
+        });
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        return response.status(401).json({ message: "Refresh token is invalid or expired", error: true, success: false });
     }
 }
 
