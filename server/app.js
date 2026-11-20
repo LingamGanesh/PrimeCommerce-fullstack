@@ -34,8 +34,9 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "")
-  .split(",")
+const allowedOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_URLS]
+  .filter(Boolean)
+  .flatMap(value => value.split(","))
   .map(origin => origin.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
