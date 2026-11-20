@@ -7,65 +7,38 @@ import RegisterPage from "../pages/RegisterPage";
 import ForgotPage from "../pages/ForgotPage";
 import VerificationOtpPage from "../pages/VerificationOtpPage";
 import ResetPassword from "../pages/ResetPassword";
-import  Dashboard  from "../layout/Dashboard";
-import  Profile  from "../pages/Profile";
+import Dashboard from "../layout/Dashboard";
+import Profile from "../pages/Profile";
 import Myorders from "../pages/Myorders";
 import Address from "../pages/Address";
 import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
 
 const router = createBrowserRouter([
-    {
-      path:'/',  
-      element:<App/>,
-      children:[
-        {
-        path:'',
-        element:<Home/>
-      },
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      { path: "", element: <Home /> },
+      { path: "search", element: <SearchPage /> },
+      { path: "cart", element: <Cart /> },
+      { path: "checkout", element: <Checkout /> },
+      { path: "login", element: <LoginPage /> },
+      { path: "register", element: <RegisterPage /> },
+      { path: "forgot-password", element: <ForgotPage /> },
+      { path: "verification-page", element: <VerificationOtpPage /> },
+      { path: "reset-password", element: <ResetPassword /> },
       {
-        path:'search',
-        element:<SearchPage/>
-      },
-      {
-        path:'login',
-        element:<LoginPage/>
-      },
-      {
-        path:'register',
-      element:<RegisterPage/>
-      },
-      {
-        path:'forgot-password',
-        element:<ForgotPage />
-      },
-      {
-        path:'verification-page',
-        element:<VerificationOtpPage/>
-      },
-      {
-        path:'reset-password',
-        element:<ResetPassword/>
-      },
-      {
-        path:'dashboard',
-        element:<Dashboard/>,
-        children :[
-          {
-            path:'profile',
-            element:<Profile/>
-          },
-          {
-            path:'myorders',
-            element:<Myorders/>
-          },{
-            path:'address',
-            element:<Address/>
-          }
+        path: "dashboard",
+        element: <Dashboard />,
+        children: [
+          { path: "profile", element: <Profile /> },
+          { path: "myorders", element: <Myorders /> },
+          { path: "address", element: <Address /> }
         ]
       }
-      ]
-    }
-])
+    ]
+  }
+]);
 
-export default router
+export default router;
