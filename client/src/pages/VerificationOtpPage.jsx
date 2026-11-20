@@ -11,11 +11,10 @@ const VerificationOtpPage = () => {
   const location = useLocation()
   const inputRef = useRef([])
 
+  const email = location?.state?.email
   useEffect(() => {
-    if (!location?.state?.email) {
-      navigate('/forgot-password')
-    }
-  }, [])
+    if (!email) navigate("/forgot-password", { replace: true })
+  }, [email, navigate])
 
   const [data, setData] = useState(['', '', '', '', '', ''])
 
