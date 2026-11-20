@@ -157,7 +157,7 @@ export default function AdminDashboard() {
   };
 
   const signOut = async () => {
-    try { await Axios.get("/api/user/logout"); } catch { /* Clear the local session even if the API is unavailable. */ }
+    try { await Axios.post("/api/user/logout"); } catch { /* Clear the local session even if the API is unavailable. */ }
     dispatch(logout());
     localStorage.clear();
     navigate("/login", { replace: true });
@@ -173,7 +173,7 @@ export default function AdminDashboard() {
   return <div className="min-h-screen bg-slate-50 -m-4 sm:-m-6 lg:-m-8">
     <div className="flex min-h-screen">
       <aside className="hidden md:flex w-64 shrink-0 flex-col bg-slate-950 text-white p-5">
-        <div className="flex items-center gap-3 px-2 py-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-lime-400 text-xl font-black text-slate-950">b</div><div><p className="font-extrabold tracking-tight">blinkit</p><p className="text-xs text-slate-400">Operations console</p></div></div>
+        <div className="flex items-center gap-3 px-2 py-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-lime-400 text-sm font-black text-slate-950">PC</div><div><p className="font-extrabold tracking-tight">PrimeCommerce</p><p className="text-xs text-slate-400">Operations console</p></div></div>
         <p className="mt-10 px-3 text-[10px] font-bold uppercase tracking-[.2em] text-slate-500">Workspace</p>
         <nav className="mt-3 space-y-1">{navItems.map((item) => <button key={item.id} onClick={() => setSection(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${section === item.id ? "bg-lime-400 text-slate-950" : "text-slate-300 hover:bg-white/10"}`}><span className="text-lg">{item.icon}</span>{item.label}</button>)}</nav>
         <div className="mt-auto rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-sm font-semibold">Admin access</p><p className="mt-1 text-xs leading-5 text-slate-400">This workspace is restricted to verified administrator accounts.</p><button onClick={signOut} className="mt-4 w-full rounded-lg border border-white/15 px-3 py-2 text-sm hover:bg-white/10">Sign out</button></div>
