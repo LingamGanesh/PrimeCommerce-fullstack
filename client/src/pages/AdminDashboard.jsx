@@ -127,16 +127,6 @@ export default function AdminDashboard() {
     finally { setBusy(""); }
   };
 
-  const updateOrder = async (orderId, delivery_status) => {
-    setBusy(orderId);
-    try {
-      await Axios.patch(`/api/v1/admin/orders/${orderId}/status`, { delivery_status });
-      toast.success("Order status updated");
-      await loadData();
-    } catch (error) { toast.error(error.response?.data?.message || "Order update failed"); }
-    finally { setBusy(""); }
-  };
-
   const signOut = () => { dispatch(logout()); localStorage.clear(); navigate("/login"); };
   const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }, { id: "fulfilment", label: "Picker & rider", icon: "⇢" }];
   const metrics = [
