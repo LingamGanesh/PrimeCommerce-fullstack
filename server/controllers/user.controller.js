@@ -517,7 +517,7 @@ export async function userDetails(req, res) {
     }
 
     const user = await UserModel.findById(userId).select(
-      "-password -refresh_token"
+      "name email mobile avatar verify_email last_login_date status address_details shopping_cart orderHistory role createdAt updatedAt"
     );
 
     if (!user) {
