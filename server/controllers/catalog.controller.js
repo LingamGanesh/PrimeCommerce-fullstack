@@ -247,7 +247,7 @@ export async function createSubCategory(req, res) {
     if (!name || name.length > 100 || !Array.isArray(categoryId) || !categoryId.length || categoryId.some(id => !mongoose.isValidObjectId(id))) {
       return res.status(400).json({ success: false, error: true, message: "Subcategory name and at least one category are required" });
     }
-    const validCount = await CategoryModel.countDocuments({ _id: { $in: categoryId } });
+    const validCount = await CategoryModel.countDocuments({ _id: { $in: categoryId }, isActive: { $ne: false } });
     if (validCount !== new Set(categoryId.map(String)).size) {
       return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
     }
