@@ -90,8 +90,18 @@ async function reconcileRazorpayRefund(refund, eventName) {
   const failed = eventName === "refund.failed";
   if (failed) {
     await OrderModel.updateOne(
-      { payment_id: refund.payment_id, refund_status: { $in: ["initiating", "pending", "failed"] }, inventoryReleased: false },
-      { $set: { refund_status: "failed", refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100 } }
+      {
+        payment_id: refund.payment_id,
+        paymentMethod: "RAZORPAY",
+        refund_status: { $in: ["initiating", "pending", "failed"] }
+      },
+      {
+        $set: {
+          refund_status: "failed",
+          refund_id: refund.id,
+          refund_amount: Number(refund.amount || 0) / 100
+        }
+      }
     );
     return;
   }
@@ -125,7 +135,14 @@ async function reconcileRazorpayRefund(refund, eventName) {
         return;
       }
       const existing = await OrderModel.findOne({ payment_id: refund.payment_id }).session(session);
-      if (existing?.inventoryReleased && existing?.refund_id === refund.id && existing?.delivery_status === "cancelled") return;
+      if (existing?.inventoryReleased && existing?.refund_id === refund.id && existing?.delivery_status === "cancelled") {
+        await OrderModel.updateOne(
+          { _id: existing._id, refund_id: refund.id, inventoryReleased: true, delivery_status: "cancelled" },
+          { $set: { refund_status: "processed", refund_amount: Number(refund.amount || 0) / 100 } },
+          { session }
+        );
+        return;
+      }
       throw new Error("Refund webhook could not be reconciled with an active cancellation");
     });
   } finally {
