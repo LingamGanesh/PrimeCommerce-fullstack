@@ -1,19 +1,25 @@
 import { Router } from 'express';
 import { logoutController,loginController,registerUserController ,verifyEmailController,uploadAvatar, updateUserDetails, forgotPasswordController, verifyForgotPasswordOtp, resetpassword, refreshToken, userDetails } from '../controllers/user.controller.js';
 import auth from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
 import upload from '../middleware/multer.js';
 
 const userRouter = Router();
+const loginLimiter = createRateLimiter({ name: "login", windowMs: 15 * 60 * 1000, max: 10 });
+const registrationLimiter = createRateLimiter({ name: "register", windowMs: 60 * 60 * 1000, max: 5 });
+const forgotPasswordLimiter = createRateLimiter({ name: "forgot-password", windowMs: 60 * 60 * 1000, max: 3 });
+const passwordOtpLimiter = createRateLimiter({ name: "password-otp", windowMs: 15 * 60 * 1000, max: 10 });
+const passwordResetLimiter = createRateLimiter({ name: "password-reset", windowMs: 15 * 60 * 1000, max: 10 });
 
-userRouter.post('/register', registerUserController);
+userRouter.post('/register', registrationLimiter, registerUserController);
 userRouter.post('/verify-email',verifyEmailController)
-userRouter.post('/login',loginController)
+userRouter.post('/login',loginLimiter,loginController)
 userRouter.get('/logout', auth, logoutController)
 userRouter.put('/upload-avatar',auth,upload.single('avatar'),uploadAvatar)
 userRouter.put('/update-user',auth,updateUserDetails)
-userRouter.post('/forgot-password', forgotPasswordController)
-userRouter.put('/verify-forgot-password',verifyForgotPasswordOtp)
-userRouter.put('/reset-password',resetpassword)
+userRouter.post('/forgot-password', forgotPasswordLimiter, forgotPasswordController)
+userRouter.put('/verify-forgot-password',passwordOtpLimiter,verifyForgotPasswordOtp)
+userRouter.put('/reset-password',passwordResetLimiter,resetpassword)
 userRouter.post('/refresh-token',refreshToken)
 userRouter.get('/user-details',auth,userDetails)
 export default userRouter;
