@@ -8,6 +8,7 @@ import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
+import { createHash, timingSafeEqual } from "node:crypto"
 import generateAccessToken from '../utils/generatedAccessToken.js';
 
 
@@ -334,115 +335,108 @@ export async function updateUserDetails(request,response){
 }
 
 //forgot password not login
-export async function forgotPasswordController(request,response) {
-    try {
-        const { email } = request.body 
+export async function forgotPasswordController(request, response) {
+  try {
+    const email = String(request.body?.email || "").trim().toLowerCase();
+    if (!email) return response.status(400).json({ message: "Email is required", error: true, success: false });
 
-        const user = await UserModel.findOne({ email: String(email).trim().toLowerCase() }).select("+forgot_password_otp +forgot_password_expiry")
+    const user = await UserModel.findOne({ email }).select("+forgot_password_last_sent_at");
+    // Use the same response for known and unknown email addresses to reduce account enumeration.
+    if (!user) return response.json({ message: "If the account exists, a reset code has been sent.", error: false, success: true });
 
-        if(!user){
-            return response.status(400).json({
-                message : "Email not available",
-                error : true,
-                success : false
-            })
-        }
-
-        const otp = generatedOtp()
-        const expireTime = new Date(Date.now() + 60 * 60 * 1000);
-
-        await UserModel.findByIdAndUpdate(user._id, {
-            forgot_password_otp: otp,
-            forgot_password_expiry: expireTime,
-            passwordResetVerifiedUntil: null
-        })
-
-        await sendEmail({
-            sendTo : email,
-            subject : "Forgot password from Binkeyit",
-            html : forgotPasswordTemplate({
-                name : user.name,
-                otp : otp
-            })
-        })
-
-        return response.json({
-            message : "check your email",
-            error : false,
-            success : true
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+    const now = new Date();
+    if (user.forgot_password_last_sent_at && now - user.forgot_password_last_sent_at < 60 * 1000) {
+      return response.status(429).json({ message: "Please wait one minute before requesting another code.", error: true, success: false });
     }
+
+    const otp = generatedOtp();
+    const otpHash = createHash("sha256").update(otp).digest("hex");
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+    await UserModel.updateOne({ _id: user._id }, {
+      $set: {
+        forgot_password_otp: otpHash,
+        forgot_password_expiry: expiresAt,
+        forgot_password_otp_attempts: 0,
+        forgot_password_last_sent_at: now,
+        passwordResetVerifiedUntil: null
+      }
+    });
+
+    try {
+      await sendEmail({
+        sendTo: email,
+        subject: "PrimeCommerce password reset code",
+        html: forgotPasswordTemplate({ name: user.name, otp })
+      });
+    } catch (emailError) {
+      await UserModel.updateOne({ _id: user._id, forgot_password_otp: otpHash }, {
+        $set: { forgot_password_otp: "", forgot_password_expiry: null }
+      });
+      throw emailError;
+    }
+
+    return response.json({ message: "If the account exists, a reset code has been sent.", error: false, success: true });
+  } catch (error) {
+    console.error("Password reset email failed:", error.message);
+    return response.status(503).json({ message: "Unable to send a password reset code right now.", error: true, success: false });
+  }
 }
 
 
 //verify forgot password otp
-export async function verifyForgotPasswordOtp(request,response){
-    try {
-        const { email , otp }  = request.body
-
-        if(!email || !otp){
-            return response.status(400).json({
-                message : "Provide required field email, otp.",
-                error : true,
-                success : false
-            })
-        }
-
-        const user = await UserModel.findOne({ email: String(email).trim().toLowerCase() }).select("+forgot_password_otp +forgot_password_expiry")
-
-        if(!user){
-            return response.status(400).json({
-                message : "Email not available",
-                error : true,
-                success : false
-            })
-        }
-
-        if (!user.forgot_password_expiry || user.forgot_password_expiry <= new Date()) {
-            return response.status(400).json({
-                message : "Otp is expired",
-                error : true,
-                success : false
-            })
-        }
-
-        if(otp !== user.forgot_password_otp){
-            return response.status(400).json({
-                message : "Invalid otp",
-                error : true,
-                success : false
-            })
-        }
-
-        //if otp is not expired
-        //otp === user.forgot_password_otp
-
-        const updateUser = await UserModel.findByIdAndUpdate(user._id, {
-            forgot_password_otp: "",
-            forgot_password_expiry: null,
-            passwordResetVerifiedUntil: new Date(Date.now() + 10 * 60 * 1000)
-        })
-        
-        return response.json({
-            message : "Verify otp successfully",
-            error : false,
-            success : true
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+export async function verifyForgotPasswordOtp(request, response) {
+  try {
+    const email = String(request.body?.email || "").trim().toLowerCase();
+    const otp = String(request.body?.otp || "");
+    if (!email || !/^\\d{6}$/.test(otp)) {
+      return response.status(400).json({ message: "Enter your email and 6-digit code.", error: true, success: false });
     }
+
+    const user = await UserModel.findOne({ email }).select(
+      "+forgot_password_otp +forgot_password_expiry +forgot_password_otp_attempts"
+    );
+    const now = new Date();
+    if (!user || !user.forgot_password_otp || !user.forgot_password_expiry ||
+        user.forgot_password_expiry <= now || user.forgot_password_otp_attempts >= 5) {
+      return response.status(400).json({ message: "The code is invalid or expired. Request a new one.", error: true, success: false });
+    }
+
+    const submittedHash = createHash("sha256").update(otp).digest();
+    const savedHash = Buffer.from(user.forgot_password_otp, "hex");
+    const matches = savedHash.length === submittedHash.length && timingSafeEqual(savedHash, submittedHash);
+
+    if (!matches) {
+      await UserModel.updateOne(
+        { _id: user._id, forgot_password_otp: user.forgot_password_otp, forgot_password_otp_attempts: { $lt: 5 } },
+        { $inc: { forgot_password_otp_attempts: 1 } }
+      );
+      return response.status(400).json({ message: "The code is invalid or expired. Request a new one.", error: true, success: false });
+    }
+
+    const verified = await UserModel.findOneAndUpdate(
+      {
+        _id: user._id,
+        forgot_password_otp: user.forgot_password_otp,
+        forgot_password_expiry: { $gt: now },
+        forgot_password_otp_attempts: { $lt: 5 }
+      },
+      {
+        $set: {
+          forgot_password_otp: "",
+          forgot_password_expiry: null,
+          forgot_password_otp_attempts: 0,
+          passwordResetVerifiedUntil: new Date(now.getTime() + 10 * 60 * 1000)
+        }
+      },
+      { new: true }
+    );
+
+    if (!verified) return response.status(409).json({ message: "The code has already been used or expired. Request a new one.", error: true, success: false });
+    return response.json({ message: "Code verified. You can now reset your password.", error: false, success: true });
+  } catch {
+    return response.status(500).json({ message: "Unable to verify the reset code.", error: true, success: false });
+  }
 }
 
 //reset the password
