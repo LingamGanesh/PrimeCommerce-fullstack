@@ -16,7 +16,7 @@ const refreshTokenLimiter = createRateLimiter({ name: "refresh-token", windowMs:
 userRouter.post('/register', registrationLimiter, registerUserController);
 userRouter.post('/verify-email',emailVerificationLimiter,verifyEmailController)
 userRouter.post('/login',loginLimiter,loginController)
-userRouter.get('/logout', auth, logoutController)
+userRouter.post('/logout', auth, logoutController)
 userRouter.put('/upload-avatar',auth,upload.single('avatar'),uploadAvatar)
 userRouter.put('/update-user',auth,updateUserDetails)
 userRouter.post('/forgot-password', forgotPasswordLimiter, forgotPasswordController)
