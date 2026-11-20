@@ -11,7 +11,7 @@ export async function listMyOrders(req, res) {
       return {
         id: order._id.toString(), orderId: order.orderId, items,
         address: order.delivery_address, subtotal: order.subTotalAmt, total: order.totalAmt,
-        paymentStatus: order.payment_status, deliveryStatus: order.delivery_status, createdAt: order.createdAt
+        paymentStatus: order.payment_status, paymentMethod: order.paymentMethod, refundStatus: order.refund_status, refundAmount: order.refund_amount, deliveryStatus: order.delivery_status, createdAt: order.createdAt
       };
     });
     return res.json({ success: true, error: false, data });
