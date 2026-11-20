@@ -18,6 +18,7 @@ const Header = () => {
   useEffect(() => {
     let active = true;
     if (!user?._id) {
+      setCartCount(0);
       return () => { active = false; };
     }
     const loadCartCount = () => {
