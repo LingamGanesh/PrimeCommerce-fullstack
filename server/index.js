@@ -9,7 +9,7 @@ const [{ default: app }, { default: connectDB }, { expireRazorpayReservations }]
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
-  const server = app.listen(PORT, () => console.log(\`Server running on port \${PORT}\`));
+  const server = app.listen(PORT, () => console.log("Server running on port " + PORT));
 
   const reservationSweep = setInterval(() => {
     expireRazorpayReservations().catch(error => console.error("Payment reservation cleanup failed:", error.message));
@@ -17,7 +17,7 @@ connectDB().then(() => {
   reservationSweep.unref?.();
 
   const shutdown = (signal) => {
-    console.log(\`\${signal} received; shutting down gracefully\`);
+    console.log(signal + " received; shutting down gracefully");
     clearInterval(reservationSweep);
     server.close(async () => {
       const mongoose = (await import("mongoose")).default;
