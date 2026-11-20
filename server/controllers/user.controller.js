@@ -514,7 +514,22 @@ export async function refreshToken(request,response){
     try {
         const authorization = String(request.headers?.authorization || "");
         const bearerToken = /^Bearer\s+(.+)$/i.exec(authorization)?.[1];
-        const currentRefreshToken = request.cookies?.refreshToken || bearerToken;
+        const cookieRefreshToken = request.cookies?.refreshToken;
+        const currentRefreshToken = cookieRefreshToken || bearerToken;
+
+        if (cookieRefreshToken) {
+            const origin = String(request.headers?.origin || "").replace(/\/$/, "");
+            const allowedOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_URLS]
+                .filter(Boolean)
+                .flatMap(value => value.split(","))
+                .map(value => value.trim().replace(/\/$/, ""))
+                .filter(Boolean);
+            const isLocalDevelopmentOrigin = process.env.NODE_ENV !== "production"
+                && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+            if (!origin || (!allowedOrigins.includes(origin) && !isLocalDevelopmentOrigin)) {
+                return response.status(403).json({ message: "Request origin is not allowed", error: true, success: false });
+            }
+        }
         if (!currentRefreshToken || currentRefreshToken.length > 4096) {
             return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
         }
