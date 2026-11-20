@@ -10,7 +10,7 @@ const productPayload = (product) => {
   return {
     ...item,
     id: String(item._id),
-    mrp: discount > 0 && discount < 100 ? Math.round(price / (1 - discount / 100)) : price,
+    mrp: discount > 0 && discount < 100 ? Math.round((price / (1 - discount / 100)) * 100) / 100 : price,
     discountPercent: discount,
     images: item.image || []
   };
@@ -78,8 +78,13 @@ export async function createProduct(req, res) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
     }
     const values = [Number(price), Number(discount), Number(stock)];
-    if (!values.every(Number.isFinite) || values[0] < 0 || values[1] < 0 || values[1] >= 100 || values[2] < 0) {
-      return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
+    if (
+      !values.every(Number.isFinite) ||
+      values[0] < 0 || values[0] > 10000000 ||
+      values[1] < 0 || values[1] >= 100 ||
+      !Number.isSafeInteger(values[2]) || values[2] < 0 || values[2] > 10000000
+    ) {
+      return res.status(400).json({ success: false, error: true, message: "Price must be between 0 and 1 crore, discount must be 0–99.99%, and stock must be a whole number between 0 and 1 crore" });
     }
     const [validCategories, validSubCategories] = await Promise.all([
       CategoryModel.countDocuments({ _id: { $in: categoryId } }),
@@ -131,8 +136,12 @@ export async function updateProduct(req, res) {
         return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
       }
     }
-    if (["price", "discount", "stock"].some(key => updates[key] !== undefined && (!Number.isFinite(updates[key]) || updates[key] < 0)) || (updates.discount !== undefined && updates.discount >= 100)) {
-      return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
+    if (
+      (updates.price !== undefined && (!Number.isFinite(updates.price) || updates.price < 0 || updates.price > 10000000)) ||
+      (updates.discount !== undefined && (!Number.isFinite(updates.discount) || updates.discount < 0 || updates.discount >= 100)) ||
+      (updates.stock !== undefined && (!Number.isSafeInteger(updates.stock) || updates.stock < 0 || updates.stock > 10000000))
+    ) {
+      return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid; stock must be a whole number" });
     }
     const product = await ProductModel.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product not found" });
