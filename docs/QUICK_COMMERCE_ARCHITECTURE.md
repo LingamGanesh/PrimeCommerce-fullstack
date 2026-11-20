@@ -62,3 +62,13 @@ The storefront now loads published products and categories from `/api/v1/product
 ## Verification still required
 
 Run the client install/build/lint and server test suite in a checked-out environment. This GitHub connector can commit source files but does not execute the repository's npm scripts. Add integration tests for catalog filtering/pagination, product CRUD and RBAC, server-authoritative pricing, stock reservation, payment webhook idempotency and delivery state transitions before production use. Existing admin accounts must be granted `role: admin` through a trusted database/admin provisioning process; public registration must never accept a role field.
+
+
+## Admin operations dashboard (current phase)
+
+- `/admin` is a protected client route. The guard loads the signed-in user and checks the active `admin` role; server endpoints independently enforce JWT authentication and the database-backed admin middleware.
+- `GET /api/v1/admin/overview` returns customer, published-product, category, order, paid-revenue and low-stock counts plus recent orders.
+- `GET /api/v1/admin/products` and `GET /api/v1/admin/orders` provide admin-only inventory and order lists (latest 100).
+- `PATCH /api/v1/admin/products/:id` uses the existing catalog admin endpoint for stock updates.
+- `PATCH /api/v1/admin/orders/:id/status` allows processing, shipped and delivered status changes. Terminal cancellation/refund is intentionally not exposed in this UI because stock restoration and payment refunds are not implemented.
+- Product creation/editing, customer management, picker/rider operations, delivery tracking, payment refunds and audit logs remain future work.
