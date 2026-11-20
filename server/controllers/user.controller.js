@@ -135,12 +135,16 @@ export async function loginController(request, response) {
       })
     }
 
-    if (!user.verify_email) {
+    if (!user.verify_email && user.email_verification_token_hash) {
       return response.status(403).json({
         message: "Please verify your email address before logging in.",
         error: true,
         success: false
       })
+    }
+    // Existing accounts created before email verification was introduced have no token to verify.
+    if (!user.verify_email && !user.email_verification_token_hash) {
+      await UserModel.updateOne({ _id: user._id }, { $set: { verify_email: true } });
     }
 
     // 5️⃣ Generate tokens
