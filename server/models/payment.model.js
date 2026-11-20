@@ -5,7 +5,7 @@ const paymentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   gateway: { type: String, enum: ["razorpay", "cod", "wallet"], default: "razorpay" },
   gatewayOrderId: { type: String, default: "", index: true },
-  gatewayPaymentId: { type: String, default: "", unique: true, sparse: true, index: true },
+  gatewayPaymentId: { type: String, default: undefined, unique: true, sparse: true, index: true },
   amount: { type: Number, required: true, min: 0 },
   currency: { type: String, default: "INR" },
   status: { type: String, enum: ["created", "pending", "paid", "failed", "refund_pending", "refunded", "partially_refunded"], default: "created", index: true },
