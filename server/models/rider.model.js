@@ -8,7 +8,7 @@ const riderSchema = new mongoose.Schema({
   kycStatus: { type: String, enum: ["pending", "verified", "rejected"], default: "pending", index: true },
   isOnline: { type: Boolean, default: false, index: true },
   currentLocation: {
-    type: { type: String, enum: ["Point"], default: "Point" },
+    type: { type: String, enum: ["Point"] },
     coordinates: { type: [Number], default: undefined }
   },
   totalDeliveries: { type: Number, default: 0, min: 0 },
