@@ -49,22 +49,24 @@ const addressSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     label: { type: String, enum: ["Home", "Work", "Other"], default: "Home" },
     house: { type: String, trim: true, default: "" },
     floor: { type: String, trim: true, default: "" },
     landmark: { type: String, trim: true, default: "" },
     geo: { type: geoPointSchema, default: undefined },
-    isDefault: { type: Boolean, default: false, index: true },
+    isDefault: { type: Boolean, default: false },
     deliveryInstructions: { type: String, trim: true, maxlength: 500, default: "" },
   },
   {
     timestamps: true, // adds createdAt and updatedAt
+    autoIndex: false,
   }
 );
 
-addressSchema.index({ geo: "2dsphere" });
+addressSchema.index({ userId: 1 }, { name: "address_user_id_idx" });
+addressSchema.index({ geo: "2dsphere" }, { name: "address_geo_2dsphere_idx" });
+addressSchema.index({ userId: 1 }, { unique: true, partialFilterExpression: { isDefault: true }, name: "one_default_address_per_user" });
 
 const AddressModel = mongoose.model("Address", addressSchema);
 
