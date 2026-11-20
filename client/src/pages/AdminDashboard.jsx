@@ -33,6 +33,8 @@ export default function AdminDashboard() {
   const [staffRole, setStaffRole] = useState("picker");
   const [orderAssignees, setOrderAssignees] = useState({});
   const [refunds, setRefunds] = useState([]);
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [supportDrafts, setSupportDrafts] = useState({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -107,6 +109,21 @@ export default function AdminDashboard() {
     finally { setSectionLoading(false); }
   }, []);
 
+  const loadSupport = useCallback(async () => {
+    setSectionLoading(true);
+    try { const response = await Axios.get("/api/v1/admin/support"); setSupportTickets(response.data?.data || []); }
+    catch (error) { toast.error(error.response?.data?.message || "Could not load support queue"); }
+    finally { setSectionLoading(false); }
+  }, []);
+
+  const updateSupport = async (ticket) => {
+    const draft = supportDrafts[ticket._id] || {};
+    setBusy(ticket._id);
+    try { await Axios.patch(`/api/v1/admin/support/${ticket._id}`, { status: draft.status || ticket.status, adminReply: draft.reply ?? ticket.adminReply ?? "" }); toast.success("Support ticket updated"); await loadSupport(); }
+    catch (error) { toast.error(error.response?.data?.message || "Could not update ticket"); }
+    finally { setBusy(""); }
+  };
+
   const loadReport = useCallback(async () => {
     setSectionLoading(true);
     try {
@@ -121,7 +138,8 @@ export default function AdminDashboard() {
     if (section === "reports") loadReport();
     if (section === "fulfilment") loadFulfilment();
     if (section === "refunds") loadRefunds();
-  }, [section, loadCustomers, loadReport, loadFulfilment, loadRefunds]);
+    if (section === "support") loadSupport();
+  }, [section, loadCustomers, loadReport, loadFulfilment, loadRefunds, loadSupport]);
 
   const updateStock = async (product) => {
     const value = Number(stockDraft[product._id] ?? product.stock);
@@ -137,7 +155,7 @@ export default function AdminDashboard() {
   };
 
   const signOut = () => { dispatch(logout()); localStorage.clear(); navigate("/login"); };
-  const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }, { id: "fulfilment", label: "Picker & rider", icon: "⇢" }, { id: "refunds", label: "Refunds", icon: "↩" }];
+  const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }, { id: "fulfilment", label: "Picker & rider", icon: "⇢" }, { id: "refunds", label: "Refunds", icon: "↩" }, { id: "support", label: "Support inbox", icon: "?" }];
   const metrics = [
     { label: "Total orders", value: overview?.orders ?? "—", note: "All recorded orders", icon: "▣" },
     { label: "Gross paid revenue", value: money(overview?.revenue), note: "Paid / completed payments", icon: "₹" },
