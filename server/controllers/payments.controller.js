@@ -95,11 +95,11 @@ export async function verifyRazorpayPayment(req, res) {
     const supplied = Buffer.from(signature, "hex"); const expectedBuffer = Buffer.from(expected, "hex");
     if (supplied.length !== expectedBuffer.length || !crypto.timingSafeEqual(supplied, expectedBuffer)) return res.status(400).json({ success: false, message: "Payment signature verification failed" });
     const payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}`);
-    if (payment.order_id !== gatewayOrderId || !["authorized", "captured"].includes(payment.status)) return res.status(400).json({ success: false, message: "Payment status could not be verified" });
+    if (payment.order_id !== gatewayOrderId || !["authorized", "captured"].includes(payment.status) || Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100) || payment.currency !== "INR") return res.status(400).json({ success: false, message: "Payment amount, currency or status could not be verified" });
     if (payment.status === "captured") {
-      if (order.payment_status === "expired") { order.payment_status = "paid_review_required"; order.payment_id = paymentId; await order.save(); return res.status(200).json({ success: true, reviewRequired: true, message: "Payment received after stock reservation expired. Support will review this order." }); }
+      if (order.payment_status === "expired" || order.inventoryReleased) { order.payment_status = "paid_review_required"; order.payment_id = paymentId; await order.save(); return res.status(200).json({ success: true, reviewRequired: true, message: "Payment received after stock reservation expired. Support will review this order." }); }
       order.payment_status = "paid"; order.payment_id = paymentId; await order.save();
-    } else { order.payment_status = "authorized"; order.payment_id = paymentId; await order.save(); }
+    } else { if (order.payment_status === "expired" || order.inventoryReleased) return res.status(409).json({ success: false, message: "This payment reservation has expired. Please start a new checkout." }); order.payment_status = "authorized"; order.payment_id = paymentId; await order.save(); }
     return res.json({ success: true, paymentStatus: order.payment_status, message: order.payment_status === "paid" ? "Payment verified" : "Payment authorized; final confirmation is pending" });
   } catch (error) { return res.status(400).json({ success: false, message: error.message || "Unable to verify payment" }); }
 }
@@ -122,7 +122,7 @@ export async function handleRazorpayWebhook(req, res) {
     if (event.event === "payment.failed") {
       const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false }, { $set: { payment_status: "failed", inventoryReleased: true } }, { new: true });
       if (claimed) await restoreOrderStock(claimed);
-    } else if (order.payment_status === "expired") {
+    } else if (order.payment_status === "expired" || order.inventoryReleased || (payment && Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100)) || (payment && payment.currency !== "INR")) {
       await OrderModel.updateOne({ _id: order._id, payment_status: "expired" }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id } });
     } else {
       await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
