@@ -37,11 +37,14 @@ export async function updateAdminSupportTicket(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ticket id" });
     const status = req.body?.status;
-    const adminReply = String(req.body?.adminReply || "").trim();
-    if (!["open", "in_progress", "resolved", "closed"].includes(status) || adminReply.length > 3000) return res.status(400).json({ success: false, message: "Choose a valid ticket status and reply" });
+    const hasAdminReply = Object.prototype.hasOwnProperty.call(req.body || {}, "adminReply");
+    const requestedReply = hasAdminReply ? String(req.body.adminReply ?? "").trim() : null;
+    if (!["open", "in_progress", "resolved", "closed"].includes(status) || (hasAdminReply && requestedReply.length > 3000)) return res.status(400).json({ success: false, message: "Choose a valid ticket status and reply" });
     const previousTicket = await SupportTicketModel.findById(req.params.id).select("adminReply");
     if (!previousTicket) return res.status(404).json({ success: false, message: "Support ticket not found" });
-    const replyChanged = adminReply.length > 0 && adminReply !== previousTicket.adminReply;
+    // A status-only update must not erase an existing support reply.
+    const adminReply = hasAdminReply ? requestedReply : (previousTicket.adminReply || "");
+    const replyChanged = hasAdminReply && adminReply.length > 0 && adminReply !== previousTicket.adminReply;
     const update = { status, adminReply, repliedAt: replyChanged ? new Date() : (adminReply ? undefined : null) };
     if (update.repliedAt === undefined) delete update.repliedAt;
     // Compare the reply we just read so concurrent admin updates cannot both
