@@ -15,6 +15,8 @@ import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
 import AdminGuard from "../components/AdminGuard";
 import AdminDashboard from "../pages/AdminDashboard";
+import StaffGuard from "../components/StaffGuard";
+import FulfilmentDashboard from "../pages/FulfilmentDashboard";
 
 const router = createBrowserRouter([
   {
@@ -26,6 +28,8 @@ const router = createBrowserRouter([
       { path: "cart", element: <Cart /> },
       { path: "checkout", element: <Checkout /> },
       { path: "admin", element: <AdminGuard />, children: [{ path: "", element: <AdminDashboard /> }] },
+      { path: "picker", element: <StaffGuard role="picker" />, children: [{ path: "", element: <FulfilmentDashboard /> }] },
+      { path: "rider", element: <StaffGuard role="rider" />, children: [{ path: "", element: <FulfilmentDashboard /> }] },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPage /> },
