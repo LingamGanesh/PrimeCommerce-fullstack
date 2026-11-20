@@ -260,45 +260,79 @@ export async  function uploadAvatar(request,response){
     
 }
 
-//update user details
-export async function updateUserDetails(request,response){
-    try {
-        const userId = request.userId //auth middleware
-        const { name, email, mobile, password } = request.body 
+// Update the signed-in user's profile.
+export async function updateUserDetails(request, response) {
+  try {
+    const userId = request.userId;
+    const currentUser = await UserModel.findById(userId).select("+refresh_token");
+    if (!currentUser) return response.status(404).json({ message: "User not found", error: true, success: false });
 
-        let hashPassword = ""
+    const { name, email, mobile, password } = request.body || {};
+    const updates = {};
 
-        if(password && (String(password).length < 8 || String(password).length > 128)){
-            return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false });
-        }
-
-        if(password){
-            const salt = await bcrypt.genSalt(10)
-            hashPassword = await bcrypt.hash(password,salt)
-        }
-
-        const updateUser = await UserModel.updateOne({ _id : userId},{
-            ...(name && { name : name }),
-            ...(email && { email : email }),
-            ...(mobile && { mobile : mobile }),
-            ...(password && { password : hashPassword, refresh_token: "" })
-        })
-
-        return response.json({
-            message : "Updated successfully",
-            error : false,
-            success : true,
-            data : updateUser
-        })
-
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+    if (name !== undefined) {
+      const normalizedName = String(name).trim();
+      if (normalizedName.length < 2 || normalizedName.length > 80) {
+        return response.status(400).json({ message: "Name must be between 2 and 80 characters", error: true, success: false });
+      }
+      updates.name = normalizedName;
     }
+
+    if (email !== undefined) {
+      const normalizedEmail = String(email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        return response.status(400).json({ message: "Enter a valid email address", error: true, success: false });
+      }
+      if (normalizedEmail !== currentUser.email) {
+        return response.status(400).json({ message: "Email changes require a separate verification process and cannot be made from this form", error: true, success: false });
+      }
+    }
+
+    if (mobile !== undefined) {
+      const normalizedMobile = String(mobile).replace(/\D/g, "");
+      if (normalizedMobile && !/^\d{10}$/.test(normalizedMobile)) {
+        return response.status(400).json({ message: "Enter a valid 10-digit mobile number", error: true, success: false });
+      }
+      updates.mobile = normalizedMobile ? Number(normalizedMobile) : null;
+    }
+
+    if (password !== undefined && password !== "") {
+      if (String(password).length < 8 || String(password).length > 128) {
+        return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false });
+      }
+      updates.password = await bcrypt.hash(String(password), 12);
+      updates.refresh_token = "";
+    }
+
+    if (!Object.keys(updates).length) {
+      return response.status(400).json({ message: "No profile changes were provided", error: true, success: false });
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(userId, { $set: updates }, {
+      new: true,
+      runValidators: true
+    }).select("name email mobile avatar verify_email role address_details orderHistory");
+
+    if (updates.password) {
+      const isProduction = process.env.NODE_ENV === "production";
+      const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax", path: "/" };
+      response.clearCookie("accessToken", cookieOptions);
+      response.clearCookie("refreshToken", cookieOptions);
+    }
+
+    return response.json({
+      message: updates.password ? "Profile updated. Please log in again." : "Profile updated successfully",
+      error: false,
+      success: true,
+      data: updatedUser
+    });
+  } catch (error) {
+    return response.status(400).json({
+      message: error.message || "Unable to update profile",
+      error: true,
+      success: false
+    });
+  }
 }
 
 //forgot password not login
