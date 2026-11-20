@@ -14,13 +14,13 @@ test("health endpoints remain available when MongoDB is disconnected", async () 
     });
 
     const address = server.address();
-    const baseUrl = \`http://127.0.0.1:\${address.port}\`;
+    const baseUrl = "http://127.0.0.1:" + address.port;
 
-    const liveness = await fetch(\`\${baseUrl}/healthz\`);
+    const liveness = await fetch(baseUrl + "/healthz");
     assert.equal(liveness.status, 200);
     assert.deepEqual(await liveness.json(), { status: "ok" });
 
-    const readiness = await fetch(\`\${baseUrl}/readyz\`);
+    const readiness = await fetch(baseUrl + "/readyz");
     assert.equal(readiness.status, 503);
     assert.deepEqual(await readiness.json(), {
       status: "unavailable",
