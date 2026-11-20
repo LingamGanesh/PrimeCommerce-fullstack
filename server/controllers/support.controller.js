@@ -44,8 +44,14 @@ export async function updateAdminSupportTicket(req, res) {
     const replyChanged = adminReply.length > 0 && adminReply !== previousTicket.adminReply;
     const update = { status, adminReply, repliedAt: replyChanged ? new Date() : (adminReply ? undefined : null) };
     if (update.repliedAt === undefined) delete update.repliedAt;
-    const ticket = await SupportTicketModel.findByIdAndUpdate(req.params.id, { $set: update }, { new: true, runValidators: true }).populate("userId", "name email mobile").populate("orderId", "orderId");
-    if (!ticket) return res.status(404).json({ success: false, message: "Support ticket not found" });
+    // Compare the reply we just read so concurrent admin updates cannot both
+    // send the same "new reply" email from a stale previousReply snapshot.
+    const ticket = await SupportTicketModel.findOneAndUpdate(
+      { _id: req.params.id, adminReply: previousTicket.adminReply },
+      { $set: update },
+      { new: true, runValidators: true }
+    ).populate("userId", "name email mobile").populate("orderId", "orderId");
+    if (!ticket) return res.status(409).json({ success: false, message: "This ticket was updated by another admin. Refresh and try again." });
     if (replyChanged && ticket.userId?.email) {
       void sendNotificationEmail({ to: ticket.userId.email, subject: `Update on your support request: ${ticket.subject}`, text: `Our support team replied to your request.\n\n${adminReply}\n\nTicket status: ${ticket.status}`, html: `<h2>Support team reply</h2><p>${escapeEmailHtml(adminReply).replace(/\n/g, "<br>")}</p><p>Ticket status: ${escapeEmailHtml(ticket.status)}</p>` });
     }
