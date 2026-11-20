@@ -114,16 +114,22 @@ export async function updateProduct(req, res) {
         return res.status(400).json({ success: false, error: true, message: `Invalid ${key} selection` });
       }
     }
+    const currentProduct = await ProductModel.findById(req.params.id).select("categoryId sub_categoryId").lean();
+    if (!currentProduct) return res.status(404).json({ success: false, error: true, message: "Product not found" });
+
+    const categoryIds = updates.categoryId || currentProduct.categoryId;
+    const subCategoryIds = updates.sub_categoryId || currentProduct.sub_categoryId;
     if (updates.categoryId) {
-      const count = await CategoryModel.countDocuments({ _id: { $in: updates.categoryId } });
-      if (count !== new Set(updates.categoryId.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
+      const count = await CategoryModel.countDocuments({ _id: { $in: categoryIds } });
+      if (count !== new Set(categoryIds.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
     }
-    if (updates.sub_categoryId) {
-      const selectedSubcategories = await SubCategoryModel.find({ _id: { $in: updates.sub_categoryId } }).select("categoryId").lean();
-      if (selectedSubcategories.length !== new Set(updates.sub_categoryId.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid subcategories" });
-      const categoryIds = updates.categoryId || (await ProductModel.findById(req.params.id).select("categoryId").lean())?.categoryId || [];
+    if (updates.categoryId || updates.sub_categoryId) {
+      const selectedSubcategories = await SubCategoryModel.find({ _id: { $in: subCategoryIds } }).select("categoryId").lean();
+      if (selectedSubcategories.length !== new Set(subCategoryIds.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid subcategories" });
       const selectedCategoryIds = new Set(categoryIds.map(String));
-      if (selectedSubcategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
+      if (selectedSubcategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) {
+        return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
+      }
     }
     if (["price", "discount", "stock"].some(key => updates[key] !== undefined && (!Number.isFinite(updates[key]) || updates[key] < 0)) || (updates.discount !== undefined && updates.discount >= 100)) {
       return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
