@@ -513,7 +513,7 @@ export async function resetpassword(request,response){
 export async function refreshToken(request,response){
     try {
         const authorization = String(request.headers?.authorization || "");
-        const bearerToken = /^Bearer\\s+(.+)$/i.exec(authorization)?.[1];
+        const bearerToken = /^Bearer\s+(.+)$/i.exec(authorization)?.[1];
         const currentRefreshToken = request.cookies?.refreshToken || bearerToken;
         if (!currentRefreshToken || currentRefreshToken.length > 4096) {
             return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
