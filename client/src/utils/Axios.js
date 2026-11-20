@@ -7,17 +7,21 @@ const Axios = axios.create({
 });
 
 // Authentication is carried by HttpOnly cookies; never read tokens from localStorage.
-const refreshAccessToken = async () => {
-    try {
-        const response = await axios.post(
+// Share one refresh request across concurrent 401 responses because refresh tokens
+// are single-use and rotated atomically by the server.
+let refreshPromise = null;
+const refreshAccessToken = () => {
+    if (!refreshPromise) {
+        refreshPromise = axios.post(
             `${baseUrl}${SummaryApi.refreshToken.url}`,
             {},
             { withCredentials: true }
-        );
-        return response?.data?.success === true;
-    } catch {
-        return false;
+        )
+            .then((response) => response?.data?.success === true)
+            .catch(() => false)
+            .finally(() => { refreshPromise = null; });
     }
+    return refreshPromise;
 };
 
 // ================= RESPONSE INTERCEPTOR =================
