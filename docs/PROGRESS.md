@@ -28,7 +28,7 @@ Status meanings:
 | Phase 1 — catalogue active/deactivation visibility | DONE | Customer catalogue now excludes explicitly inactive categories/subcategories/products; legacy records without isActive remain visible; category/product deactivation and publish synchronization supported; CI 44774872063 passed 10/10 backend tests and frontend lint/build |
 | Phase 1 — avatar upload file-signature validation | DONE | Added JPEG/PNG/GIF/WebP magic-byte validation after Multer and MIME-match enforcement; CI 44775373218 passed 12/12 backend tests and frontend lint/build |
 | Phase 1 — mobile fields stored as strings | DONE for schema/write path | User and Address mobile fields are strings; profile/address writes and admin search preserve digit strings; idempotent `npm run migrate:mobile-to-string` converts existing numeric DB values; CI 44775958656 passed 14/14 backend tests and frontend lint/build |
-| Phase 1 — address GeoJSON and default-address integrity | PARTIAL | Optional GeoJSON Point validation and 2dsphere index; create-address accepts location/labels/instructions; first address/default replacement/deletion fallback; `npm run migrate:address-indexes` cleans legacy geo and creates unique partial default index; address edit endpoint is implemented; DB migration execution and API integration tests remain unverified; CI 44777018024 passed 18/18 backend tests and frontend lint/build |
+| Phase 1 — address GeoJSON and default-address integrity | PARTIAL | Optional GeoJSON Point validation and 2dsphere index; create/edit accepts location/labels/instructions; first address/default replacement/deletion fallback; `npm run migrate:address-indexes` cleans legacy geo and creates unique partial default index; DB migration execution and API integration tests remain unverified; CI 44778178598 passed 20/20 backend tests and frontend lint/build |
 | Phase 2 — canonical MongoDB schemas and migration | PARTIAL | Several models exist, but old/new duplicate fields remain; see AUD-004 to AUD-008 and AUD-021 |
 | Phase 2 — full idempotent seed data | PARTIAL | Existing seed creates 15 categories, 30 subcategories, 60 products, one store, admin/customer/rider; required second store, manager/support/picker, 100+ products and sample orders are absent |
 | Phase 3 — modular backend API foundation | PARTIAL | Existing auth/catalog/cart/address/checkout/orders/payments/admin/fulfilment/support routes; many target modules absent |
@@ -87,7 +87,8 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 | AUD-027 | HIGH | PENDING | Authenticated socket room and event privacy tests |
 | AUD-028 | MEDIUM | PENDING | Cross-domain cookie test matrix in supported browsers |
 | AUD-029 | MEDIUM | PENDING | Rate-limit load/failure tests and edge limit configuration |
-| AUD-030 | MEDIUM | PENDING | Ticket message append-only history tests |
+| AUD-030 | MEDIUM | PARTIAL | Added ticket message history, customer reply endpoint and UI; schema tests pass; end-to-end API authorization/reply tests remain pending |
+
 | AUD-031 | MEDIUM | PENDING | Required domain models and migration tests |
 | AUD-032 | MEDIUM | PENDING | Unit, integration, component and Playwright suites; CI gates |
 | AUD-033 | LOW | DONE | Removed duplicate dotenv.config() calls from app and connectDB; index.js imports dotenv/config once before dynamic imports |
@@ -96,15 +97,15 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 
 Latest fix commit: 0b306fc25eade66a3985b5b287de34f59f000482. An earlier CI attempt exposed a syntax error in the newly added test; the test was corrected and the latest run passes. No failed run is being represented as a pass.
 
-Latest verified dependency/security workflow: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44777349844
+Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44778178598
 
 | Command | Result |
 |---|---|
 | client: npm ci | PASS |
-| client: npm run lint | PASS (dependency-remediation workflow 44777349844) |
+| client: npm run lint | PASS (latest CI 44778178598) |
 | client: npm run build | PASS (baseline and latest CI 44775373218) |
 | server: npm ci | PASS |
-| server: npm test | PASS — dependency-remediation workflow 44777349844: 18 tests, 18 passed, 0 failed |
+| server: npm test | PASS — latest CI 44778178598: 20 tests, 20 passed, 0 failed |
 | client: npm audit | PASS — 0 vulnerabilities after compatible audit fix (workflow 44777349844) |
 | server: npm audit | PASS — 0 vulnerabilities after compatible audit fix (workflow 44777349844) |
 | server: npm run seed against the user’s Atlas database | NOT VERIFIED |
