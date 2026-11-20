@@ -11,11 +11,11 @@ const ResetPassword = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const [data, setData] = useState({
-    email: "",
+  const [data, setData] = useState(() => ({
+    email: location?.state?.email || "",
     newPassword: "",
     confirmPassword: ""
-  })
+  }))
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -29,13 +29,7 @@ const ResetPassword = () => {
       return
     }
 
-    if (location?.state?.email) {
-      setData(prev => ({
-        ...prev,
-        email: location.state.email
-      }))
-    }
-  }, [location, navigate])
+  }, [location?.state?.data?.success, navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target
