@@ -9,6 +9,7 @@ const discountedPrice = (product) => Math.round(Number(product.price) * 100) / 1
 
 export async function createCashOnDeliveryOrder(req, res) {
   const reserved = [];
+  let createdOrder = null;
   try {
     const { addressId } = req.body;
     if (!mongoose.isValidObjectId(addressId)) return res.status(400).json({ success: false, error: true, message: "Select a valid delivery address" });
@@ -59,6 +60,7 @@ export async function createCashOnDeliveryOrder(req, res) {
       totalAmt: subtotal
     });
 
+    createdOrder = order;
     await CartProductModel.deleteMany({ userId: req.userId });
     await UserModel.findByIdAndUpdate(req.userId, { $addToSet: { orderHistory: order._id } });
     return res.status(201).json({
@@ -66,6 +68,10 @@ export async function createCashOnDeliveryOrder(req, res) {
       data: { orderId: order.orderId, orderDbId: order._id, subtotal, total: subtotal, paymentMethod: "COD", paymentStatus: "pending", deliveryStatus: order.delivery_status }
     });
   } catch (error) {
+    if (createdOrder?._id) {
+      await OrderModel.deleteOne({ _id: createdOrder._id, userId: req.userId });
+      await UserModel.findByIdAndUpdate(req.userId, { $pull: { orderHistory: createdOrder._id } });
+    }
     if (reserved.length) {
       await Promise.all(reserved.map((item) => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })));
     }
