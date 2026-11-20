@@ -25,12 +25,14 @@ export async function getMyOrderTracking(req, res) {
       .select("orderId delivery_status riderId riderLocation pickedAt deliveredAt updatedAt")
       .populate("riderId", "name mobile").lean();
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    const riderAssigned = ["rider_assigned", "picked_up", "out_for_delivery"].includes(order.delivery_status);
+    const locationSharingActive = ["picked_up", "out_for_delivery"].includes(order.delivery_status);
     return res.json({
       success: true,
       data: {
         orderId: order.orderId, deliveryStatus: order.delivery_status,
-        rider: order.riderId ? { name: order.riderId.name, mobile: order.riderId.mobile } : null,
-        location: order.delivery_status === "delivered" ? null : order.riderLocation,
+        rider: riderAssigned && order.riderId ? { name: order.riderId.name, mobile: order.riderId.mobile } : null,
+        location: locationSharingActive ? order.riderLocation : null,
         pickedAt: order.pickedAt, deliveredAt: order.deliveredAt, updatedAt: order.updatedAt
       }
     });
