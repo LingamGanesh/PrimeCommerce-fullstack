@@ -6,7 +6,7 @@ const storeSchema = new mongoose.Schema({
   address: { type: String, required: true, trim: true },
   pincodes: { type: [String], default: [], index: true },
   location: {
-    type: { type: String, enum: ["Point"], default: "Point" },
+    type: { type: String, enum: ["Point"] },
     coordinates: { type: [Number], default: undefined }
   },
   openTime: { type: String, default: "07:00" },
