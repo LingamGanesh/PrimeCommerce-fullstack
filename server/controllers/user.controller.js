@@ -7,6 +7,7 @@ import uploadImageClodinary from '../utils/uploadImageClodinary.js';
 import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
+import mongoose from "mongoose"
 import generateAccessToken from '../utils/generatedAccessToken.js';
 
 
@@ -15,10 +16,11 @@ import generateAccessToken from '../utils/generatedAccessToken.js';
 // ===============================================
 export async function registerUserController(request, response) {
   try {
-    const { name, email, password } = request.body;
+    const { name, password } = request.body;
+    const normalizedEmail = String(request.body?.email || "").trim().toLowerCase();
 
     // Check required fields
-    if (!name || !email || !password) {
+    if (!name || !normalizedEmail || !password) {
       return response.status(400).json({
         message: "Provide name, email, and password",
         error: true,
@@ -27,7 +29,7 @@ export async function registerUserController(request, response) {
     }
 
     // Check if email already exists
-    const existingUser = await UserModel.findOne({ email });
+    const existingUser = await UserModel.findOne({ email: normalizedEmail });
     if (existingUser) {
       return response.status(400).json({
         message: 'Email is already registered',
@@ -42,7 +44,7 @@ export async function registerUserController(request, response) {
     // Create user
     const newUser = new UserModel({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       verify_email: false
     });
@@ -50,13 +52,18 @@ export async function registerUserController(request, response) {
     const savedUser = await newUser.save();
 
     // Verification email link
-    const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${savedUser._id}`;
+    const verifyEmailUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?code=${savedUser._id}`;
 
-    await sendEmail({
-      sendTo: email,
-      subject: 'Verify your email - PrimeCommerce',
-      html: verifyEmailTemplate({ name, url: verifyEmailUrl })
-    });
+    try {
+      await sendEmail({
+        sendTo: normalizedEmail,
+        subject: 'Verify your email - PrimeCommerce',
+        html: verifyEmailTemplate({ name, url: verifyEmailUrl })
+      });
+    } catch (emailError) {
+      await UserModel.deleteOne({ _id: savedUser._id });
+      throw emailError;
+    }
 
     const safeUser = savedUser.toObject();
     delete safeUser.password;
@@ -72,8 +79,8 @@ export async function registerUserController(request, response) {
     });
 
   } catch (error) {
-    return response.status(500).json({
-      message: error.message || 'Something went wrong',
+    return response.status(503).json({
+      message: error.message || 'Unable to complete registration right now',
       error: true,
       success: false
     });
@@ -85,7 +92,10 @@ export async function registerUserController(request, response) {
 // ===============================================
 export async function verifyEmailController(request, response) {
   try {
-    const { code } = request.body;
+    const { code } = request.body || {};
+    if (!mongoose.isValidObjectId(code)) {
+      return response.status(400).json({ message: "Invalid verification link", error: true, success: false });
+    }
 
     if (!code) {
       return response.status(400).json({
