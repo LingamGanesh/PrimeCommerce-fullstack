@@ -13,6 +13,7 @@ const ResetPassword = () => {
 
   const [data, setData] = useState(() => ({
     email: location?.state?.email || "",
+    resetToken: location?.state?.resetToken || "",
     newPassword: "",
     confirmPassword: ""
   }))
@@ -24,12 +25,12 @@ const ResetPassword = () => {
 
   // 🔐 Protect route + set email
   useEffect(() => {
-    if (!location?.state?.data?.success) {
+    if (!location?.state?.data?.success || !location?.state?.resetToken) {
       navigate("/", { replace: true })
       return
     }
 
-  }, [location?.state?.data?.success, navigate])
+  }, [location?.state?.data?.success, location?.state?.resetToken, navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target
