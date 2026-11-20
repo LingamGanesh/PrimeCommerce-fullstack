@@ -25,7 +25,7 @@ if (process.env.NODE_ENV === "production") {
   const requiredSecrets = ["SECRET_KEY_ACCESS_TOKEN", "SECRET_KEY_REFRESH_TOKEN"];
   for (const name of requiredSecrets) {
     if (!process.env[name] || process.env[name].length < 32) {
-      throw new Error(\`\${name} must be configured with at least 32 characters in production\`);
+      throw new Error(name + " must be configured with at least 32 characters in production");
     }
   }
   if (process.env.SECRET_KEY_ACCESS_TOKEN === process.env.SECRET_KEY_REFRESH_TOKEN) {
@@ -88,7 +88,7 @@ app.use(express.json());
 app.get("/api/cron/expire-reservations", async (req, res) => {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return res.status(503).json({ success: false, message: "Reservation cleanup scheduler is not configured" });
-  if (req.headers.authorization !== \`Bearer \${cronSecret}\`) {
+  if (req.headers.authorization !== "Bearer " + cronSecret) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
   try {
