@@ -6,6 +6,8 @@ import Search from "./Search";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useMobile from "../hooks/useMobile";
 import { useSelector } from "react-redux";
+import { useEffect } from "react";
+import Axios from "../utils/Axios";
 import { Usermenu } from "./Usermenu";
 
 const Header = () => {
@@ -14,6 +16,8 @@ const Header = () => {
   const navigate = useNavigate();
 
   const [openMenu, setOpenMenu] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  useEffect(() => { if (user?._id) Axios.get("/api/v1/cart").then(r => setCartCount(r.data?.data?.itemCount || 0)).catch(() => setCartCount(0)); else setCartCount(0); }, [user?._id, location.pathname]);
   const user = useSelector((state) => state.user);
 
   const isSearchPage = location.pathname === "/search";
