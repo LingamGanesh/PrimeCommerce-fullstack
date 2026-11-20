@@ -80,7 +80,10 @@ export async function listCategories(req, res) {
 
 export async function listSubCategories(req, res) {
   try {
-    const filter = mongoose.isValidObjectId(req.query.categoryId) ? { categoryId: req.query.categoryId } : {};
+    if (req.query.categoryId && !mongoose.isValidObjectId(req.query.categoryId)) {
+      return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
+    }
+    const filter = req.query.categoryId ? { categoryId: req.query.categoryId } : {};
     const categories = await SubCategoryModel.find(filter).sort({ name: 1 }).lean();
     return res.json({ success: true, error: false, data: categories });
   } catch {
