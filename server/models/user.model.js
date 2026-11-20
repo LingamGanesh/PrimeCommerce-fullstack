@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema(
       default: "",
       select: false,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
     verify_email: {
       type: Boolean,
       default: false,
