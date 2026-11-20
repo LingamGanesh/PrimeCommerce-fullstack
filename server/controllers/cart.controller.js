@@ -12,7 +12,9 @@ const publicCartItem = (row) => {
     cartItemId: row._id.toString(),
     product: {
       id: product._id.toString(), name: product.name, image: product.image || [],
-      unit: product.unit, price: unitPrice, mrp: price, discountPercent: discount,
+      unit: product.unit, price: unitPrice,
+      mrp: discount > 0 && discount < 100 ? Math.round((price / (1 - discount / 100)) * 100) / 100 : price,
+      discountPercent: discount,
       stock: Number(product.stock) || 0, publish: product.publish
     },
     quantity: row.quantity,
@@ -48,7 +50,8 @@ export async function addCartItem(req, res) {
     }
 
     // First atomically increment an existing row without exceeding the cart cap.
-    const filter = { userId: req.userId, productId, quantity: { $lte: 50 - quantity } };
+    const maxAdditionalQuantity = Math.min(50 - quantity, Number(product.stock) - quantity);
+    const filter = { userId: req.userId, productId, quantity: { $lte: maxAdditionalQuantity } };
     let row = await CartProductModel.findOneAndUpdate(
       filter,
       { $inc: { quantity } },
@@ -71,7 +74,7 @@ export async function addCartItem(req, res) {
     }
 
     if (!row) {
-      return res.status(409).json({ success: false, error: true, message: "Cart quantity cannot exceed 50" });
+      return res.status(409).json({ success: false, error: true, message: "Cart quantity cannot exceed available stock or 50 items" });
     }
     await row.populate({ path: "productId", select: "name image unit price discount stock publish" });
     return res.status(200).json({ success: true, error: false, message: "Cart updated", data: publicCartItem(row) });
