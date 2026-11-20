@@ -91,6 +91,7 @@ const userSchema = new mongoose.Schema(
     forgot_password_expiry: {
       type: Date,
       default: null,
+      select: false,
     },
     password_reset_token_hash: {
       type: String,
