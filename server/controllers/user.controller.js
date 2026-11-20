@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import sendEmail from '../config/sendEmail.js';
 import UserModel from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
@@ -511,8 +512,10 @@ export async function resetpassword(request,response){
 //refresh token controler
 export async function refreshToken(request,response){
     try {
-        const refreshToken = request.cookies.refreshToken || request.headers?.authorization?.split(" ")[1];
-        if (!refreshToken) {
+        const authorization = String(request.headers?.authorization || "");
+        const bearerToken = /^Bearer\\s+(.+)$/i.exec(authorization)?.[1];
+        const currentRefreshToken = request.cookies?.refreshToken || bearerToken;
+        if (!currentRefreshToken || currentRefreshToken.length > 4096) {
             return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
         }
 
@@ -520,27 +523,45 @@ export async function refreshToken(request,response){
         if (!refreshSecret) {
             return response.status(500).json({ message: "Refresh-token secret is not configured", error: true, success: false });
         }
-        const decoded = jwt.verify(refreshToken, refreshSecret, { algorithms: ["HS256"] });
-        const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshTokenHash }).select("+refresh_token +tokenVersion");
-        if (!user || user.status !== "active") {
+        const decoded = jwt.verify(currentRefreshToken, refreshSecret, { algorithms: ["HS256"] });
+        if (!decoded?.id || !mongoose.isValidObjectId(decoded.id)) {
             return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
+        }
+
+        const currentHash = crypto.createHash("sha256").update(currentRefreshToken).digest("hex");
+        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: currentHash, status: "active" }).select("+refresh_token +tokenVersion");
+        if (!user) {
+            return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
+        }
+
+        // Rotate with a compare-and-swap update. Only one concurrent request
+        // can consume the previous token; replayed tokens are rejected.
+        const nextRefreshToken = jwt.sign(
+            { id: user._id },
+            refreshSecret,
+            { expiresIn: "7d", algorithm: "HS256" }
+        );
+        const nextHash = crypto.createHash("sha256").update(nextRefreshToken).digest("hex");
+        const rotated = await UserModel.updateOne(
+            { _id: user._id, refresh_token: currentHash, tokenVersion: user.tokenVersion || 0, status: "active" },
+            { $set: { refresh_token: nextHash } }
+        );
+        if (rotated.modifiedCount !== 1) {
+            return response.status(401).json({ message: "Refresh token was already used. Please log in again.", error: true, success: false });
         }
 
         const newAccessToken = await generateAccessToken(user._id, user.tokenVersion || 0);
         const isProduction = process.env.NODE_ENV === "production";
-        response.cookie("accessToken", newAccessToken, {
+        const cookieOptions = {
             httpOnly: true,
             secure: isProduction,
             sameSite: isProduction ? "none" : "lax",
             path: "/"
-        });
+        };
+        response.cookie("accessToken", newAccessToken, cookieOptions);
+        response.cookie("refreshToken", nextRefreshToken, cookieOptions);
 
-        return response.json({
-            message: "Session refreshed",
-            error: false,
-            success: true
-        });
+        return response.json({ message: "Session refreshed", error: false, success: true });
     } catch (error) {
         return response.status(401).json({ message: "Refresh token is invalid or expired", error: true, success: false });
     }
