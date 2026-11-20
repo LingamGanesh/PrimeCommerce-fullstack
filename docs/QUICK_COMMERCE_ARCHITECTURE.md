@@ -49,7 +49,7 @@ Cancellation/refund transitions must be validated against current order state. P
 ## Delivery phases
 
 1. Foundation: repository audit, design tokens, customer home, reusable product/cart UI.
-2. Catalog: category/product/variant models, admin catalog CRUD, search and store resolution.
+2. Catalog: connect the existing category/product models to public catalog APIs, admin-only product CRUD, search and store resolution.
 3. Cart and checkout: address book, pricing service, coupons, stock reservation and payment test mode.
 4. Fulfilment: order lifecycle, picker workflow, rider assignment, delivery OTP and tracking.
 5. Operations: admin analytics, inventory, dark stores, customer/rider management, RBAC, reports and support.
@@ -57,8 +57,8 @@ Cancellation/refund transitions must be validated against current order state. P
 
 ## Current change
 
-The first implementation slice replaces the placeholder home page with a responsive quick-commerce storefront: category navigation, product search/filter, product cards, discount display, add/quantity controls, persistent browser cart state and a sticky cart summary. The current product set is clearly a frontend demo catalogue; it must be replaced by the catalog API when that module is implemented. No payment, live stock, delivery ETA or live order tracking is claimed by this UI slice.
+The storefront now loads published products and categories from `/api/v1/products` and `/api/v1/categories`; it displays an explicit empty/loading/error state rather than silently substituting demo products. The existing Product, Category and SubCategory schemas are retained. Public catalog endpoints include `GET /api/v1/products`, `GET /api/v1/products/:id`, `GET /api/v1/categories` and `GET /api/v1/subcategories`. Admin-only endpoints include `POST /api/v1/admin/products`, `PATCH /api/v1/admin/products/:id` and `DELETE /api/v1/admin/products/:id` (soft-unpublishes). Admin endpoints require the existing JWT auth middleware and an active user with `role: admin`. Product creation validates category/subcategory references and price/discount/stock values. The browser cart is still local-only; checkout, server-side stock reservation, payment, live inventory and delivery tracking are not implemented yet.
 
 ## Verification still required
 
-Run the client install/build/lint and server test suite in a checked-out environment. This GitHub connector can commit source files but does not execute the repository's npm scripts. Add integration tests for server-authoritative pricing, stock reservation, auth/RBAC, payment webhook idempotency and delivery state transitions before production use.
+Run the client install/build/lint and server test suite in a checked-out environment. This GitHub connector can commit source files but does not execute the repository's npm scripts. Add integration tests for catalog filtering/pagination, product CRUD and RBAC, server-authoritative pricing, stock reservation, payment webhook idempotency and delivery state transitions before production use. Existing admin accounts must be granted `role: admin` through a trusted database/admin provisioning process; public registration must never accept a role field.
