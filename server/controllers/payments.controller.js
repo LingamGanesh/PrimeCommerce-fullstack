@@ -113,6 +113,14 @@ export async function handleRazorpayWebhook(req, res) {
     const signature = String(req.headers["x-razorpay-signature"] || "");
     if (!verifyHmacHex(req.body, signature, secret)) return res.status(400).json({ success: false, message: "Invalid webhook signature" });
     const event = JSON.parse(req.body.toString("utf8"));
+    if (["refund.processed", "refund.failed"].includes(event.event)) {
+      const refund = event.payload?.refund?.entity;
+      if (!refund?.payment_id) return res.json({ success: true, ignored: true });
+      const refundOrder = await OrderModel.findOne({ payment_id: refund.payment_id, refund_status: { $in: ["pending", "failed"] } });
+      if (!refundOrder) return res.json({ success: true, ignored: true });
+      await OrderModel.updateOne({ _id: refundOrder._id, refund_status: { $in: ["pending", "failed"] } }, { $set: { refund_status: event.event === "refund.processed" ? "processed" : "failed", refund_id: refund.id || refundOrder.refund_id } });
+      return res.json({ success: true });
+    }
     if (!["payment.captured", "order.paid", "payment.failed"].includes(event.event)) return res.json({ success: true, ignored: true });
     const payment = event.payload?.payment?.entity;
     const gatewayOrder = event.payload?.order?.entity;
