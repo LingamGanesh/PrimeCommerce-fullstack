@@ -60,6 +60,8 @@ const restoreOrderStock = async (order) => {
 export async function createRazorpayOrder(req, res) {
   let reserved = []; let savedOrder = null;
   try {
+    // Recover stock from expired reservations when a new online checkout is attempted.
+    await expireRazorpayReservations();
     const { addressId } = req.body;
     if (!mongoose.isValidObjectId(addressId)) return res.status(400).json({ success: false, message: "Select a valid delivery address" });
     const address = await AddressModel.findOne({ _id: addressId, userId: req.userId }).lean();

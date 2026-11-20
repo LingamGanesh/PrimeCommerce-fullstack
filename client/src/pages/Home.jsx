@@ -131,15 +131,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#fafaf7] pb-28 text-gray-900">
-      <div className="bg-[#f8cb46]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:py-8">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#f7c943] via-[#ffe17a] to-[#fff3c4]">
+        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:py-12">
           <div className="max-w-xl">
-            <span className="inline-flex rounded-full bg-white/70 px-3 py-1 text-xs font-bold text-green-800">QUICK COMMERCE · EVERYDAY MADE EASY</span>
-            <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">Your daily essentials,<br className="hidden sm:block" /> at your doorstep.</h1>
-            <p className="mt-2 max-w-md text-sm text-gray-700">Groceries, fresh picks and household favourites — all in one convenient place.</p>
-            <div className="mt-5 flex flex-wrap gap-3 text-xs font-semibold text-gray-800"><span className="rounded-full bg-white/70 px-3 py-2">✓ Fresh picks</span><span className="rounded-full bg-white/70 px-3 py-2">✓ Easy ordering</span><span className="rounded-full bg-white/70 px-3 py-2">✓ Secure checkout</span></div>
+            <span className="inline-flex rounded-full border border-white/80 bg-white/65 px-3 py-1.5 text-[11px] font-extrabold tracking-[0.14em] text-green-900 shadow-sm">YOUR EVERYDAY STORE</span>
+            <h1 className="mt-4 max-w-xl text-4xl font-black leading-[1.06] tracking-tight text-[#172d1e] sm:text-5xl lg:text-[3.6rem]">Good things for<br className="hidden sm:block" /> every day.</h1>
+            <p className="mt-4 max-w-md text-base leading-7 text-[#435345]">Fresh groceries, pantry staples and home essentials — discover your favourites and add them to your basket.</p>
+            <div className="mt-6 flex flex-wrap gap-2.5 text-xs font-bold text-gray-800"><span className="rounded-full bg-white/70 px-3 py-2">✓ Fresh picks</span><span className="rounded-full bg-white/70 px-3 py-2">✓ Easy ordering</span><span className="rounded-full bg-white/70 px-3 py-2">✓ Secure checkout</span></div>
           </div>
-          <div className="w-full max-w-lg rounded-2xl border border-white/60 bg-white p-3 shadow-lg">
+          <div className="w-full max-w-lg rounded-3xl border border-white/80 bg-white/95 p-3 shadow-[0_20px_55px_rgba(83,66,15,0.16)] backdrop-blur">
             <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
               <span className="text-xl">⌕</span>
               <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && navigate(`/search?q=${encodeURIComponent(search)}`)} placeholder="Search for atta, milk, fruits..." className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400" aria-label="Search products" />
@@ -150,21 +150,21 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <section className="py-7">
-          <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Browse by department</p><h2 className="mt-1 text-xl font-extrabold">Shop by category</h2></div><button onClick={() => setActiveCategory("All")} className="text-xs font-bold text-green-800">View all</button></div>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="py-8 sm:py-10">
+          <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Browse by department</p><h2 className="mt-1 text-2xl font-black tracking-tight">Shop by category</h2></div><button onClick={() => setActiveCategory("All")} className="text-xs font-bold text-green-800">View all</button></div>
           {categories.length ? <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {categories.map((category) => { const visual = visualFor(category.name); return <button key={category._id} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group flex flex-col items-center gap-2 rounded-xl p-2 text-center transition hover:bg-white hover:shadow-sm"><span className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl text-3xl transition group-hover:scale-105 ${visual.color}`}>{category.image ? <img src={category.image} alt="" className="h-full w-full object-cover" /> : visual.emoji}</span><span className="text-[11px] font-semibold leading-4 text-gray-700">{category.name}</span></button>; })}
+            {categories.map((category) => { const visual = visualFor(category.name); return <button key={category._id} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group flex flex-col items-center gap-2 rounded-2xl border border-transparent p-3 text-center transition hover:border-gray-100 hover:bg-white hover:shadow-md"><span className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl text-3xl transition group-hover:scale-105 ${visual.color}`}>{category.image ? <img src={category.image} alt="" className="h-full w-full object-cover" /> : visual.emoji}</span><span className="text-[11px] font-semibold leading-4 text-gray-700">{category.name}</span></button>; })}
           </div> : <p className="rounded-xl bg-white p-5 text-sm text-gray-500">Categories will appear here when the store catalogue is configured.</p>}
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2">
-          <div className="flex items-center justify-between overflow-hidden rounded-2xl bg-[#e7f4e8] p-5"><div><p className="text-xs font-bold uppercase tracking-wider text-green-800">Fresh every day</p><h3 className="mt-1 text-xl font-extrabold">Fruits & vegetables</h3><p className="mt-1 text-xs text-gray-600">Bring home the goodness</p></div><span className="text-6xl">🥑</span></div>
-          <div className="flex items-center justify-between overflow-hidden rounded-2xl bg-[#fff0d9] p-5"><div><p className="text-xs font-bold uppercase tracking-wider text-orange-800">Snack smarter</p><h3 className="mt-1 text-xl font-extrabold">Treats for every mood</h3><p className="mt-1 text-xs text-gray-600">Discover your favourites</p></div><span className="text-6xl">🍪</span></div>
+        <section className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-r from-[#e2f2e4] to-[#f1f8ee] p-6 shadow-sm sm:p-7"><div><p className="text-xs font-bold uppercase tracking-wider text-green-800">Fresh every day</p><h3 className="mt-1 text-xl font-extrabold">Fruits & vegetables</h3><p className="mt-1 text-xs text-gray-600">Bring home the goodness</p></div><span className="text-6xl">🥑</span></div>
+          <div className="flex items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-r from-[#fff0d9] to-[#fff8e9] p-6 shadow-sm sm:p-7"><div><p className="text-xs font-bold uppercase tracking-wider text-orange-800">Snack smarter</p><h3 className="mt-1 text-xl font-extrabold">Treats for every mood</h3><p className="mt-1 text-xs text-gray-600">Discover your favourites</p></div><span className="text-6xl">🍪</span></div>
         </section>
 
         <section id="products" className="py-8">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Handpicked for your home</p><h2 className="mt-1 text-xl font-extrabold">{activeCategory === "All" ? "Popular products" : categories.find((category) => category._id === activeCategory)?.name || "Products"}</h2></div>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Handpicked for your home</p><h2 className="mt-1 text-2xl font-black tracking-tight">{activeCategory === "All" ? "Popular products" : categories.find((category) => category._id === activeCategory)?.name || "Products"}</h2></div>
             <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs outline-none"><option value="All">All categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
           </div>
           {loading ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"><div className="h-56 animate-pulse rounded-2xl bg-gray-200" /><div className="h-56 animate-pulse rounded-2xl bg-gray-200" /><div className="h-56 animate-pulse rounded-2xl bg-gray-200" /></div>

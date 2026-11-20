@@ -14,16 +14,17 @@ const auth = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.SECRET_KEY_ACCESS_TOKEN
-    );
+    const secret = process.env.SECRET_KEY_ACCESS_TOKEN || process.env.JWT_SECRET;
+    if (!secret) {
+      return res.status(500).json({
+        message: "Authentication secret is not configured",
+        error: true,
+        success: false,
+      });
+    }
 
-    // ✅ FIXED LINE
+    const decoded = jwt.verify(token, secret);
     req.userId = decoded.id;
-
-    console.log("AUTH USER ID:", req.userId);
-
     next();
   } catch (error) {
     return res.status(401).json({

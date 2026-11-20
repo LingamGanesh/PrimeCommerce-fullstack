@@ -7,6 +7,7 @@ import uploadImageClodinary from '../utils/uploadImageClodinary.js';
 import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
+import crypto from "node:crypto"
 import generateAccessToken from '../utils/generatedAccessToken.js';
 
 
@@ -176,10 +177,12 @@ const refreshToken = await generatedRefreshToken(user._id)
 
 
     // 6️⃣ Cookie options (ENV-safe)
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None'
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/"
     }
 
     // 7️⃣ Set cookies
@@ -217,14 +220,19 @@ const refreshToken = await generatedRefreshToken(user._id)
 export async function logoutController(request, response) {
   try {
     // Clear both tokens
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/"
     };
 
     response.clearCookie("accessToken", cookieOptions);
     response.clearCookie("refreshToken", cookieOptions);
+    if (request.userId) {
+      await UserModel.findByIdAndUpdate(request.userId, { refresh_token: "" });
+    }
 
     return response.status(200).json({
       message: "Logged out successfully",
@@ -282,8 +290,8 @@ export async function updateUserDetails(request,response){
         let hashPassword = ""
 
         if(password){
-            const salt = await bcryptjs.genSalt(10)
-            hashPassword = await bcryptjs.hash(password,salt)
+            const salt = await bcrypt.genSalt(10)
+            hashPassword = await bcrypt.hash(password,salt)
         }
 
         const updateUser = await UserModel.updateOne({ _id : userId},{
@@ -361,169 +369,108 @@ export async function forgotPasswordController(request,response) {
 //verify forgot password otp
 export async function verifyForgotPasswordOtp(request,response){
     try {
-        const { email , otp }  = request.body
-
-        if(!email || !otp){
-            return response.status(400).json({
-                message : "Provide required field email, otp.",
-                error : true,
-                success : false
-            })
+        const { email, otp } = request.body
+        if (!email || !otp) {
+            return response.status(400).json({ message: "Provide required field email, otp.", error: true, success: false })
         }
-
         const user = await UserModel.findOne({ email })
-
-        if(!user){
-            return response.status(400).json({
-                message : "Email not available",
-                error : true,
-                success : false
-            })
+        if (!user) {
+            return response.status(400).json({ message: "Email not available", error: true, success: false })
+        }
+        if (!user.forgot_password_expiry || user.forgot_password_expiry <= new Date()) {
+            return response.status(400).json({ message: "Otp is expired", error: true, success: false })
+        }
+        if (otp !== user.forgot_password_otp) {
+            return response.status(400).json({ message: "Invalid otp", error: true, success: false })
         }
 
-        const currentTime = new Date().toISOString()
-
-        if(user.forgot_password_expiry < currentTime  ){
-            return response.status(400).json({
-                message : "Otp is expired",
-                error : true,
-                success : false
-            })
-        }
-
-        if(otp !== user.forgot_password_otp){
-            return response.status(400).json({
-                message : "Invalid otp",
-                error : true,
-                success : false
-            })
-        }
-
-        //if otp is not expired
-        //otp === user.forgot_password_otp
-
-        const updateUser = await UserModel.findByIdAndUpdate(user?._id,{
-            forgot_password_otp : "",
-            forgot_password_expiry : ""
+        const resetToken = crypto.randomBytes(32).toString("hex")
+        const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
+        await UserModel.findByIdAndUpdate(user._id, {
+            forgot_password_otp: "",
+            forgot_password_expiry: null,
+            password_reset_token_hash: resetTokenHash,
+            password_reset_expires_at: new Date(Date.now() + 10 * 60 * 1000)
         })
-        
         return response.json({
-            message : "Verify otp successfully",
-            error : false,
-            success : true
+            message: "OTP verified. Set a new password within 10 minutes.",
+            error: false,
+            success: true,
+            data: { resetToken }
         })
-
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        return response.status(500).json({ message: error.message || error, error: true, success: false })
     }
 }
 
-//reset the password
+// Reset password requires the short-lived token issued after OTP verification.
 export async function resetpassword(request,response){
     try {
-        const { email , newPassword, confirmPassword } = request.body 
-
-        if(!email || !newPassword || !confirmPassword){
-            return response.status(400).json({
-                message : "provide required fields email, newPassword, confirmPassword"
-            })
+        const { email, newPassword, confirmPassword, resetToken } = request.body
+        if (!email || !newPassword || !confirmPassword || !resetToken) {
+            return response.status(400).json({ message: "Provide email, new password, confirmation and reset token", error: true, success: false })
         }
-
-        const user = await UserModel.findOne({ email })
-
-        if(!user){
-            return response.status(400).json({
-                message : "Email is not available",
-                error : true,
-                success : false
-            })
+        if (newPassword !== confirmPassword) {
+            return response.status(400).json({ message: "New password and confirmation must match", error: true, success: false })
         }
-
-        if(newPassword !== confirmPassword){
-            return response.status(400).json({
-                message : "newPassword and confirmPassword must be same.",
-                error : true,
-                success : false,
-            })
+        const resetTokenHash = crypto.createHash("sha256").update(String(resetToken)).digest("hex")
+        const user = await UserModel.findOne({
+            email,
+            password_reset_token_hash: resetTokenHash,
+            password_reset_expires_at: { $gt: new Date() }
+        }).select("+password_reset_token_hash +password_reset_expires_at")
+        if (!user) {
+            return response.status(400).json({ message: "Password reset session is invalid or expired. Verify your OTP again.", error: true, success: false })
         }
 
         const salt = await bcrypt.genSalt(10)
-        const hashPassword = await bcrypt.hash(newPassword,salt)
-
-        const update = await UserModel.findOneAndUpdate(user._id,{
-            password : hashPassword
+        const hashPassword = await bcrypt.hash(newPassword, salt)
+        await UserModel.findByIdAndUpdate(user._id, {
+            password: hashPassword,
+            password_reset_token_hash: "",
+            password_reset_expires_at: null
         })
-
-        return response.json({
-            message : "Password updated successfully.",
-            error : false,
-            success : true
-        })
-
+        return response.json({ message: "Password updated successfully.", error: false, success: true })
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        return response.status(500).json({ message: error.message || error, error: true, success: false })
     }
 }
 
 //refresh token controler
 export async function refreshToken(request,response){
     try {
-        const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
-
-        if(!refreshToken){
-            return response.status(401).json({
-                message : "Invalid token",
-                error  : true,
-                success : false
-            })
+        const refreshToken = request.cookies.refreshToken || request.headers?.authorization?.split(" ")[1];
+        if (!refreshToken) {
+            return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
         }
 
-        const verifyToken = await jwt.verify(refreshToken,process.env.SECRET_KEY_REFRESH_TOKEN)
-
-        if(!verifyToken){
-            return response.status(401).json({
-                message : "token is expired",
-                error : true,
-                success : false
-            })
+        const refreshSecret = process.env.SECRET_KEY_REFRESH_TOKEN || process.env.JWT_SECRET;
+        if (!refreshSecret) {
+            return response.status(500).json({ message: "Refresh-token secret is not configured", error: true, success: false });
+        }
+        const decoded = jwt.verify(refreshToken, refreshSecret);
+        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshToken }).select("+refresh_token");
+        if (!user || user.status !== "active") {
+            return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
         }
 
-        const userId = verifyToken?._id
-
-        const newAccessToken = await generatedAccessToken(userId)
-
-        const cookiesOption = {
-            httpOnly : true,
-            secure : true,
-            sameSite : "None"
-        }
-
-        response.cookie('accessToken',newAccessToken,cookiesOption)
+        const newAccessToken = await generateAccessToken(user._id);
+        const isProduction = process.env.NODE_ENV === "production";
+        response.cookie("accessToken", newAccessToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            path: "/"
+        });
 
         return response.json({
-            message : "New Access token generated",
-            error : false,
-            success : true,
-            data : {
-                accessToken : newAccessToken
-            }
-        })
-
-
+            message: "New access token generated",
+            error: false,
+            success: true,
+            data: { accessToken: newAccessToken }
+        });
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        return response.status(401).json({ message: "Refresh token is invalid or expired", error: true, success: false });
     }
 }
 

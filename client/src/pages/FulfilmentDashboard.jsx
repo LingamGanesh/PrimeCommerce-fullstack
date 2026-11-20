@@ -15,6 +15,8 @@ export default function FulfilmentDashboard() {
   const [busy, setBusy] = useState("");
   const [sharingOrderId, setSharingOrderId] = useState("");
   const [deliveryOtps, setDeliveryOtps] = useState({});
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const watchIdRef = useRef(null);
   const lastLocationSentAt = useRef(0);
 
@@ -92,6 +94,15 @@ export default function FulfilmentDashboard() {
   };
 
   const address = (value) => [value?.address_line, value?.city, value?.state, value?.pincode].filter(Boolean).join(", ") || value?.fullAddress || "Address not available";
+  const visibleOrders = orders.filter((order) => {
+    const query = search.trim().toLowerCase();
+    const searchable = [order.orderId, order.userId?.name, order.userId?.mobile, address(order.delivery_address)].filter(Boolean).join(" ").toLowerCase();
+    return (!query || searchable.includes(query)) && (statusFilter === "all" || order.delivery_status === statusFilter);
+  });
+  const statusCounts = orders.reduce((counts, order) => {
+    counts[order.delivery_status] = (counts[order.delivery_status] || 0) + 1;
+    return counts;
+  }, {});
   const nextAction = (status) => {
     if (isPicker && status === "picking") return { label: "Mark packed", next: "packed" };
     if (!isPicker && status === "rider_assigned") return { label: "Confirm pickup", next: "picked_up" };
@@ -105,9 +116,21 @@ export default function FulfilmentDashboard() {
         <div><p className="text-xs font-bold uppercase tracking-[.2em] text-lime-300">{isPicker ? "Picker workspace" : "Rider workspace"}</p><h1 className="mt-2 text-2xl font-black">Hello, {user?.name || (isPicker ? "Picker" : "Rider")}</h1><p className="mt-1 text-sm text-slate-300">{isPicker ? "Pick and pack the orders assigned to you." : "Manage deliveries and share your location while on the road."}</p></div>
         <button onClick={loadOrders} className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold hover:bg-white/20">↻ Refresh queue</button>
       </header>
-      <div className="mb-5 flex items-center justify-between"><div><h2 className="text-xl font-extrabold text-slate-900">{isPicker ? "My picking queue" : "My deliveries"}</h2><p className="text-sm text-slate-500">Only orders assigned to your staff account are shown.</p></div><span className="rounded-full bg-lime-100 px-3 py-1.5 text-sm font-bold text-lime-800">{orders.length} active</span></div>
+      <div className="mb-5 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Active orders</p><p className="mt-1 text-2xl font-black text-slate-900">{orders.length}</p></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{isPicker ? "Awaiting packing" : "Awaiting pickup"}</p><p className="mt-1 text-2xl font-black text-slate-900">{(statusCounts[isPicker ? "picking" : "rider_assigned"] || 0)}</p></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{isPicker ? "Packed" : "Out for delivery"}</p><p className="mt-1 text-2xl font-black text-slate-900">{(statusCounts[isPicker ? "packed" : "out_for_delivery"] || 0)}</p></div>
+      </div>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-extrabold text-slate-900">{isPicker ? "My picking queue" : "My deliveries"}</h2><p className="text-sm text-slate-500">Only orders assigned to your staff account are shown.</p></div><span className="rounded-full bg-lime-100 px-3 py-1.5 text-sm font-bold text-lime-800">{orders.length} active</span></div>
+      <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_220px]">
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, customer, phone or address" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-lime-500 focus:ring-2 focus:ring-lime-100" />
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-lime-500">
+          <option value="all">All active statuses</option>
+          {(isPicker ? ["picking", "packed"] : ["rider_assigned", "picked_up", "out_for_delivery"]).map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+        </select>
+      </div>
       {loading ? <div className="rounded-2xl bg-white p-12 text-center text-slate-500">Loading assigned work…</div> : <div className="grid gap-4 lg:grid-cols-2">
-        {orders.map((order) => {
+        {visibleOrders.map((order) => {
           const action = nextAction(order.delivery_status);
           return <article key={order._id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold text-slate-400">ORDER #{order.orderId || String(order._id).slice(-7)}</p><h3 className="mt-1 font-extrabold text-slate-900">{order.userId?.name || "Customer"}</h3><p className="text-sm text-slate-500">{order.userId?.mobile || order.delivery_address?.mobile || "No phone number"}</p></div><span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold capitalize text-amber-800">{String(order.delivery_status).replaceAll("_", " ")}</span></div>
@@ -117,7 +140,7 @@ export default function FulfilmentDashboard() {
             {!isPicker && sharingOrderId === order._id && <p className="mt-3 text-xs font-medium text-green-700">GPS sharing is active while this dashboard remains open. Keep location permission enabled.</p>}
           </article>;
         })}
-        {!orders.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center lg:col-span-2"><p className="font-bold text-slate-700">No active {isPicker ? "picking" : "delivery"} orders</p><p className="mt-1 text-sm text-slate-400">New orders appear here after an administrator assigns them to you.</p></div>}
+        {!visibleOrders.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center lg:col-span-2"><p className="font-bold text-slate-700">{orders.length ? "No matching orders" : `No active ${isPicker ? "picking" : "delivery"} orders`}</p><p className="mt-1 text-sm text-slate-400">{orders.length ? "Try another search or status filter." : "New orders appear here after an administrator assigns them to you."}</p></div>}
       </div>}
     </div>
   </div>;

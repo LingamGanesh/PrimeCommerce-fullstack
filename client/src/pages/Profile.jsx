@@ -1,134 +1,47 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useSelector } from "react-redux";
 import { FaUserCircle } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import UserProfileAvatarEdit from "../components/UserProfileAvatarEdit";
 
-const Profile = () => {
-  const user = useSelector((state) => state.user);
+export default function Profile() {
+  const user = useSelector(state => state.user);
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const initials = (user?.name || "U").trim().charAt(0).toUpperCase();
+
+  const shortcuts = [
+    { title: "Saved addresses", description: "Manage delivery locations", count: user?.address_details?.length || 0, icon: "📍", action: () => navigate("/dashboard/address") },
+    { title: "My orders", description: "Track and view purchases", count: user?.orderHistory?.length || 0, icon: "📦", action: () => navigate("/dashboard/myorders") },
+    { title: "Shopping cart", description: "Review items in your basket", icon: "🛒", action: () => navigate("/cart") }
+  ];
 
   return (
-    <div className="max-w-2xl mx-auto">
-
-      <div className="bg-white shadow rounded-2xl p-6">
-
-        {/* Avatar */}
-        <div className="flex justify-center mb-4">
-          {user?.avatar && user.avatar.startsWith("http") ? (
-            <img
-              src={user.avatar}
-              className="w-24 h-24 rounded-full object-cover border"
-            />
-          ) : (
-            <FaUserCircle size={80} className="text-gray-400" />
-          )}
+    <main className="min-h-[70vh] bg-[#f7f8f3] px-4 py-8 sm:py-10">
+      <div className="mx-auto max-w-5xl">
+        <div className="overflow-hidden rounded-3xl bg-[#123d2a] p-6 text-white shadow-lg sm:p-8">
+          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-lime-300">Your account</p>
+          <div className="mt-4 flex flex-wrap items-center gap-5">
+            <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white/20 bg-white/10">
+              {user?.avatar?.startsWith("http") ? <img src={user.avatar} alt={user?.name || "Profile"} className="h-full w-full object-cover" /> : user?.avatar ? <img src={user.avatar} alt={user?.name || "Profile"} className="h-full w-full object-cover" /> : <span className="text-4xl font-black text-lime-200">{initials}</span>}
+            </div>
+            <div className="min-w-0 flex-1"><h1 className="text-3xl font-black">{user?.name || "My profile"}</h1><p className="mt-1 break-all text-sm text-green-100">{user?.email || "Account details"}</p><p className="mt-2 text-xs font-semibold text-lime-200">{user?.role ? String(user.role).toUpperCase() : "CUSTOMER"} ACCOUNT</p></div>
+            <button type="button" onClick={() => setOpen(true)} className="rounded-xl bg-lime-300 px-4 py-3 text-sm font-extrabold text-green-950 transition hover:bg-lime-200">Edit profile photo</button>
+          </div>
         </div>
-
-        <button
-          onClick={() => setOpen(true)}
-          className="text-blue-500 text-sm mb-4 block mx-auto"
-        >
-          Edit Avatar
-        </button>
-
-        {/* Name */}
-        <h2 className="text-xl font-bold text-center">{user?.name}</h2>
-        <p className="text-center text-gray-500 mb-6">{user?.email}</p>
-
-        {/* USER DETAILS */}
-        <div className="space-y-3 text-sm">
-
-          <div className="flex justify-between border-b pb-2">
-            <span>User ID</span>
-            <span>{user?._id}</span>
+        <section className="mt-7"><div className="mb-3 flex items-end justify-between gap-3"><div><h2 className="text-xl font-black text-slate-900">Account shortcuts</h2><p className="mt-1 text-sm text-slate-500">Everything you need to manage your orders.</p></div></div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {shortcuts.map(item => <button key={item.title} type="button" onClick={item.action} className="rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"><div className="flex items-center justify-between"><span className="grid h-12 w-12 place-items-center rounded-xl bg-green-50 text-2xl">{item.icon}</span>{item.count !== undefined && <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">{item.count}</span>}</div><h3 className="mt-4 font-extrabold text-slate-900">{item.title}</h3><p className="mt-1 text-xs text-slate-500">{item.description}</p></button>)}
           </div>
-
-          <div className="flex justify-between border-b pb-2">
-            <span>Mobile</span>
-            <span>{user?.mobile || "Not added"}</span>
-          </div>
-
-          <div className="flex justify-between border-b pb-2">
-            <span>Role</span>
-            <span>{user?.role}</span>
-          </div>
-
-          <div className="flex justify-between border-b pb-2">
-            <span>Status</span>
-            <span>{user?.status}</span>
-          </div>
-
-          <div className="flex justify-between border-b pb-2">
-            <span>Email Verified</span>
-            <span>{user?.verify_email ? "Yes" : "No"}</span>
-          </div>
-
-          <div className="flex justify-between border-b pb-2">
-            <span>Created</span>
-            <span>
-              {user?.createdAt
-                ? new Date(user.createdAt).toLocaleDateString()
-                : "-"}
-            </span>
-          </div>
-
-          <div className="flex justify-between border-b pb-2">
-            <span>Last Login</span>
-            <span>
-              {user?.last_login_date
-                ? new Date(user.last_login_date).toLocaleString()
-                : "-"}
-            </span>
-          </div>
-
-        </div>
-
-        {/* CLICKABLE CARDS */}
-        <div className="grid grid-cols-3 gap-4 mt-6">
-
-          {/* Address */}
-          <div
-            onClick={() => navigate("/dashboard/address")}
-            className="cursor-pointer bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center"
-          >
-            <p className="font-bold text-lg">
-              {user?.address_details?.length || 0}
-            </p>
-            <p className="text-sm">Addresses</p>
-          </div>
-
-          {/* Orders */}
-          <div
-            onClick={() => navigate("/dashboard/myorders")}
-            className="cursor-pointer bg-blue-100 hover:bg-blue-200 p-4 rounded-lg text-center"
-          >
-            <p className="font-bold text-lg">
-              {user?.orderHistory?.length || 0}
-            </p>
-            <p className="text-sm">Orders</p>
-          </div>
-
-          {/* Cart */}
-          <div
-            onClick={() => navigate("/dashboard/myorders")}
-            className="cursor-pointer bg-yellow-100 hover:bg-yellow-200 p-4 rounded-lg text-center"
-          >
-            <p className="font-bold text-lg">
-              {user?.shopping_cart?.length || 0}
-            </p>
-            <p className="text-sm">Cart</p>
-          </div>
-
-        </div>
-
+        </section>
+        <section className="mt-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6"><h2 className="font-black text-slate-900">Personal details</h2><div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Full name</p><p className="mt-1 font-bold text-slate-800">{user?.name || "Not available"}</p></div>
+          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email address</p><p className="mt-1 break-all font-bold text-slate-800">{user?.email || "Not available"}</p></div>
+          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mobile number</p><p className="mt-1 font-bold text-slate-800">{user?.mobile || "Not added"}</p></div>
+          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email verification</p><p className="mt-1 font-bold text-slate-800">{user?.verify_email ? "Verified" : "Not verified"}</p></div>
+        </div><div className="mt-5 border-t border-slate-100 pt-4"><Link to="/dashboard/address" className="text-sm font-extrabold text-green-800 hover:text-green-950">Manage delivery addresses →</Link></div></section>
       </div>
-
-      {/* Modal */}
       {open && <UserProfileAvatarEdit close={() => setOpen(false)} />}
-    </div>
+    </main>
   );
-};
-
-export default Profile;
+}

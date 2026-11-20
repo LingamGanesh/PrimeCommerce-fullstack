@@ -37,11 +37,12 @@ const VerificationOtpPage = () => {
 
       if (response.data?.success) {
         toast.success(response.data.message)
-        navigate('/reset-password',{
-           state :{
-          data: response.data,
-          email:  location?.state?.email
-        }
+        navigate('/reset-password', {
+          state: {
+            data: response.data,
+            email: location?.state?.email,
+            resetToken: response.data?.data?.resetToken
+          }
         })
        
         
