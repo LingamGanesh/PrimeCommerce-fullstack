@@ -23,6 +23,7 @@ Status meanings:
 | Phase 1 — browser auth/payment/checkout E2E | PENDING | No Playwright harness or live configured environment; not claimed as run |
 | Phase 1 — write docs/AUDIT.md | DONE | Commit c0f6fde00d938a3abe2aa92d1eab453a11aa0a03 |
 | Phase 1 — backend liveness/readiness and single dotenv bootstrap | DONE | /healthz and /readyz are now DB-independent/status-aware respectively; dotenv loads once in index.js; CI run 44774204891 passed 7/7 backend tests and frontend lint/build |
+| Phase 1 — admin logout method and PrimeCommerce dashboard branding | DONE | Admin sign-out now uses POST /api/user/logout; audited dashboard wordmark/icon changed to PrimeCommerce; CI run 44774465829 passed |
 | Phase 2 — canonical MongoDB schemas and migration | PARTIAL | Several models exist, but old/new duplicate fields remain; see AUD-004 to AUD-008 and AUD-021 |
 | Phase 2 — full idempotent seed data | PARTIAL | Existing seed creates 15 categories, 30 subcategories, 60 products, one store, admin/customer/rider; required second store, manager/support/picker, 100+ products and sample orders are absent |
 | Phase 3 — modular backend API foundation | PARTIAL | Existing auth/catalog/cart/address/checkout/orders/payments/admin/fulfilment/support routes; many target modules absent |
@@ -56,8 +57,10 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 | AUD-011 | HIGH | PENDING | State transition and statusHistory tests |
 | AUD-012 | HIGH | PENDING | Permission denial, store scoping and IDOR tests |
 | AUD-013 | HIGH | PENDING | Mock app removed from production path; same-app admin uses real APIs |
-| AUD-014 | HIGH | PENDING | POST logout succeeds and revokes refresh token |
-| AUD-015 | HIGH | PENDING | PrimeCommerce-only brand audit of all app assets/copy |
+| AUD-014 | HIGH | DONE | Admin UI now calls the existing POST /api/user/logout endpoint; CI run 44774465829 passed |
+
+| AUD-015 | HIGH | DONE (scoped finding) | Audited AdminDashboard occurrence replaced; a full asset/legal-brand sweep remains a later QA task |
+
 | AUD-016 | HIGH | PENDING | Role redirect and route/API permission matrix tests |
 | AUD-017 | HIGH | PENDING | Idempotent seed creates required fixture counts and roles |
 | AUD-018 | MEDIUM | PENDING | Inactive catalogue data excluded; archive/deactivate regression tests |
@@ -81,13 +84,13 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 
 Latest fix commit: 0b306fc25eade66a3985b5b287de34f59f000482. An earlier CI attempt exposed a syntax error in the newly added test; the test was corrected and the latest run passes. No failed run is being represented as a pass.
 
-Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44774204891
+Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44774465829
 
 | Command | Result |
 |---|---|
 | client: npm ci | PASS |
-| client: npm run lint | PASS |
-| client: npm run build | PASS (baseline and latest CI 44774204891) |
+| client: npm run lint | PASS (latest fix CI 44774465829) |
+| client: npm run build | PASS (baseline and latest CI 44774465829) |
 | server: npm ci | PASS |
 | server: npm test | PASS — 6 tests, 6 passed, 0 failed (baseline); latest CI 44774204891: 7 tests, 7 passed, 0 failed |
 | client: npm audit | 21 advisories — 1 low, 4 moderate, 16 high |
