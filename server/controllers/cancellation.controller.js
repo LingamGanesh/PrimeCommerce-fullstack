@@ -82,15 +82,21 @@ export async function cancelMyOrder(req, res) {
       if (!canRequestFullRazorpayRefund(order)) return res.status(409).json({ success: false, message: "Only captured online payments without a previous refund request can be refunded. Contact support for this payment state." });
       const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", payment_status: "paid", refund_status: "not_required" }, { $set: { refund_status: "initiating" } }, { new: true });
       if (!claimed) return res.status(409).json({ success: false, message: "Cancellation or refund is already being processed" });
+      let refundRequestDispatched = false;
+      let definitiveGatewayFailure = false;
       try {
         const key = process.env.RAZORPAY_KEY_ID; const secret = process.env.RAZORPAY_KEY_SECRET;
         if (!key || !secret) throw new Error("Payment gateway is not configured");
+        refundRequestDispatched = true;
         const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(order.payment_id)}/refund`, {
           method: "POST", signal: AbortSignal.timeout(15000),
           headers: { Authorization: "Basic " + Buffer.from(`${key}:${secret}`).toString("base64"), "Content-Type": "application/json" },
           body: JSON.stringify({ amount: Math.round(Number(order.totalAmt) * 100), notes: { orderId: order.orderId, reason: "Customer cancellation before fulfilment" } })
         });
         const refund = await response.json().catch(() => ({}));
+        // A definitive client rejection means no refund was created. Timeouts,
+        // rate limits and server errors are ambiguous and must stay reconcilable.
+        definitiveGatewayFailure = response.status >= 400 && response.status < 500 && response.status !== 429;
         if (!response.ok) throw new Error(refund.error?.description || "Refund request failed");
         const expectedAmount = Math.round(Number(order.totalAmt) * 100);
         const responseHasValidIdentity =
@@ -140,10 +146,17 @@ export async function cancelMyOrder(req, res) {
         if (/Refund was accepted but order state/.test(error.message)) {
           return res.status(202).json({ success: true, message: "Refund may have been accepted. Order reconciliation is pending; please do not retry the cancellation." });
         }
+        const needsReconciliation = refundRequestDispatched && !definitiveGatewayFailure;
         await OrderModel.updateOne(
           { _id: order._id, refund_status: "initiating", inventoryReleased: false },
-          { $set: { refund_status: "failed" } }
+          { $set: { refund_status: needsReconciliation ? "pending" : "failed" } }
         );
+        if (needsReconciliation) {
+          return res.status(202).json({
+            success: true,
+            message: "The refund request outcome is not yet confirmed. We are checking with the payment provider; please do not submit another cancellation or payment."
+          });
+        }
         return res.status(502).json({ success: false, message: error.message || "Refund could not be initiated. Contact support before retrying." });
       }
     }
