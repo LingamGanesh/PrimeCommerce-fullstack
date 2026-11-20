@@ -28,8 +28,9 @@ const addressSchema = new mongoose.Schema(
       trim: true,
     },
     mobile: {
-      type: Number,
+      type: String,
       required: [true, "Mobile number is required"],
+      trim: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
