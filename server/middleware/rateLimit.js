@@ -6,39 +6,46 @@ export function createRateLimiter({ name, windowMs, max }) {
     throw new Error("Invalid rate limiter configuration");
   }
 
+  const incrementBucket = async (bucketKey, expiresAt) => {
+    try {
+      return await RateLimitBucketModel.findOneAndUpdate(
+        { bucketKey },
+        { $inc: { count: 1 }, $setOnInsert: { expiresAt } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ).lean();
+    } catch (error) {
+      if (error?.code !== 11000) throw error;
+      return RateLimitBucketModel.findOneAndUpdate(
+        { bucketKey },
+        { $inc: { count: 1 } },
+        { new: true }
+      ).lean();
+    }
+  };
+
   return async function rateLimit(req, res, next) {
     try {
       const now = Date.now();
       const windowId = Math.floor(now / windowMs);
       const expiresAt = new Date((windowId + 1) * windowMs);
-      const identity = [
-        String(req.ip || req.socket?.remoteAddress || "unknown"),
-        String(req.body?.email || "").trim().toLowerCase()
-      ].join("|");
-      const identityHash = crypto.createHash("sha256").update(identity).digest("hex");
-      const bucketKey = `${name}:${windowId}:${identityHash}`;
+      const ip = String(req.ip || req.socket?.remoteAddress || "unknown");
+      const account = String(req.userId || req.body?.email || "").trim().toLowerCase();
+      const identities = [
+        ["ip", ip],
+        ...(account ? [["account", account]] : [])
+      ];
+      const buckets = await Promise.all(identities.map(async ([kind, value]) => {
+        const digest = crypto.createHash("sha256").update(value).digest("hex");
+        const bucketKey = `${name}:${kind}:${windowId}:${digest}`;
+        return incrementBucket(bucketKey, expiresAt);
+      }));
 
-      let bucket;
-      try {
-        bucket = await RateLimitBucketModel.findOneAndUpdate(
-          { bucketKey },
-          { $inc: { count: 1 }, $setOnInsert: { expiresAt } },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        ).lean();
-      } catch (error) {
-        if (error?.code !== 11000) throw error;
-        bucket = await RateLimitBucketModel.findOneAndUpdate(
-          { bucketKey },
-          { $inc: { count: 1 } },
-          { new: true }
-        ).lean();
-      }
-
-      const remaining = Math.max(0, max - bucket.count);
+      const remaining = Math.max(0, ...buckets.map(bucket => max - bucket.count));
+      const allowed = buckets.every(bucket => bucket.count <= max);
       res.set("RateLimit-Limit", String(max));
-      res.set("RateLimit-Remaining", String(remaining));
+      res.set("RateLimit-Remaining", String(Math.min(...buckets.map(bucket => Math.max(0, max - bucket.count)))));
       res.set("RateLimit-Reset", String(Math.ceil(expiresAt.getTime() / 1000)));
-      if (bucket.count > max) {
+      if (!allowed) {
         res.set("Retry-After", String(Math.max(1, Math.ceil((expiresAt.getTime() - now) / 1000))));
         return res.status(429).json({
           success: false,
