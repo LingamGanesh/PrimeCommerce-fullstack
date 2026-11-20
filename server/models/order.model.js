@@ -2,7 +2,14 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    orderNo: { type: String, unique: true, sparse: true, index: true },
+    storeId: { type: mongoose.Schema.Types.ObjectId, ref: "Store", default: null, index: true },
+    items: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    pricing: { type: mongoose.Schema.Types.Mixed, default: {} },
+    status: { type: String, enum: ["PLACED", "CONFIRMED", "PICKING", "PACKED", "RIDER_ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "REFUND_INITIATED", "REFUNDED"], default: "PLACED", index: true },
+    statusHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    paymentStatus: { type: String, enum: ["pending", "paid", "failed", "refunded", "partially_refunded"], default: "pending", index: true },
     orderId: { type: String, required: [true, "Order ID is required"], unique: true },
     product_details: { type: String, required: [true, "Product details are required"] },
     payment_id: { type: String, default: "" },
