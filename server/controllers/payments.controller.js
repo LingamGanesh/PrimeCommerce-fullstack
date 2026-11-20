@@ -90,7 +90,7 @@ export async function createRazorpayOrder(req, res) {
 export async function verifyRazorpayPayment(req, res) {
   try {
     const { razorpay_order_id: gatewayOrderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = req.body;
-    if (![gatewayOrderId, paymentId, signature].every(value => typeof value === "string" && value.length > 0)) return res.status(400).json({ success: false, message: "Payment verification details are incomplete" });
+    if (![gatewayOrderId, paymentId].every(value => typeof value === "string" && value.length > 0) || typeof signature !== "string" || !/^[a-f0-9]{64}$/i.test(signature)) return res.status(400).json({ success: false, message: "Payment verification details are incomplete" });
     const order = await OrderModel.findOne({ razorpayOrderId: gatewayOrderId, userId: req.userId });
     if (!order) return res.status(404).json({ success: false, message: "Payment order not found" });
     const { secret } = razorpayAuth();
