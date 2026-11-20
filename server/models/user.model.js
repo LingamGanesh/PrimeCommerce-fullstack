@@ -73,6 +73,16 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    forgot_password_otp_attempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    forgot_password_last_sent_at: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     passwordResetVerifiedUntil: {
       type: Date,
       default: null,
