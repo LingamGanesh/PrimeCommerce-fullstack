@@ -58,7 +58,10 @@ export async function updateRiderOrder(req, res) {
     }
     const update = { delivery_status: transition.next };
     if (transition.next === "picked_up") update.pickedAt = new Date();
-    if (transition.next === "delivered") update.deliveredAt = new Date();
+    if (transition.next === "delivered") {
+      update.deliveredAt = new Date();
+      update.riderLocation = { lat: null, lng: null, updatedAt: null };
+    }
     const order = await OrderModel.findOneAndUpdate(
       { _id: req.params.id, riderId: req.userId, delivery_status: transition.from },
       { $set: update },
@@ -68,5 +71,28 @@ export async function updateRiderOrder(req, res) {
     return res.json({ success: true, message: `Delivery updated: ${transition.next.replaceAll("_", " ")}`, data: serialize(order) });
   } catch {
     return res.status(500).json({ success: false, message: "Unable to update delivery" });
+  }
+}
+
+export async function updateRiderLocation(req, res) {
+  try {
+    const { lat, lng } = req.body || {};
+    if (!mongoose.isValidObjectId(req.params.id) || !Number.isFinite(lat) || !Number.isFinite(lng) ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ success: false, message: "Provide valid latitude and longitude" });
+    }
+    const order = await OrderModel.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        riderId: req.userId,
+        delivery_status: { $in: ["picked_up", "out_for_delivery"] }
+      },
+      { $set: { riderLocation: { lat, lng, updatedAt: new Date() } } },
+      { new: true, projection: { _id: 1, riderLocation: 1, delivery_status: 1 } }
+    );
+    if (!order) return res.status(409).json({ success: false, message: "Location sharing is available only for your picked-up active deliveries" });
+    return res.json({ success: true, message: "Delivery location updated", data: order.riderLocation });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to update rider location" });
   }
 }
