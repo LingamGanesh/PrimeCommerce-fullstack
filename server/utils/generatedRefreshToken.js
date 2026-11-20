@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import UserModel from "../models/user.model.js";
 
 const generateRefreshToken = async (userId) => {
@@ -13,7 +14,7 @@ const generateRefreshToken = async (userId) => {
 
   await UserModel.updateOne(
     { _id: userId },
-    { refresh_token: token }
+    { refresh_token: crypto.createHash("sha256").update(token).digest("hex") }
   );
 
   return token;
