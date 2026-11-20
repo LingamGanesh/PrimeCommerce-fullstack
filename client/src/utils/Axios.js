@@ -30,7 +30,20 @@ Axios.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !originalRequest.url?.includes(SummaryApi.refreshToken.url)) {
+        const publicAuthEndpoints = [
+            SummaryApi.login.url,
+            SummaryApi.register.url,
+            SummaryApi.forgot_password.url,
+            SummaryApi.forgot_password_verification_otp.url,
+            SummaryApi.resetPassword.url,
+            "/api/user/verify-email",
+            SummaryApi.refreshToken.url,
+        ];
+        const isPublicAuthRequest = publicAuthEndpoints.some((endpoint) =>
+            originalRequest?.url?.includes(endpoint)
+        );
+
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isPublicAuthRequest) {
             originalRequest._retry = true;
             const refreshed = await refreshAccessToken();
             if (refreshed) return Axios(originalRequest);
