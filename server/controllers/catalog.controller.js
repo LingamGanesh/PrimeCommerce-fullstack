@@ -126,3 +126,48 @@ export async function archiveProduct(req, res) {
     return res.status(500).json({ success: false, error: true, message: "Unable to unpublish product" });
   }
 }
+
+
+export async function createCategory(req, res) {
+  try {
+    const name = req.body.name?.trim();
+    if (!name) return res.status(400).json({ success: false, error: true, message: "Category name is required" });
+    const category = await CategoryModel.create({ name, image: req.body.image || "" });
+    return res.status(201).json({ success: true, error: false, message: "Category created", data: category });
+  } catch (error) {
+    return res.status(400).json({ success: false, error: true, message: error.message || "Unable to create category" });
+  }
+}
+
+export async function updateCategory(req, res) {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
+    const updates = {};
+    if (req.body.name !== undefined) updates.name = String(req.body.name).trim();
+    if (req.body.image !== undefined) updates.image = String(req.body.image);
+    if (updates.name === "") return res.status(400).json({ success: false, error: true, message: "Category name cannot be empty" });
+    const category = await CategoryModel.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    if (!category) return res.status(404).json({ success: false, error: true, message: "Category not found" });
+    return res.json({ success: true, error: false, message: "Category updated", data: category });
+  } catch {
+    return res.status(400).json({ success: false, error: true, message: "Unable to update category" });
+  }
+}
+
+export async function createSubCategory(req, res) {
+  try {
+    const name = req.body.name?.trim();
+    const categoryId = req.body.categoryId;
+    if (!name || !Array.isArray(categoryId) || !categoryId.length) {
+      return res.status(400).json({ success: false, error: true, message: "Subcategory name and at least one category are required" });
+    }
+    const validCount = await CategoryModel.countDocuments({ _id: { $in: categoryId } });
+    if (validCount !== new Set(categoryId.map(String)).size) {
+      return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
+    }
+    const subcategory = await SubCategoryModel.create({ name, categoryId, image: req.body.image || "" });
+    return res.status(201).json({ success: true, error: false, message: "Subcategory created", data: subcategory });
+  } catch (error) {
+    return res.status(400).json({ success: false, error: true, message: error.message || "Unable to create subcategory" });
+  }
+}
