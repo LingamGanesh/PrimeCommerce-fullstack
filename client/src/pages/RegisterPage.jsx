@@ -61,7 +61,8 @@ const RegisterPage = () => {
     <section className="flex min-h-[75vh] items-center justify-center bg-[#f7f8f3] px-4 py-10">
       <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-7 shadow-xl shadow-green-950/5 sm:p-9">
 
-        <p className="mb-3 text-center text-xs font-extrabold uppercase tracking-[.2em] text-green-700">PrimeCommerce · Join us</p>\n        <h1 className="text-center text-3xl font-black tracking-tight text-slate-900 mb-6">
+        <p className="mb-3 text-center text-xs font-extrabold uppercase tracking-[.2em] text-green-700">PrimeCommerce · Join us</p>
+        <h1 className="text-center text-3xl font-black tracking-tight text-slate-900 mb-6">
           Create your account
         </h1>
 
