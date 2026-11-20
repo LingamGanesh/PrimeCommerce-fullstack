@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Axios from "../utils/Axios";
+import loadRazorpayCheckout from "../utils/loadRazorpayCheckout";
 
 const activeTrackingStatuses = ["rider_assigned", "picked_up", "out_for_delivery"];
 const deliverySteps = [{ id: "processing", label: "Confirmed" }, { id: "picking", label: "Picking" }, { id: "packed", label: "Packed" }, { id: "rider_assigned", label: "Rider assigned" }, { id: "picked_up", label: "Picked up" }, { id: "out_for_delivery", label: "On the way" }, { id: "delivered", label: "Delivered" }];
@@ -62,28 +63,11 @@ export default function Myorders() {
   const retryPayment = async (order) => {
     setRetryingOrder(order.id);
     try {
-      if (!window.Razorpay) {
-        await new Promise((resolve, reject) => {
-          const existing = document.querySelector('script[data-razorpay-checkout]');
-          if (existing) {
-            existing.addEventListener("load", resolve, { once: true });
-            existing.addEventListener("error", () => reject(new Error("Unable to load payment checkout")), { once: true });
-            return;
-          }
-          const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.async = true;
-          script.dataset.razorpayCheckout = "true";
-          script.onload = resolve;
-          script.onerror = () => reject(new Error("Unable to load payment checkout"));
-          document.body.appendChild(script);
-        });
-      }
-      if (!window.Razorpay) throw new Error("Payment checkout is unavailable");
+      const Razorpay = await loadRazorpayCheckout();
       const response = await Axios.post(`/api/v1/payments/razorpay/${order.id}/retry`);
       const paymentOrder = response.data?.data;
       if (!paymentOrder?.keyId || !paymentOrder?.razorpayOrderId) throw new Error("Payment retry details are incomplete");
-      const checkout = new window.Razorpay({
+      const checkout = new Razorpay({
         key: paymentOrder.keyId,
         amount: paymentOrder.amount,
         currency: paymentOrder.currency,
