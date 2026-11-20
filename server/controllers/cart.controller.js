@@ -7,7 +7,7 @@ const publicCartItem = (row) => {
   if (!product) return null;
   const discount = Math.max(0, Math.min(100, Number(product.discount) || 0));
   const price = Math.max(0, Number(product.price) || 0);
-  const unitPrice = Math.round(price * (1 - discount / 100) * 100) / 100;
+  const unitPrice = Math.round(price * 100) / 100;
   return {
     cartItemId: row._id.toString(),
     product: {
