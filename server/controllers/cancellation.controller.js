@@ -3,11 +3,28 @@ import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js";
 import { canCustomerCancelOrder, canRequestFullRazorpayRefund } from "../utils/orderPolicy.js";
 
-async function restoreReservedInventory(order) {
-  let items = [];
-  try { items = JSON.parse(order.product_details || "[]"); } catch { return false; }
-  await Promise.all(items.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: Number(item.quantity) || 0 } })));
-  return true;
+async function restoreReservedInventory(order, session) {
+  let items;
+  try { items = JSON.parse(order.product_details || "[]"); } catch {
+    throw new Error(`Cannot restore inventory for order ${order.orderId}: invalid product snapshot`);
+  }
+  if (!Array.isArray(items) || items.some(item =>
+    !mongoose.isValidObjectId(item.productId) ||
+    !Number.isSafeInteger(Number(item.quantity)) ||
+    Number(item.quantity) < 1
+  )) {
+    throw new Error(`Cannot restore inventory for order ${order.orderId}: invalid product quantities`);
+  }
+  for (const item of items) {
+    const result = await ProductModel.updateOne(
+      { _id: item.productId },
+      { $inc: { stock: Number(item.quantity) } },
+      { session }
+    );
+    if (result.matchedCount !== 1) {
+      throw new Error(`Cannot restore inventory for order ${order.orderId}: product ${item.productId} no longer exists`);
+    }
+  }
 }
 
 export async function cancelMyOrder(req, res) {
@@ -40,9 +57,21 @@ export async function cancelMyOrder(req, res) {
         return res.status(502).json({ success: false, message: error.message || "Refund could not be initiated. Contact support before retrying." });
       }
     }
-    const cancelled = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", inventoryReleased: false }, { $set: { delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } }, { new: true });
-    if (!cancelled) return res.status(409).json({ success: false, message: "Order cancellation is already being processed" });
-    await restoreReservedInventory(cancelled);
+    const session = await mongoose.startSession();
+    let cancelled;
+    try {
+      await session.withTransaction(async () => {
+        cancelled = await OrderModel.findOneAndUpdate(
+          { _id: order._id, userId: req.userId, delivery_status: "processing", inventoryReleased: false },
+          { $set: { delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } },
+          { new: true, session }
+        );
+        if (!cancelled) throw new Error("Order cancellation is already being processed");
+        await restoreReservedInventory(cancelled, session);
+      });
+    } finally {
+      await session.endSession();
+    }
     return res.json({ success: true, message: "Cash on Delivery order cancelled", data: { orderId: cancelled.orderId, refundStatus: "not_required" } });
   } catch (error) { return res.status(500).json({ success: false, message: error.message || "Unable to cancel order" }); }
 }
