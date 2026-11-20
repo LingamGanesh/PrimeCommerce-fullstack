@@ -16,10 +16,11 @@ const Header = () => {
   const navigate = useNavigate();
 
   const [openMenu, setOpenMenu] = useState(false);
+  const user = useSelector((state) => state.user);
   const [cartCount, setCartCount] = useState(0);
   useEffect(() => { if (user?._id) Axios.get("/api/v1/cart").then(r => setCartCount(r.data?.data?.itemCount || 0)).catch(() => setCartCount(0)); else setCartCount(0); }, [user?._id, location.pathname]);
-  const user = useSelector((state) => state.user);
-
+  const [cartCount, setCartCount] = useState(0);
+  useEffect(() => { if (user?._id) Axios.get("/api/v1/cart").then(r => setCartCount(r.data?.data?.itemCount || 0)).catch(() => setCartCount(0)); else setCartCount(0); }, [user?._id, location.pathname]);
   const isSearchPage = location.pathname === "/search";
 
   const toggleMenu = () => setOpenMenu((prev) => !prev);
@@ -102,11 +103,9 @@ const Header = () => {
               </button>
 
               {/* CART */}
-              <button className="relative text-gray-700">
+              <button onClick={() => navigate("/cart")} className="relative text-gray-700" aria-label="Open shopping cart">
                 <FaShoppingCart size={20} />
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                  10
-                </span>
+                {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs min-w-5 h-5 px-1 flex items-center justify-center rounded-full">{cartCount}</span>}
               </button>
 
             </div>
