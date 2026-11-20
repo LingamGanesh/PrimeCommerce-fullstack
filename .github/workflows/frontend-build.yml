@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - feat/quick-commerce-foundation
+      - feat/blinkit-inspired-design
       - main
 
 jobs:
