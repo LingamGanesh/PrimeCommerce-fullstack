@@ -94,6 +94,7 @@ If using a different static host, configure SPA fallback so application routes s
 2. Add any additional frontend/admin origins to `FRONTEND_URLS`, comma-separated.
 3. The production API rejects browser origins that are not in this allowlist.
 4. Keep frontend and API on HTTPS. Authentication cookies use `Secure` and `SameSite=None` in production. For reliable browser sessions, use custom domains on the same registrable domain (for example, `shop.example.com` and `api.example.com`). Separate default `*.vercel.app` project domains are cross-site; browsers that block third-party cookies may block login/session cookies even when CORS is configured. If you use separate Vercel domains, test login, refresh and logout in Safari and Chrome privacy settings before launch.
+5. Cookie-authenticated state-changing requests are protected by exact `Origin` validation against `FRONTEND_URL` / `FRONTEND_URLS`; keep those values synchronized with the deployed browser origins. Logout uses `POST` (not `GET`) so it receives the same CSRF check. Requests using bearer-token authentication are not subject to the cookie-origin check.
 5. If using custom domains, update the allowlist and redeploy the backend. Avoid broad wildcard CORS origins.
 
 ## 5. Razorpay webhook
