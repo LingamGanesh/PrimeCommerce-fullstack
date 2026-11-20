@@ -2,6 +2,16 @@ import mongoose from "mongoose";
 import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import SubCategoryModel from "../models/subCategory.model.js";
+import { buildPublicProductFilter, buildPublicSubCategoryFilter } from "../utils/catalogVisibility.js";
+
+async function getActiveCatalogRefs() {
+  const activeCategories = await CategoryModel.find({ isActive: { $ne: false } }).select("_id").lean();
+  const activeCategoryIds = activeCategories.map(category => category._id);
+  const activeSubCategories = activeCategoryIds.length
+    ? await SubCategoryModel.find({ isActive: { $ne: false }, categoryId: { $in: activeCategoryIds } }).select("_id").lean()
+    : [];
+  return { activeCategoryIds, activeSubCategoryIds: activeSubCategories.map(category => category._id) };
+}
 
 const normalizeImageUrl = (value, field = "image") => {
   if (value === undefined || value === null || value === "") return "";
@@ -35,14 +45,9 @@ export async function listProducts(req, res) {
     const { category, search, featured, page = 1, limit = 24 } = req.query;
     const currentPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const pageSize = Math.min(60, Math.max(1, Number.parseInt(limit, 10) || 24));
-    const filter = { publish: true };
-    if (category) {
-      if (!mongoose.isValidObjectId(category)) return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
-      filter.categoryId = category;
-    }
-    if (featured === "true") filter.discount = { $gt: 0 };
-    if (search?.trim()) filter.name = { $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
-
+    if (category && !mongoose.isValidObjectId(category)) return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
+    const activeRefs = await getActiveCatalogRefs();
+    const filter = buildPublicProductFilter({ ...activeRefs, categoryId: category, search, featured });
     const [products, total] = await Promise.all([
       ProductModel.find(filter).populate("categoryId", "name image").populate("sub_categoryId", "name image")
         .sort({ createdAt: -1 }).skip((currentPage - 1) * pageSize).limit(pageSize).lean(),
@@ -60,7 +65,8 @@ export async function listProducts(req, res) {
 export async function getProduct(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid product id" });
-    const product = await ProductModel.findOne({ _id: req.params.id, publish: true })
+    const activeRefs = await getActiveCatalogRefs();
+    const product = await ProductModel.findOne({ _id: req.params.id, publish: true, isActive: { $ne: false }, categoryId: { $in: activeRefs.activeCategoryIds }, sub_categoryId: { $in: activeRefs.activeSubCategoryIds } })
       .populate("categoryId", "name image").populate("sub_categoryId", "name image");
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product not found" });
     return res.json({ success: true, error: false, data: productPayload(product) });
@@ -71,7 +77,7 @@ export async function getProduct(req, res) {
 
 export async function listCategories(req, res) {
   try {
-    const categories = await CategoryModel.find().sort({ name: 1 }).lean();
+    const categories = await CategoryModel.find({ isActive: { $ne: false } }).sort({ sortOrder: 1, name: 1 }).lean();
     return res.json({ success: true, error: false, data: categories });
   } catch {
     return res.status(500).json({ success: false, error: true, message: "Unable to load categories" });
@@ -83,8 +89,9 @@ export async function listSubCategories(req, res) {
     if (req.query.categoryId && !mongoose.isValidObjectId(req.query.categoryId)) {
       return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
     }
-    const filter = req.query.categoryId ? { categoryId: req.query.categoryId } : {};
-    const categories = await SubCategoryModel.find(filter).sort({ name: 1 }).lean();
+    const activeRefs = await getActiveCatalogRefs();
+    const filter = buildPublicSubCategoryFilter({ activeCategoryIds: activeRefs.activeCategoryIds, categoryId: req.query.categoryId });
+    const categories = await SubCategoryModel.find(filter).sort({ sortOrder: 1, name: 1 }).lean();
     return res.json({ success: true, error: false, data: categories });
   } catch {
     return res.status(500).json({ success: false, error: true, message: "Unable to load subcategories" });
@@ -107,8 +114,8 @@ export async function createProduct(req, res) {
       return res.status(400).json({ success: false, error: true, message: "Price must be between 0 and 1 crore, discount must be 0–99.99%, and stock must be a whole number between 0 and 1 crore" });
     }
     const [validCategories, validSubCategories] = await Promise.all([
-      CategoryModel.countDocuments({ _id: { $in: categoryId } }),
-      SubCategoryModel.find({ _id: { $in: sub_categoryId } }).select("categoryId").lean()
+      CategoryModel.countDocuments({ _id: { $in: categoryId }, isActive: { $ne: false } }),
+      SubCategoryModel.find({ _id: { $in: sub_categoryId }, isActive: { $ne: false } }).select("categoryId").lean()
     ]);
     if (validCategories !== new Set(categoryId.map(String)).size || validSubCategories.length !== new Set(sub_categoryId.map(String)).size) {
       return res.status(400).json({ success: false, error: true, message: "Select valid categories and subcategories" });
@@ -134,7 +141,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid product id" });
-    const allowed = ["name", "categoryId", "sub_categoryId", "unit", "price", "discount", "stock", "description", "image", "publish"];
+    const allowed = ["name", "categoryId", "sub_categoryId", "unit", "price", "discount", "stock", "description", "image", "publish", "isActive"];
     const updates = {};
     for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
     for (const key of ["price", "discount", "stock"]) if (updates[key] !== undefined) updates[key] = Number(updates[key]);
@@ -147,6 +154,9 @@ export async function updateProduct(req, res) {
     if (updates.description !== undefined && updates.description.length > 5000) return res.status(400).json({ success: false, error: true, message: "Product description is too long" });
     if (updates.image !== undefined) updates.image = normalizeProductImages(updates.image);
     if (updates.publish !== undefined && typeof updates.publish !== "boolean") return res.status(400).json({ success: false, error: true, message: "Publish must be true or false" });
+    if (updates.isActive !== undefined && typeof updates.isActive !== "boolean") return res.status(400).json({ success: false, error: true, message: "isActive must be true or false" });
+    if (updates.publish !== undefined) updates.isActive = updates.publish;
+    if (updates.isActive !== undefined) updates.publish = updates.isActive;
     for (const key of ["categoryId", "sub_categoryId"]) {
       if (updates[key] !== undefined && (!Array.isArray(updates[key]) || updates[key].length === 0 || updates[key].some(id => !mongoose.isValidObjectId(id)))) {
         return res.status(400).json({ success: false, error: true, message: `Invalid ${key} selection` });
@@ -158,11 +168,11 @@ export async function updateProduct(req, res) {
     const categoryIds = updates.categoryId || currentProduct.categoryId;
     const subCategoryIds = updates.sub_categoryId || currentProduct.sub_categoryId;
     if (updates.categoryId) {
-      const count = await CategoryModel.countDocuments({ _id: { $in: categoryIds } });
+      const count = await CategoryModel.countDocuments({ _id: { $in: categoryIds }, isActive: { $ne: false } });
       if (count !== new Set(categoryIds.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
     }
     if (updates.categoryId || updates.sub_categoryId) {
-      const selectedSubcategories = await SubCategoryModel.find({ _id: { $in: subCategoryIds } }).select("categoryId").lean();
+      const selectedSubcategories = await SubCategoryModel.find({ _id: { $in: subCategoryIds }, isActive: { $ne: false } }).select("categoryId").lean();
       if (selectedSubcategories.length !== new Set(subCategoryIds.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid subcategories" });
       const selectedCategoryIds = new Set(categoryIds.map(String));
       if (selectedSubcategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) {
@@ -187,7 +197,7 @@ export async function updateProduct(req, res) {
 export async function archiveProduct(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid product id" });
-    const product = await ProductModel.findByIdAndUpdate(req.params.id, { publish: false }, { new: true });
+    const product = await ProductModel.findByIdAndUpdate(req.params.id, { publish: false, isActive: false }, { new: true });
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product not found" });
     return res.json({ success: true, error: false, message: "Product unpublished" });
   } catch {
@@ -217,6 +227,10 @@ export async function updateCategory(req, res) {
       updates.name = req.body.name.trim();
     }
     if (req.body?.image !== undefined) updates.image = normalizeImageUrl(req.body.image, "Category image");
+    if (req.body?.isActive !== undefined) {
+      if (typeof req.body.isActive !== "boolean") return res.status(400).json({ success: false, error: true, message: "isActive must be true or false" });
+      updates.isActive = req.body.isActive;
+    }
     if (!Object.keys(updates).length) return res.status(400).json({ success: false, error: true, message: "No category changes were provided" });
     const category = await CategoryModel.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     if (!category) return res.status(404).json({ success: false, error: true, message: "Category not found" });
