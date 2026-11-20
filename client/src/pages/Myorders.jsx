@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import Axios from "../utils/Axios";
 
 const activeTrackingStatuses = ["rider_assigned", "picked_up", "out_for_delivery"];
+const deliverySteps = [{ id: "processing", label: "Confirmed" }, { id: "picking", label: "Picking" }, { id: "packed", label: "Packed" }, { id: "rider_assigned", label: "Rider assigned" }, { id: "picked_up", label: "Picked up" }, { id: "out_for_delivery", label: "On the way" }, { id: "delivered", label: "Delivered" }];
 
 export default function Myorders() {
   const location = useLocation();
@@ -87,6 +88,7 @@ export default function Myorders() {
               <div><p className="text-xs text-gray-500">Order ID</p><p className="font-bold">{order.orderId}</p><p className="mt-1 text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p></div>
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold capitalize text-amber-800">{String(order.deliveryStatus || "processing").replaceAll("_", " ")}</span>
             </div>
+            {order.deliveryStatus === "cancelled" ? <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-medium text-rose-700">This order was cancelled.</p> : <div className="mt-5 rounded-xl bg-slate-50 p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="text-sm font-bold text-slate-800">Delivery progress</p><p className="text-xs font-semibold capitalize text-green-700">{String(order.deliveryStatus || "processing").replaceAll("_", " ")}</p></div><div className="grid grid-cols-4 gap-2 sm:grid-cols-7">{deliverySteps.map((step, index) => { const currentIndex = deliverySteps.findIndex(item => item.id === (order.deliveryStatus || "processing")); const complete = currentIndex >= index; return <div key={step.id} className="min-w-0"><div className={complete ? "h-1.5 rounded-full bg-green-600" : "h-1.5 rounded-full bg-slate-200"} /><p className={complete ? "mt-2 text-[10px] leading-4 font-bold text-green-800 sm:text-xs" : "mt-2 text-[10px] leading-4 text-slate-400 sm:text-xs"}>{step.label}</p></div>; })}</div></div>}
             <div className="mt-4 space-y-2">{order.items.map((item,index) => <div key={String(item.productId) + index} className="flex justify-between gap-3 text-sm"><span className="text-gray-600">{item.name} × {item.quantity}</span><strong>₹{Number(item.lineTotal || 0).toFixed(2)}</strong></div>)}</div>
             <div className="mt-4 flex flex-wrap justify-between gap-3 border-t pt-3 text-sm"><span className="text-gray-500">{order.paymentMethod === "RAZORPAY" ? "Razorpay" : "Cash on Delivery"} · Payment {order.paymentStatus}{order.refundStatus && order.refundStatus !== "not_required" ? ` · Refund ${order.refundStatus}` : ""}</span><strong>Total ₹{Number(order.total || 0).toFixed(2)}</strong></div>
             <p className="mt-2 text-xs text-gray-500">Deliver to: {order.address?.address_line}, {order.address?.city}, {order.address?.state} - {order.address?.pincode}</p>
