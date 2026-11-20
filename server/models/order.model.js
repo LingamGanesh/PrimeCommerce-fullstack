@@ -4,7 +4,7 @@ const orderSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to User collection
+      ref: "User",
       required: true,
     },
     orderId: {
@@ -13,45 +13,33 @@ const orderSchema = new mongoose.Schema(
       unique: true,
     },
     product_details: {
-      type: String, // You can also make this an array of product objects if needed
+      type: String,
       required: [true, "Product details are required"],
     },
-    payment_id: {
-      type: String,
-      default: "",
-    },
-    payment_status: {
-      type: String,
-      default: "pending", // e.g., pending, completed, failed
-    },
+    payment_id: { type: String, default: "" },
+    payment_status: { type: String, default: "pending" },
     delivery_address: {
-      type: Object, // Can store structured address info
+      type: Object,
       required: true,
     },
     pickerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     riderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     pickedAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
+    riderLocation: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      updatedAt: { type: Date, default: null },
+    },
     delivery_status: {
       type: String,
-      default: "processing", // e.g., processing, shipped, delivered
+      default: "processing",
     },
-    subTotalAmt: {
-      type: Number,
-      required: true,
-    },
-    totalAmt: {
-      type: Number,
-      required: true,
-    },
-    invoice_receipt: {
-      type: String,
-      default: "",
-    },
+    subTotalAmt: { type: Number, required: true },
+    totalAmt: { type: Number, required: true },
+    invoice_receipt: { type: String, default: "" },
   },
-  {
-    timestamps: true, // Automatically adds createdAt and updatedAt
-  }
+  { timestamps: true }
 );
 
 const OrderModel = mongoose.model("Order", orderSchema);
