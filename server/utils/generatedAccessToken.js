@@ -7,7 +7,7 @@ const generateAccessToken = async (userId) => {
   return jwt.sign(
     { id: userId },
     secret,
-    { expiresIn: "5h" }
+    { expiresIn: "5h", algorithm: "HS256" }
   )
 }
 
