@@ -44,14 +44,11 @@ export async function issueMyDeliveryOtp(req, res) {
       .select("+deliveryOtpHash +deliveryOtpExpiresAt +deliveryOtpAttempts");
     if (!order) return res.status(409).json({ success: false, message: "Delivery OTP is available when your order is out for delivery" });
     const now = new Date();
-    if (order.deliveryOtpHash && order.deliveryOtpExpiresAt > now && order.deliveryOtpAttempts < 5) {
-      return res.status(429).json({ success: false, message: "An OTP is already active. Use the code you generated; you can request another after it expires." });
-    }
     const otp = String(randomInt(0, 1000000)).padStart(6, "0");
     order.deliveryOtpHash = createHash("sha256").update(otp).digest("hex");
     order.deliveryOtpExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
     order.deliveryOtpAttempts = 0;
     await order.save();
-    return res.json({ success: true, message: "Share this one-time code with your delivery rider. It expires in 30 minutes.", data: { otp, expiresAt: order.deliveryOtpExpiresAt } });
+    return res.json({ success: true, message: "Share this one-time code with your delivery rider only when they arrive. It expires in 30 minutes; generating another code invalidates this one.", data: { otp, expiresAt: order.deliveryOtpExpiresAt } });
   } catch { return res.status(500).json({ success: false, message: "Unable to generate delivery OTP" }); }
 }
