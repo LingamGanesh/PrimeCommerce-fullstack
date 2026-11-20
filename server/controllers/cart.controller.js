@@ -40,14 +40,37 @@ export async function addCartItem(req, res) {
     if (!mongoose.isValidObjectId(productId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
       return res.status(400).json({ success: false, error: true, message: "Provide a valid product and quantity (1–50)" });
     }
+
     const product = await ProductModel.findOne({ _id: productId, publish: true }).select("stock");
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product is unavailable" });
-    const existing = await CartProductModel.findOne({ userId: req.userId, productId });
-    const nextQuantity = (existing?.quantity || 0) + quantity;
-    if (nextQuantity > product.stock) return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
-    const row = existing
-      ? await CartProductModel.findByIdAndUpdate(existing._id, { quantity: nextQuantity }, { new: true })
-      : await CartProductModel.create({ userId: req.userId, productId, quantity });
+    if (quantity > product.stock) {
+      return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
+    }
+
+    // Atomic increment + unique compound index prevent concurrent requests from
+    // creating duplicate rows or overwriting each other's quantity updates.
+    const filter = { userId: req.userId, productId, quantity: { $lte: 50 - quantity } };
+    let row;
+    try {
+      row = await CartProductModel.findOneAndUpdate(
+        filter,
+        { $inc: { quantity }, $setOnInsert: { userId: req.userId, productId } },
+        { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
+      );
+    } catch (error) {
+      // Another request may win the first insert. Retry as an update against
+      // the unique row; never fall back to creating a second cart item.
+      if (error?.code !== 11000) throw error;
+      row = await CartProductModel.findOneAndUpdate(
+        filter,
+        { $inc: { quantity } },
+        { new: true, runValidators: true }
+      );
+    }
+
+    if (!row) {
+      return res.status(409).json({ success: false, error: true, message: "Cart quantity cannot exceed 50" });
+    }
     await row.populate({ path: "productId", select: "name image unit price discount stock publish" });
     return res.status(200).json({ success: true, error: false, message: "Cart updated", data: publicCartItem(row) });
   } catch {
