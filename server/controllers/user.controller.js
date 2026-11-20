@@ -164,9 +164,7 @@ const refreshToken = await generatedRefreshToken(user._id)
       error: false,
       success: true,
       data: {
-        userId: user._id,
-        accessToken,
-        refreshToken
+        userId: user._id
       }
     })
 
@@ -429,7 +427,8 @@ export async function refreshToken(request,response){
             return response.status(500).json({ message: "Refresh-token secret is not configured", error: true, success: false });
         }
         const decoded = jwt.verify(refreshToken, refreshSecret);
-        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshToken }).select("+refresh_token");
+        const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+        const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshTokenHash }).select("+refresh_token");
         if (!user || user.status !== "active") {
             return response.status(401).json({ message: "Refresh token is invalid or revoked", error: true, success: false });
         }
