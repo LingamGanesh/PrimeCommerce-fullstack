@@ -26,39 +26,10 @@ const Footer = () => {
           </ul>
         </div>
 
-        {/* Contact + Social Icons */}
-        <div>
-          <h4 className="text-gray-900 font-semibold mb-3">Contact</h4>
-          <p className="text-sm text-gray-600 mb-4">Questions about an order? Visit Customer Support from your account.</p>
-
-          <div className="flex space-x-4">
-            <a
-              href="/"
-              className="p-2 rounded-full border text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition"
-            >
-              <FaFacebookF />
-            </a>
-
-            <a
-              href="#"
-              className="p-2 rounded-full border text-gray-500 hover:bg-pink-50 hover:text-pink-500 transition"
-            >
-              <FaInstagram />
-            </a>
-
-            <a
-              href="#"
-              className="p-2 rounded-full border text-gray-500 hover:bg-sky-50 hover:text-sky-500 transition"
-            >
-              <FaTwitter />
-            </a>
-          </div>
-        </div>
-
       </div>
 
       <div className="border-t border-gray-200 mt-8 pt-4 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} YourCompany. All rights reserved.
+        © {new Date().getFullYear()} PrimeCommerce. All rights reserved.
       </div>
     </footer>
   )
