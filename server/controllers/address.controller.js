@@ -96,12 +96,12 @@ export async function updateAddress(req, res) {
         }
         updates[field] = req.body[field].trim();
       }
-      if (updates.pincode !== undefined && !/^[1-9]\\d{5}$/.test(updates.pincode)) {
+      if (updates.pincode !== undefined && !/^[1-9]\d{5}$/.test(updates.pincode)) {
         throw Object.assign(new Error("Enter a valid six-digit Indian PIN code"), { statusCode: 400 });
       }
       if (req.body.mobile !== undefined) {
         const mobile = normalizeMobileNumber(req.body.mobile);
-        if (!/^[6-9]\\d{9}$/.test(mobile)) throw Object.assign(new Error("Enter a valid Indian mobile number"), { statusCode: 400 });
+        if (!/^[6-9]\d{9}$/.test(mobile)) throw Object.assign(new Error("Enter a valid Indian mobile number"), { statusCode: 400 });
         updates.mobile = mobile;
       }
       for (const field of optionalTextFields) {
@@ -130,8 +130,11 @@ export async function updateAddress(req, res) {
         updates.isDefault = true;
       } else if (req.body.isDefault === false && current.isDefault) {
         const replacement = await AddressModel.findOne({ userId: req.userId, _id: { $ne: current._id } }).sort({ createdAt: -1 }).session(session);
-        if (replacement) await AddressModel.updateOne({ _id: replacement._id, userId: req.userId }, { $set: { isDefault: true } }, { session });
-        else updates.isDefault = true;
+        if (replacement) {
+          updates.isDefault = false;
+          await AddressModel.updateOne({ _id: current._id, userId: req.userId }, { $set: { isDefault: false } }, { session });
+          await AddressModel.updateOne({ _id: replacement._id, userId: req.userId }, { $set: { isDefault: true } }, { session });
+        } else updates.isDefault = true;
       }
       if (!Object.keys(updates).length && !Object.keys(unset).length) {
         throw Object.assign(new Error("No address changes were provided"), { statusCode: 400 });
