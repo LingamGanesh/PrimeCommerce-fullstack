@@ -17,6 +17,7 @@ Status meanings:
 |---|---|---|
 | Phase 1 — inspect repository structure and feature inventory | DONE | 158 tree entries / 131 files inventoried; client, server, admin, docs, configuration and CI reviewed |
 | Phase 1 — inspect dependency declarations and lockfiles | DONE | client/server/admin package declarations and lockfile roots reviewed |
+| Phase 1 — remediate npm audit advisories | DONE | Added compatible dependency remediation workflow; npm audit fix updated server/client lockfiles; both audits now report 0 vulnerabilities; remediation workflow 44777349844 passed backend tests (18/18), frontend lint and build |
 | Phase 1 — npm audit | DONE | GitHub Actions npm audit logs inspected: client 21 advisories (16 high); server 15 advisories (8 high, 2 critical). Audit is non-blocking in workflow |
 | Phase 1 — run frontend lint/build and backend tests | DONE | CI run 44768025216: install, lint, build and backend tests passed |
 | Phase 1 — local MongoDB startup and seed | BLOCKED | User local log reports querySrv EBADNAME for literal <cluster-host>; local ignored .env cannot be inspected from GitHub |
@@ -47,8 +48,10 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 
 | ID | Priority | Status | Planned evidence before closure |
 |---|---|---|---|
-| AUD-001 | CRITICAL | PENDING | Patched Mongoose/proxy-addr; npm audit no critical/high; backend regression tests |
-| AUD-002 | HIGH | PENDING | Patched client dependencies; npm audit no critical/high; lint/build/browser tests |
+| AUD-001 | CRITICAL | DONE | Mongoose 9.12.2 and proxy-addr 2.0.8 in lockfile; server npm audit 0 vulnerabilities; remediation workflow passed tests |
+
+| AUD-002 | HIGH | DONE | Axios 1.21.1, Vite 7.3.8 and React Router 7.18.6 locked; client npm audit 0 vulnerabilities; lint/build passed |
+
 | AUD-003 | HIGH | DONE | Regression test verifies /healthz=200 and /readyz=503 while MongoDB is disconnected; CI 44774204891 passed |
 
 | AUD-004 | HIGH | DONE | User.mobile is String; controller/admin query paths use strings; migration script added; 2 normalization tests; CI 44775958656 passed |
@@ -93,17 +96,17 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 
 Latest fix commit: 0b306fc25eade66a3985b5b287de34f59f000482. An earlier CI attempt exposed a syntax error in the newly added test; the test was corrected and the latest run passes. No failed run is being represented as a pass.
 
-Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44777018024
+Latest verified dependency/security workflow: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44777349844
 
 | Command | Result |
 |---|---|
 | client: npm ci | PASS |
-| client: npm run lint | PASS (latest fix CI 44777018024) |
+| client: npm run lint | PASS (dependency-remediation workflow 44777349844) |
 | client: npm run build | PASS (baseline and latest CI 44775373218) |
 | server: npm ci | PASS |
-| server: npm test | PASS — latest CI 44777018024: 18 tests, 18 passed, 0 failed |
-| client: npm audit | 21 advisories — 1 low, 4 moderate, 16 high |
-| server: npm audit | 15 advisories — 5 moderate, 8 high, 2 critical |
+| server: npm test | PASS — dependency-remediation workflow 44777349844: 18 tests, 18 passed, 0 failed |
+| client: npm audit | PASS — 0 vulnerabilities after compatible audit fix (workflow 44777349844) |
+| server: npm audit | PASS — 0 vulnerabilities after compatible audit fix (workflow 44777349844) |
 | server: npm run seed against the user’s Atlas database | NOT VERIFIED |
 | local server + browser auth/checkout | NOT VERIFIED |
 | Razorpay sandbox/webhooks | NOT RUN |
@@ -111,7 +114,7 @@ Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/
 
 ## Known blockers and external requirements
 
-1. MongoDB Atlas: local server still reads a placeholder hostname. Replace it with the actual Atlas host in ignored server/.env. Rotate the MongoDB credential previously exposed in the conversation.
+1. MongoDB Atlas: local server still reads a placeholder hostname. Replace it with the actual Atlas host in ignored server/.env. Rotate the MongoDB credential previously exposed in the conversation. Before starting with the new Address schema, run `npm run migrate:address-indexes`; run `npm run migrate:mobile-to-string` for existing phone records.
 2. Resend: email verification and password-reset delivery require RESEND_API and a verified EMAIL_FROM sender.
 3. Cloudinary: avatar upload requires CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.
 4. Razorpay: online payments/refunds require test keys and webhook secret; sandbox verification has not been performed.
