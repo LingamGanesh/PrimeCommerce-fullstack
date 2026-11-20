@@ -9,10 +9,10 @@ const Footer = () => {
         {/* Brand */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            YourCompany
+            PrimeCommerce
           </h3>
           <p className="text-sm text-gray-600">
-            Building modern web solutions with clean design and performance.
+            Everyday essentials, simple shopping and reliable delivery.
           </p>
         </div>
 
@@ -20,21 +20,20 @@ const Footer = () => {
         <div>
           <h4 className="text-gray-900 font-semibold mb-3">Quick Links</h4>
           <ul className="space-y-2 text-sm text-gray-600">
-            <li><a href="#" className="hover:text-gray-900">Home</a></li>
-            <li><a href="#" className="hover:text-gray-900">About</a></li>
-            <li><a href="#" className="hover:text-gray-900">Contact</a></li>
+            <li><a href="/" className="hover:text-gray-900">Home</a></li>
+            <li><a href="/search" className="hover:text-gray-900">Shop all</a></li>
+            <li><a href="/dashboard/support" className="hover:text-gray-900">Customer support</a></li>
           </ul>
         </div>
 
         {/* Contact + Social Icons */}
         <div>
           <h4 className="text-gray-900 font-semibold mb-3">Contact</h4>
-          <p className="text-sm text-gray-600">support@yourcompany.com</p>
-          <p className="text-sm text-gray-600 mb-4">+91 98765 43210</p>
+          <p className="text-sm text-gray-600 mb-4">Questions about an order? Visit Customer Support from your account.</p>
 
           <div className="flex space-x-4">
             <a
-              href="#"
+              href="/"
               className="p-2 rounded-full border text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition"
             >
               <FaFacebookF />
