@@ -22,6 +22,10 @@ dotenv.config();
 
 const app = express();
 
+// Production deployments run behind one trusted hosting proxy (Vercel/Render).
+// Enable Express IP resolution so account/IP rate limits use the client address.
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
+
 if (process.env.NODE_ENV === "production") {
   const requiredSecrets = ["SECRET_KEY_ACCESS_TOKEN", "SECRET_KEY_REFRESH_TOKEN"];
   for (const name of requiredSecrets) {
