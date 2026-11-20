@@ -23,7 +23,7 @@ export async function getAdminOverview(req, res) {
 
 export async function listAdminProducts(req, res) {
   try {
-    const products = await ProductModel.find().populate("categoryId", "name").sort({ updatedAt: -1 }).limit(100).lean();
+    const products = await ProductModel.find().populate("categoryId", "name").populate("sub_categoryId", "name").sort({ updatedAt: -1 }).limit(100).lean();
     return res.json({ success: true, data: products });
   } catch {
     return res.status(500).json({ success: false, message: "Unable to load product inventory" });
