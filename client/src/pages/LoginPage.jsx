@@ -54,7 +54,7 @@ const Login = () => {
             localStorage.setItem('refreshtoken',response.data.data.refreshToken)
             const userDetails =  await fetchUserDetails()
             dispatch(setUserDetails(userDetails.data))
-        navigate('/')
+        navigate(userDetails.data?.role === 'admin' ? '/admin' : '/')
       }
 
     } catch (error) {
