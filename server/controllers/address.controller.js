@@ -14,6 +14,7 @@ export async function listAddresses(req, res) {
 }
 
 export async function createAddress(req, res) {
+  const session = await mongoose.startSession();
   try {
     const payload = {};
     for (const field of fields) payload[field] = req.body[field];
@@ -34,22 +35,43 @@ export async function createAddress(req, res) {
     }
     payload.mobile = Number(mobile);
     payload.userId = req.userId;
-    const address = await AddressModel.create(payload);
-    await UserModel.findByIdAndUpdate(req.userId, { $addToSet: { address_details: address._id } });
+    let address;
+    await session.withTransaction(async () => {
+      [address] = await AddressModel.create([payload], { session });
+      const userUpdate = await UserModel.updateOne(
+        { _id: req.userId },
+        { $addToSet: { address_details: address._id } },
+        { session }
+      );
+      if (userUpdate.matchedCount !== 1) throw new Error("User account not found");
+    });
     return res.status(201).json({ success: true, error: false, message: "Address saved", data: address });
   } catch {
-    return res.status(400).json({ success: false, error: true, message: "Unable to save address" });
+    return res.status(500).json({ success: false, error: true, message: "Unable to save address" });
+  } finally {
+    await session.endSession();
   }
 }
 
 export async function deleteAddress(req, res) {
+  const session = await mongoose.startSession();
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid address id" });
-    const address = await AddressModel.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    let address;
+    await session.withTransaction(async () => {
+      address = await AddressModel.findOneAndDelete({ _id: req.params.id, userId: req.userId }, { session });
+      if (!address) return;
+      await UserModel.updateOne(
+        { _id: req.userId },
+        { $pull: { address_details: address._id } },
+        { session }
+      );
+    });
     if (!address) return res.status(404).json({ success: false, error: true, message: "Address not found" });
-    await UserModel.findByIdAndUpdate(req.userId, { $pull: { address_details: address._id } });
     return res.json({ success: true, error: false, message: "Address deleted" });
   } catch {
-    return res.status(500).json({ success: false, error: true, message: "Unable to delete address" });
+    return res.status(503).json({ success: false, error: true, message: "Unable to safely delete address. Please retry." });
+  } finally {
+    await session.endSession();
   }
 }
