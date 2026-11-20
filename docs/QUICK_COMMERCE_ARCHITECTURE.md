@@ -99,10 +99,10 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Admin dispatch endpoints: `PATCH /api/v1/admin/orders/:id/assign-picker` assigns a picker to a processing order and moves it to `picking`; `PATCH /api/v1/admin/orders/:id/assign-rider` assigns a rider only after the order reaches `packed`, then moves it to `rider_assigned`.
 - Orders store `pickerId`, `riderId`, `pickedAt` and `deliveredAt` assignment/timestamp fields.
 - Picker APIs: `GET /api/v1/fulfilment/picker/orders` and `PATCH /api/v1/fulfilment/picker/orders/:id/status` (picker can mark its own assigned `picking` order as `packed`).
-- Rider APIs: `GET /api/v1/fulfilment/rider/orders` and `PATCH /api/v1/fulfilment/rider/orders/:id/status` (assigned rider advances through `picked_up`, `out_for_delivery`, and `delivered`).
+- Rider APIs: `GET /api/v1/fulfilment/rider/orders` and `PATCH /api/v1/fulfilment/rider/orders/:id/status` (assigned rider advances through `picked_up` and `out_for_delivery`). Delivery completion now requires customer OTP verification through `POST /api/v1/fulfilment/rider/orders/:id/verify-otp`.
 - Staff APIs verify the active account role from the database on each request; a picker/rider can only read and update orders assigned to their own account.
 - Dedicated `/picker` and `/rider` workspaces show assigned orders, item snapshots and delivery address details. Login redirects each role to its workspace.
-- This phase provides manual refresh, status updates and opt-in periodic GPS sharing. It does not provide Socket.io updates, proof-of-delivery photos/OTP, rider earnings, route optimisation, FCM notifications or dedicated staff onboarding/password provisioning.
+- This phase provides manual refresh, status updates and opt-in periodic GPS sharing. It does not provide Socket.io updates, proof-of-delivery photos, rider earnings, route optimisation, FCM notifications or dedicated staff onboarding/password provisioning.
 - The older admin order status endpoint remains for legacy `processing → shipped → delivered` orders. Newly dispatched orders use the picker/rider lifecycle above.
 
 
@@ -114,3 +114,12 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Rider dashboard uses browser geolocation after the rider explicitly starts GPS sharing. Updates are throttled to at most one request per five seconds and stop when the rider stops sharing or the dashboard unmounts.
 - Customer order history can poll the tracking endpoint every 10 seconds and open the latest coordinates in OpenStreetMap.
 - This is periodic location refresh, not a continuous socket stream. Location sharing requires browser permission and a secure context (HTTPS, or localhost). There is no background tracking after the rider closes the dashboard, and no route/ETA calculation.
+
+
+## Delivery OTP verification (current phase)
+
+- When an order reaches `out_for_delivery`, its owner can request a six-digit delivery code using `POST /api/v1/orders/:id/delivery-otp`. Only the authenticated order owner can issue it.
+- The API returns the code once to the customer and stores only its SHA-256 hash, expiry and failed-attempt counter. The code expires after 30 minutes; issuing a replacement invalidates the previous code.
+- The rider can complete only their own assigned `out_for_delivery` order by submitting the code to `POST /api/v1/fulfilment/rider/orders/:id/verify-otp`. The server uses a timing-safe hash comparison and permits at most five incorrect attempts per issued code.
+- The customer sees the code in their order tracking panel and shares it directly with the rider when the rider arrives. No SMS/WhatsApp/email delivery provider is configured, so the app does not claim to send the code automatically.
+- Delivery completion through the rider workflow is OTP-gated; the generic rider status endpoint no longer accepts a direct `delivered` transition.
