@@ -82,9 +82,9 @@ const restoreOrderStock = async (order, session) => {
 
 async function reconcileRazorpayRefund(refund, eventName) {
   if (!refund?.id || !refund?.payment_id) return null;
-  const candidate = await OrderModel.findOne({ payment_id: refund.payment_id, paymentMethod: "RAZORPAY" }).select("_id totalAmt currency");
+  const candidate = await OrderModel.findOne({ payment_id: refund.payment_id, paymentMethod: "RAZORPAY" }).select("_id totalAmt");
   if (!candidate || Number(refund.amount) !== Math.round(Number(candidate.totalAmt) * 100) ||
-      (refund.currency && refund.currency !== "INR")) {
+      refund.currency !== "INR") {
     throw new Error("Refund webhook amount or currency does not match the order");
   }
   const failed = eventName === "refund.failed";
