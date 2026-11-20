@@ -19,11 +19,11 @@ const categories = [
 
 const products = [
   { id: "milk", name: "Amul Taaza Toned Milk", unit: "500 ml", price: 28, mrp: 29, category: "Dairy, Bread & Eggs", emoji: "🥛", color: "bg-blue-50", tag: "Everyday essential" },
-  { id: "banana", name: "Robusta Banana", unit: " केले • 6 pcs", price: 42, mrp: 50, category: "Vegetables & Fruits", emoji: "🍌", color: "bg-yellow-50", tag: "Fresh pick" },
+  { id: "banana", name: "Robusta Banana", unit: "6 pcs", price: 42, mrp: 50, category: "Vegetables & Fruits", emoji: "🍌", color: "bg-yellow-50", tag: "Fresh pick" },
   { id: "bread", name: "Britannia Brown Bread", unit: "400 g", price: ಷ್ಟ 45, mrp: 50, category: "Bakery & Biscuits", emoji: "🍞", color: "bg-amber-50", tag: "Bestseller" },
   { id: "chips", name: "Classic Salted Chips", unit: " ล  pack", price: 20, mrp: 20, category: "Munchies", emoji: "🥔", color: "bg-orange-50", tag: "Snack time" },
   { id: "eggs", name: "Farm Fresh Eggs", unit: "6 pieces", price: 48, mrp: 55, category: "Dairy, Bread & Eggs", emoji: "🥚", color: "bg-stone-50", tag: "Protein rich" },
-  { id: "juice", name: " mixed Fruit Juice", unit: "1 L", price: 99, mrp: 120, category: "Cold Drinks", emoji: "🧃", color: "bg-pink-50", tag: "Refreshing" },
+  { id: "juice", name: "Mixed Fruit Juice", unit: "1 L", price: 99, mrp: 120, category: "Cold Drinks", emoji: "🧃", color: "bg-pink-50", tag: "Refreshing" },
   { id: "tomato", name: "Fresh Tomato", unit: "500 g", price: 24, mrp: 30, category: "Vegetables & Fruits", emoji: "🍅", color: "bg-red-50", tag: "Farm fresh" },
   { id: "oats", name: "Rolled Oats", unit: "500 g", price: 135, mrp: 160, category: "Breakfast & Instant Food", emoji: "🥣", color: "bg-yellow-50", tag: "Healthy choice" },
 ].map((p) => ({ ...p, price: Number(p.price) || 0 }));
