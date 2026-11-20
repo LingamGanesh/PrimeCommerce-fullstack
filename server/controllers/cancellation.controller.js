@@ -17,7 +17,7 @@ export async function cancelMyOrder(req, res) {
     if (order.delivery_status !== "processing") return res.status(409).json({ success: false, message: "Orders can only be cancelled before picker assignment" });
     if (order.paymentMethod === "RAZORPAY") {
       if (order.payment_status !== "paid" || !order.payment_id) return res.status(409).json({ success: false, message: "Only captured online payments can be refunded. Contact support for this payment state." });
-      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", payment_status: "paid", refund_status: { $nin: ["initiating", "pending", "processed"] } }, { $set: { refund_status: "initiating" } }, { new: true });
+      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", payment_status: "paid", refund_status: "not_required" }, { $set: { refund_status: "initiating" } }, { new: true });
       if (!claimed) return res.status(409).json({ success: false, message: "Cancellation or refund is already being processed" });
       try {
         const key = process.env.RAZORPAY_KEY_ID; const secret = process.env.RAZORPAY_KEY_SECRET;
@@ -29,10 +29,11 @@ export async function cancelMyOrder(req, res) {
         });
         const refund = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(refund.error?.description || "Refund request failed");
-        const updated = await OrderModel.findOneAndUpdate({ _id: order._id, refund_status: "initiating", delivery_status: "processing" }, { $set: { refund_status: refund.status === "processed" ? "processed" : "pending", refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100, delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } }, { new: true });
+        await OrderModel.updateOne({ _id: order._id, refund_status: "initiating" }, { $set: { refund_status: refund.status === "processed" ? "processed" : "pending" } });
+        const updated = await OrderModel.findOneAndUpdate({ _id: order._id, delivery_status: "processing", refund_status: { $in: ["initiating", "pending", "processed", "failed"] } }, { $set: { refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100, delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } }, { new: true });
         if (!updated) return res.status(409).json({ success: false, message: "Refund was accepted but order state needs support reconciliation" });
         await restoreReservedInventory(updated);
-        return res.json({ success: true, message: "Order cancelled. Your Razorpay refund has been initiated.", data: { orderId: updated.orderId, refundStatus: updated.refund_status, refundId: updated.refund_id } });
+        return res.json({ success: true, message: "Order cancelled. Your Razorpay refund status is being tracked.", data: { orderId: updated.orderId, refundStatus: updated.refund_status, refundId: updated.refund_id } });
       } catch (error) {
         await OrderModel.updateOne({ _id: order._id, refund_status: "initiating" }, { $set: { refund_status: "failed" } });
         return res.status(502).json({ success: false, message: error.message || "Refund could not be initiated. Contact support before retrying." });
