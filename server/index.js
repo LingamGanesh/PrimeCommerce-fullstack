@@ -10,6 +10,7 @@ import catalogRouter from './routes/catalog.routes.js';
 import cartRouter from './routes/cart.routes.js';
 import addressRouter from './routes/address.routes.js';
 import checkoutRouter from './routes/checkout.routes.js';
+import ordersRouter from './routes/orders.routes.js';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use('/api/v1', catalogRouter);
 app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/addresses', addressRouter);
 app.use('/api/v1/checkout', checkoutRouter);
+app.use('/api/v1/orders', ordersRouter);
 
 const PORT = process.env.PORT || 8080;
 
