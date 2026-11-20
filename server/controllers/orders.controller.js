@@ -40,15 +40,27 @@ export async function getMyOrderTracking(req, res) {
 export async function issueMyDeliveryOtp(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
-    const order = await OrderModel.findOne({ _id: req.params.id, userId: req.userId, delivery_status: "out_for_delivery" })
-      .select("+deliveryOtpHash +deliveryOtpExpiresAt +deliveryOtpAttempts");
-    if (!order) return res.status(409).json({ success: false, message: "Delivery OTP is available when your order is out for delivery" });
     const now = new Date();
     const otp = String(randomInt(0, 1000000)).padStart(6, "0");
-    order.deliveryOtpHash = createHash("sha256").update(otp).digest("hex");
-    order.deliveryOtpExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
-    order.deliveryOtpAttempts = 0;
-    await order.save();
-    return res.json({ success: true, message: "Share this one-time code with your delivery rider only when they arrive. It expires in 30 minutes; generating another code invalidates this one.", data: { otp, expiresAt: order.deliveryOtpExpiresAt } });
+    const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+    const deliveryOtpHash = createHash("sha256").update(otp).digest("hex");
+
+    // Atomic replacement prevents two simultaneous OTP-generation requests from
+    // overwriting each other's state through stale document saves.
+    const order = await OrderModel.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId, delivery_status: "out_for_delivery" },
+      { $set: {
+        deliveryOtpHash,
+        deliveryOtpExpiresAt: expiresAt,
+        deliveryOtpAttempts: 0
+      } },
+      { new: true, projection: { _id: 1, deliveryOtpExpiresAt: 1 } }
+    );
+    if (!order) return res.status(409).json({ success: false, message: "Delivery OTP is available when your order is out for delivery" });
+    return res.json({
+      success: true,
+      message: "Share this one-time code with your delivery rider only when they arrive. It expires in 30 minutes; generating another code invalidates this one.",
+      data: { otp, expiresAt: order.deliveryOtpExpiresAt }
+    });
   } catch { return res.status(500).json({ success: false, message: "Unable to generate delivery OTP" }); }
 }
