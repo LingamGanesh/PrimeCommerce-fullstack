@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "test": "node --test",
     "seed": "node scripts/seed.js",
-    "migrate:mobile-to-string": "node scripts/migrateMobileToString.js"
+    "migrate:mobile-to-string": "node scripts/migrateMobileToString.js",
+    "migrate:address-indexes": "node scripts/migrateAddressIndexes.js"
   },
   "keywords": [],
   "author": "",
