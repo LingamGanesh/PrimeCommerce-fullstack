@@ -3,7 +3,7 @@ import { Resend } from "resend";
 let resendClient;
 
 export async function sendNotificationEmail({ to, subject, text, html }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API;
   const from = process.env.EMAIL_FROM;
   if (!apiKey || !from || !to) return { sent: false, reason: "email_not_configured" };
   try {
