@@ -47,25 +47,27 @@ export async function addCartItem(req, res) {
       return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
     }
 
-    // Atomic increment + unique compound index prevent concurrent requests from
-    // creating duplicate rows or overwriting each other's quantity updates.
+    // First atomically increment an existing row without exceeding the cart cap.
     const filter = { userId: req.userId, productId, quantity: { $lte: 50 - quantity } };
-    let row;
-    try {
-      row = await CartProductModel.findOneAndUpdate(
-        filter,
-        { $inc: { quantity }, $setOnInsert: { userId: req.userId, productId } },
-        { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
-      );
-    } catch (error) {
-      // Another request may win the first insert. Retry as an update against
-      // the unique row; never fall back to creating a second cart item.
-      if (error?.code !== 11000) throw error;
-      row = await CartProductModel.findOneAndUpdate(
-        filter,
-        { $inc: { quantity } },
-        { new: true, runValidators: true }
-      );
+    let row = await CartProductModel.findOneAndUpdate(
+      filter,
+      { $inc: { quantity } },
+      { new: true, runValidators: true }
+    );
+
+    if (!row) {
+      // Create only when no row exists. The unique index resolves simultaneous
+      // first-add requests; the loser retries as an atomic increment.
+      try {
+        row = await CartProductModel.create({ userId: req.userId, productId, quantity });
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        row = await CartProductModel.findOneAndUpdate(
+          filter,
+          { $inc: { quantity } },
+          { new: true, runValidators: true }
+        );
+      }
     }
 
     if (!row) {
