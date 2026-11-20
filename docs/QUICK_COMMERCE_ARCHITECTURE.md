@@ -104,3 +104,13 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Dedicated `/picker` and `/rider` workspaces show assigned orders, item snapshots and delivery address details. Login redirects each role to its workspace.
 - This phase provides manual refresh and status updates only. It does not yet provide GPS location capture, live map tracking, Socket.io updates, proof-of-delivery photos/OTP, rider earnings, route optimisation, FCM notifications or dedicated staff onboarding/password provisioning.
 - The older admin order status endpoint remains for legacy `processing → shipped → delivered` orders. Newly dispatched orders use the picker/rider lifecycle above.
+
+
+## Implemented delivery tracking increment
+
+- Orders now store the rider's latest latitude, longitude and update timestamp.
+- An authenticated rider can update coordinates only for an order assigned to that rider and only after pickup while the order is picked up or out for delivery.
+- Customers can read tracking only for their own order. The API returns status, assigned rider contact details and the latest coordinates; delivered orders do not expose a stale location.
+- Rider dashboard uses browser geolocation after the rider explicitly starts GPS sharing. Updates are throttled to at most one request per five seconds and stop when the rider stops sharing or the dashboard unmounts.
+- Customer order history can poll the tracking endpoint every 10 seconds and open the latest coordinates in OpenStreetMap.
+- This is periodic location refresh, not a continuous socket stream. Location sharing requires browser permission and a secure context (HTTPS, or localhost). There is no background tracking after the rider closes the dashboard, and no route/ETA calculation.
