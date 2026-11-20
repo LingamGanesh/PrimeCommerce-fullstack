@@ -4,17 +4,13 @@ import Axios from "../utils/Axios";
 
 export default function VerifyEmail() {
   const [params] = useSearchParams();
-  const [status, setStatus] = useState("verifying");
-  const [message, setMessage] = useState("Verifying your email address…");
+  const token = params.get("token");
+  const [status, setStatus] = useState(() => token ? "verifying" : "error");
+  const [message, setMessage] = useState(() => token ? "Verifying your email address…" : "This verification link is invalid or incomplete.");
 
   useEffect(() => {
     let active = true;
-    const token = params.get("token");
-    if (!token) {
-      setStatus("error");
-      setMessage("This verification link is invalid or incomplete.");
-      return undefined;
-    }
+    if (!token) return undefined;
     Axios.post("/api/user/verify-email", { token })
       .then((response) => {
         if (!active) return;
