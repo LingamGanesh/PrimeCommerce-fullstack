@@ -101,12 +101,24 @@ async function reconcileRazorpayRefund(refund, eventName) {
     throw new Error("Refund webhook amount or currency does not match the order");
   }
   const failed = eventName === "refund.failed";
+  // A payment can have multiple refund records over its lifetime. Never let a
+  // delayed webhook for an older/different refund overwrite the refund currently
+  // attached to this order.
+  const matchingRefund = {
+    $or: [
+      { refund_id: { $exists: false } },
+      { refund_id: null },
+      { refund_id: "" },
+      { refund_id: refund.id }
+    ]
+  };
   if (failed) {
-    await OrderModel.updateOne(
+    const result = await OrderModel.updateOne(
       {
         payment_id: refund.payment_id,
         paymentMethod: "RAZORPAY",
-        refund_status: { $in: ["initiating", "pending", "failed"] }
+        refund_status: { $in: ["initiating", "pending", "failed"] },
+        ...matchingRefund
       },
       {
         $set: {
@@ -116,6 +128,12 @@ async function reconcileRazorpayRefund(refund, eventName) {
         }
       }
     );
+    if (result.matchedCount === 0) {
+      const current = await OrderModel.findOne({ payment_id: refund.payment_id }).select("refund_id refund_status");
+      if (current?.refund_id !== refund.id || !["failed", "processed"].includes(current?.refund_status)) {
+        throw new Error("Refund webhook ID does not match the order's active refund");
+      }
+    }
     return;
   }
 
@@ -129,7 +147,8 @@ async function reconcileRazorpayRefund(refund, eventName) {
           payment_status: "paid",
           delivery_status: "processing",
           inventoryReleased: false,
-          refund_status: { $in: ["initiating", "pending", "failed"] }
+          refund_status: { $in: ["initiating", "pending", "failed"] },
+          ...matchingRefund
         },
         {
           $set: {
@@ -442,7 +461,7 @@ export async function handleRazorpayWebhook(req, res) {
     // Signature/body errors are permanent client-side webhook failures. For
     // transient gateway, database, or transaction errors, return 5xx so
     // Razorpay can retry delivery instead of silently losing reconciliation.
-    if (error instanceof SyntaxError || /Refund webhook amount or currency does not match the order|Webhook payment amount, currency or captured payment ID could not be verified|Refund response is missing/i.test(error.message || "")) {
+    if (error instanceof SyntaxError || /Refund webhook amount or currency does not match the order|Refund webhook ID does not match|Webhook payment amount, currency or captured payment ID could not be verified|Refund response is missing/i.test(error.message || "")) {
       return res.status(400).json({ success: false, message: error.message || "Invalid webhook payload" });
     }
     return res.status(503).json({ success: false, message: "Webhook processing is temporarily unavailable; retry delivery" });
