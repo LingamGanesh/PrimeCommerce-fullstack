@@ -346,7 +346,7 @@ export async function forgotPasswordController(request, response) {
 
     const now = new Date();
     if (user.forgot_password_last_sent_at && now - user.forgot_password_last_sent_at < 60 * 1000) {
-      return response.status(429).json({ message: "Please wait one minute before requesting another code.", error: true, success: false });
+      return response.json({ message: "If the account exists, a reset code has been sent.", error: false, success: true });
     }
 
     const otp = generatedOtp();
@@ -389,7 +389,7 @@ export async function verifyForgotPasswordOtp(request, response) {
   try {
     const email = String(request.body?.email || "").trim().toLowerCase();
     const otp = String(request.body?.otp || "");
-    if (!email || !/^\\d{6}$/.test(otp)) {
+    if (!email || !/^[0-9]{6}$/.test(otp)) {
       return response.status(400).json({ message: "Enter your email and 6-digit code.", error: true, success: false });
     }
 
