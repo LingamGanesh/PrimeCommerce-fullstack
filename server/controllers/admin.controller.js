@@ -204,3 +204,14 @@ export async function assignOrderRider(req, res) {
     return res.status(500).json({ success: false, message: "Unable to assign rider" });
   }
 }
+
+
+export async function listAdminStaff(req, res) {
+  try {
+    const staff = await UserModel.find({ role: { $in: ["picker", "rider"] }, status: "active" })
+      .select("name email mobile role status").sort({ role: 1, name: 1 }).lean();
+    return res.json({ success: true, data: staff });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to load fulfilment staff" });
+  }
+}
