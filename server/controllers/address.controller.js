@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import AddressModel from "../models/address.model.js";
 import UserModel from "../models/user.model.js";
+import { normalizeMobileNumber } from "../utils/mobileNumber.js";
 
 const fields = ["address_line", "city", "state", "pincode", "country", "mobile"];
 
@@ -28,12 +29,12 @@ export async function createAddress(req, res) {
         return res.status(400).json({ success: false, error: true, message: field + " is too long" });
       }
     }
-    const mobile = String(payload.mobile ?? "").replace(/\D/g, "");
+    const mobile = normalizeMobileNumber(payload.mobile);
     // This checkout currently accepts Indian six-digit PIN codes and mobile numbers.
     if (!/^[6-9]\d{9}$/.test(mobile) || !/^[1-9]\d{5}$/.test(payload.pincode)) {
       return res.status(400).json({ success: false, error: true, message: "Enter a valid Indian mobile number (10 digits) and PIN code (6 digits)" });
     }
-    payload.mobile = Number(mobile);
+    payload.mobile = mobile;
     payload.userId = req.userId;
     let address;
     await session.withTransaction(async () => {
