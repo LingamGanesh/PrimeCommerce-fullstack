@@ -39,10 +39,14 @@ export async function updateAdminSupportTicket(req, res) {
     const status = req.body?.status;
     const adminReply = String(req.body?.adminReply || "").trim();
     if (!["open", "in_progress", "resolved", "closed"].includes(status) || adminReply.length > 3000) return res.status(400).json({ success: false, message: "Choose a valid ticket status and reply" });
-    const update = { status, adminReply, repliedAt: adminReply ? new Date() : null };
+    const previousTicket = await SupportTicketModel.findById(req.params.id).select("adminReply");
+    if (!previousTicket) return res.status(404).json({ success: false, message: "Support ticket not found" });
+    const replyChanged = adminReply.length > 0 && adminReply !== previousTicket.adminReply;
+    const update = { status, adminReply, repliedAt: replyChanged ? new Date() : (adminReply ? undefined : null) };
+    if (update.repliedAt === undefined) delete update.repliedAt;
     const ticket = await SupportTicketModel.findByIdAndUpdate(req.params.id, { $set: update }, { new: true, runValidators: true }).populate("userId", "name email mobile").populate("orderId", "orderId");
     if (!ticket) return res.status(404).json({ success: false, message: "Support ticket not found" });
-    if (adminReply && ticket.userId?.email) {
+    if (replyChanged && ticket.userId?.email) {
       void sendNotificationEmail({ to: ticket.userId.email, subject: `Update on your support request: ${ticket.subject}`, text: `Our support team replied to your request.\n\n${adminReply}\n\nTicket status: ${ticket.status}`, html: `<h2>Support team reply</h2><p>${escapeEmailHtml(adminReply).replace(/\n/g, "<br>")}</p><p>Ticket status: ${escapeEmailHtml(ticket.status)}</p>` });
     }
     return res.json({ success: true, data: ticket });
