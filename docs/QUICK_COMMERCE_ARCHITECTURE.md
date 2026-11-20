@@ -153,5 +153,16 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Authenticated customers can create a support ticket with a subject, message and optional order reference using `POST /api/v1/support`; the server verifies that a linked order belongs to the signed-in customer.
 - Customers can list their own tickets with `GET /api/v1/support/mine`. Ticket records include status and the latest admin reply.
 - Admin-only `GET /api/v1/admin/support` lists the bounded support queue with safe customer and order summaries. `PATCH /api/v1/admin/support/:id` updates ticket status (`open`, `in_progress`, `resolved`, `closed`) and the latest reply.
-- The customer Support page and admin Support inbox are available. The current schema stores the latest admin reply rather than a full conversation/audit trail; email/SMS notifications and reply history are future work.
+- The customer Support page and admin Support inbox are available. Optional email notifications use the existing Resend dependency when `RESEND_API_KEY` and `EMAIL_FROM` are configured; `SUPPORT_EMAIL` receives new-ticket alerts, and customers receive admin-reply emails. Missing email configuration does not block ticket creation or replies. The current schema stores the latest admin reply rather than a full conversation/audit trail; SMS notifications and reply history are future work.
 - The pure Node test suite covers payment security and order cancellation/refund eligibility rules. Six unit tests passed in an isolated Node test run; the complete repository test/install/build and live gateway integration still need to be run in a checked-out deployment environment.
+
+
+Optional support email environment:
+
+```env
+RESEND_API_KEY=your_resend_api_key
+EMAIL_FROM=Your Store <support@your-domain.example>
+SUPPORT_EMAIL=support@your-domain.example
+```
+
+Verify the sender domain with Resend before enabling outbound email. These values are optional for the support workflow and must never be committed as secrets.
