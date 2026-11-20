@@ -15,9 +15,11 @@ const cartProductSchema = new mongoose.Schema(
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to User collection
+      ref: "User",
       required: true,
     },
+    variantId: { type: mongoose.Schema.Types.ObjectId, ref: "Variant", default: null },
+    storeId: { type: mongoose.Schema.Types.ObjectId, ref: "Store", default: null },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
