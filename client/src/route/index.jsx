@@ -11,6 +11,8 @@ import  Dashboard  from "../layout/Dashboard";
 import  Profile  from "../pages/Profile";
 import Myorders from "../pages/Myorders";
 import Address from "../pages/Address";
+import Cart from "../pages/Cart";
+import Checkout from "../pages/Checkout";
 
 const router = createBrowserRouter([
     {
