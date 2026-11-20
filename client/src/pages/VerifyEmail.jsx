@@ -23,7 +23,7 @@ export default function VerifyEmail() {
         setMessage(error.response?.data?.message || "This verification link is invalid or expired.");
       });
     return () => { active = false; };
-  }, [params]);
+  }, [token]);
 
   return (
     <main className="grid min-h-[70vh] place-items-center bg-[#f7f8f3] px-4 py-12">
