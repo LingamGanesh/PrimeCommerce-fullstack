@@ -9,7 +9,7 @@ const generateRefreshToken = async (userId) => {
   const token = jwt.sign(
     { id: userId },
     secret,
-    { expiresIn: "7d" }
+    { expiresIn: "7d", algorithm: "HS256" }
   );
 
   await UserModel.updateOne(
