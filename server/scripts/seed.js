@@ -14,6 +14,7 @@ import HomeSection from "../models/homeSection.model.js";
 import Coupon from "../models/coupon.model.js";
 import AppConfig from "../models/appConfig.model.js";
 import Rider from "../models/rider.model.js";
+import CartProduct from "../models/cartProduct.model.js";
 
 const slugify = value => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const categories = [
@@ -62,6 +63,10 @@ async function seed() {
     throw new Error("Set SEED_ADMIN_PASSWORD and SEED_CUSTOMER_PASSWORD before running seed in production.");
   }
   await connectDB();
+  // Migrate the legacy one-row-per-product cart index to support product variants.
+  try { await CartProduct.collection.dropIndex("userId_1_productId_1"); }
+  catch (error) { if (error?.code !== 27 && error?.codeName !== "IndexNotFound") throw error; }
+  await CartProduct.collection.createIndex({ userId: 1, productId: 1, variantId: 1 }, { unique: true, name: "user_product_variant_unique" });
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || "PrimeAdmin@123";
   const customerPassword = process.env.SEED_CUSTOMER_PASSWORD || "PrimeUser@123";
   const [adminHash, customerHash] = await Promise.all([bcrypt.hash(adminPassword, 12), bcrypt.hash(customerPassword, 12)]);
@@ -132,7 +137,7 @@ async function seed() {
   }
 
   await upsertBy(Banner, { title: "Fresh groceries, delivered fast" }, {
-    title: "Fresh groceries, delivered fast", imageUrl: "", storeIds: [store._id], sortOrder: 0, isActive: true
+    title: "Fresh groceries, delivered fast", imageUrl: "", storeIds: [store._id], sortOrder: 0, isActive: false
   });
   await upsertBy(HomeSection, { title: "Bestsellers" }, {
     title: "Bestsellers", type: "bestsellers", productIds: productDocs.slice(0, 12).map(p => p._id),
