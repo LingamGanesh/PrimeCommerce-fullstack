@@ -83,10 +83,14 @@ export async function createProduct(req, res) {
     }
     const [validCategories, validSubCategories] = await Promise.all([
       CategoryModel.countDocuments({ _id: { $in: categoryId } }),
-      SubCategoryModel.countDocuments({ _id: { $in: sub_categoryId } })
+      SubCategoryModel.find({ _id: { $in: sub_categoryId } }).select("categoryId").lean()
     ]);
-    if (validCategories !== new Set(categoryId.map(String)).size || validSubCategories !== new Set(sub_categoryId.map(String)).size) {
+    if (validCategories !== new Set(categoryId.map(String)).size || validSubCategories.length !== new Set(sub_categoryId.map(String)).size) {
       return res.status(400).json({ success: false, error: true, message: "Select valid categories and subcategories" });
+    }
+    const selectedCategoryIds = new Set(categoryId.map(String));
+    if (validSubCategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) {
+      return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
     }
     const product = await ProductModel.create({
       name: name.trim(), categoryId, sub_categoryId, unit: unit.trim(), price: values[0],
@@ -105,6 +109,22 @@ export async function updateProduct(req, res) {
     const updates = {};
     for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
     for (const key of ["price", "discount", "stock"]) if (updates[key] !== undefined) updates[key] = Number(updates[key]);
+    for (const key of ["categoryId", "sub_categoryId"]) {
+      if (updates[key] !== undefined && (!Array.isArray(updates[key]) || updates[key].length === 0 || updates[key].some(id => !mongoose.isValidObjectId(id)))) {
+        return res.status(400).json({ success: false, error: true, message: `Invalid ${key} selection` });
+      }
+    }
+    if (updates.categoryId) {
+      const count = await CategoryModel.countDocuments({ _id: { $in: updates.categoryId } });
+      if (count !== new Set(updates.categoryId.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
+    }
+    if (updates.sub_categoryId) {
+      const selectedSubcategories = await SubCategoryModel.find({ _id: { $in: updates.sub_categoryId } }).select("categoryId").lean();
+      if (selectedSubcategories.length !== new Set(updates.sub_categoryId.map(String)).size) return res.status(400).json({ success: false, error: true, message: "Select valid subcategories" });
+      const categoryIds = updates.categoryId || (await ProductModel.findById(req.params.id).select("categoryId").lean())?.categoryId || [];
+      const selectedCategoryIds = new Set(categoryIds.map(String));
+      if (selectedSubcategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
+    }
     if (["price", "discount", "stock"].some(key => updates[key] !== undefined && (!Number.isFinite(updates[key]) || updates[key] < 0)) || (updates.discount !== undefined && updates.discount > 100)) {
       return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
     }
