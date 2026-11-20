@@ -75,7 +75,7 @@ export async function createCashOnDeliveryOrder(req, res) {
     if (!responseData) throw new Error("Unable to place order");
     return res.status(201).json({ success: true, error: false, message: "Cash on Delivery order placed", data: responseData });
   } catch (error) {
-    const conflict = /cart changed|cart is empty/i.test(error.message);
+    const conflict = /cart changed|cart is empty|insufficient stock|no longer available|write conflict|transienttransactionerror/i.test(error.message || "");
     return res.status(conflict ? 409 : 400).json({ success: false, error: true, message: error.message || "Unable to place order" });
   } finally {
     await session.endSession();
