@@ -32,7 +32,7 @@ export async function listAdminProducts(req, res) {
 
 export async function listAdminOrders(req, res) {
   try {
-    const orders = await OrderModel.find().populate("userId", "name email mobile").sort({ createdAt: -1 }).limit(100).lean();
+    const orders = await OrderModel.find().populate("userId", "name email mobile").populate("pickerId", "name").populate("riderId", "name").sort({ createdAt: -1 }).limit(100).lean();
     return res.json({ success: true, data: orders });
   } catch {
     return res.status(500).json({ success: false, message: "Unable to load orders" });
