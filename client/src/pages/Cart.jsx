@@ -13,6 +13,7 @@ export default function Cart() {
     try {
       const response = await Axios.get("/api/v1/cart");
       setCart(response.data?.data || { items: [], subtotal: 0, itemCount: 0 });
+      window.dispatchEvent(new Event("cart:updated"));
     } catch (error) {
       toast.error(error.response?.data?.message || "Please login to view your cart");
       setCart({ items: [], subtotal: 0, itemCount: 0 });
