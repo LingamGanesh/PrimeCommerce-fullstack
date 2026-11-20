@@ -141,7 +141,8 @@ export async function loginController(request, response) {
     }
 
     // 2️⃣ Check user
-    const user = await UserModel.findOne({ email }).select('+password')
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const user = await UserModel.findOne({ email: normalizedEmail }).select('+password')
 
     if (!user) {
       return response.status(404).json({
@@ -185,7 +186,8 @@ const refreshToken = await generatedRefreshToken(user._id)
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None'
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
     }
 
     // 7️⃣ Set cookies
@@ -197,18 +199,14 @@ const refreshToken = await generatedRefreshToken(user._id)
       message: 'Login successful',
       error: false,
       success: true,
-      data: {
-        userId: user._id,
-        accessToken,
-        refreshToken
-      }
+      data: { userId: user._id }
     })
 
   } catch (error) {
-  console.error("LOGIN ERROR 👉", error);
+  console.error("Login failed:", error.message);
 
   return response.status(500).json({
-    message: error.message,
+    message: "Unable to log in. Please try again.",
     error: true,
     success: false
   });
@@ -225,10 +223,12 @@ export async function logoutController(request, response) {
     // Clear both tokens
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     };
 
+    await UserModel.updateOne({ _id: request.userId }, { $set: { refresh_token: "" } });
     response.clearCookie("accessToken", cookieOptions);
     response.clearCookie("refreshToken", cookieOptions);
 
@@ -328,7 +328,7 @@ export async function forgotPasswordController(request,response) {
     try {
         const { email } = request.body 
 
-        const user = await UserModel.findOne({ email })
+        const user = await UserModel.findOne({ email: String(email).trim().toLowerCase() }).select("+forgot_password_otp +forgot_password_expiry")
 
         if(!user){
             return response.status(400).json({
@@ -385,7 +385,7 @@ export async function verifyForgotPasswordOtp(request,response){
             })
         }
 
-        const user = await UserModel.findOne({ email })
+        const user = await UserModel.findOne({ email: String(email).trim().toLowerCase() }).select("+forgot_password_otp +forgot_password_expiry")
 
         if(!user){
             return response.status(400).json({
@@ -510,7 +510,7 @@ export async function resetpassword(request,response){
 //refresh token controler
 export async function refreshToken(request,response){
     try {
-        const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
+        const refreshToken = request.cookies?.refreshToken || request?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
 
         if(!refreshToken){
             return response.status(401).json({
@@ -530,14 +530,21 @@ export async function refreshToken(request,response){
             })
         }
 
-        const userId = verifyToken?._id
+        const userId = verifyToken?.id
+        if (!userId) return response.status(401).json({ message: "Invalid refresh token", error: true, success: false })
 
-        const newAccessToken = await generatedAccessToken(userId)
+        const user = await UserModel.findById(userId).select("+refresh_token role status")
+        if (!user || user.status !== "active" || user.refresh_token !== refreshToken) {
+            return response.status(401).json({ message: "Refresh token is no longer valid", error: true, success: false })
+        }
+
+        const newAccessToken = await generateAccessToken(userId)
 
         const cookiesOption = {
-            httpOnly : true,
-            secure : true,
-            sameSite : "None"
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            path: "/",
         }
 
         response.cookie('accessToken',newAccessToken,cookiesOption)
@@ -575,9 +582,7 @@ export async function userDetails(req, res) {
       });
     }
 
-    const user = await UserModel.findById(userId).select(
-      "-password -refresh_token"
-    );
+    const user = await UserModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
