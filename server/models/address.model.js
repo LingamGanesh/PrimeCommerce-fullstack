@@ -31,6 +31,11 @@ const addressSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Mobile number is required"],
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt
