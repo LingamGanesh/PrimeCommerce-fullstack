@@ -28,6 +28,10 @@ const orderSchema = new mongoose.Schema(
       type: Object, // Can store structured address info
       required: true,
     },
+    pickerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+    riderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+    pickedAt: { type: Date, default: null },
+    deliveredAt: { type: Date, default: null },
     delivery_status: {
       type: String,
       default: "processing", // e.g., processing, shipped, delivered
