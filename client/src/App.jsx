@@ -14,7 +14,7 @@ import { useDispatch } from 'react-redux'
 function App() {
  const dispatch = useDispatch()
  const location = useLocation()
- const isAdminRoute = location.pathname.startsWith('/admin')
+ const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/picker') || location.pathname.startsWith('/rider')
   const fetchUserData = async() =>{
     const userData = await fetchUserDetails()
 
