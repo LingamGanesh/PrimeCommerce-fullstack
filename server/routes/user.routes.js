@@ -10,9 +10,11 @@ const registrationLimiter = createRateLimiter({ name: "register", windowMs: 60 *
 const forgotPasswordLimiter = createRateLimiter({ name: "forgot-password", windowMs: 60 * 60 * 1000, max: 3 });
 const passwordOtpLimiter = createRateLimiter({ name: "password-otp", windowMs: 15 * 60 * 1000, max: 10 });
 const passwordResetLimiter = createRateLimiter({ name: "password-reset", windowMs: 15 * 60 * 1000, max: 10 });
+const emailVerificationLimiter = createRateLimiter({ name: "email-verification", windowMs: 60 * 60 * 1000, max: 10 });
+const refreshTokenLimiter = createRateLimiter({ name: "refresh-token", windowMs: 15 * 60 * 1000, max: 20 });
 
 userRouter.post('/register', registrationLimiter, registerUserController);
-userRouter.post('/verify-email',verifyEmailController)
+userRouter.post('/verify-email',emailVerificationLimiter,verifyEmailController)
 userRouter.post('/login',loginLimiter,loginController)
 userRouter.get('/logout', auth, logoutController)
 userRouter.put('/upload-avatar',auth,upload.single('avatar'),uploadAvatar)
@@ -20,6 +22,6 @@ userRouter.put('/update-user',auth,updateUserDetails)
 userRouter.post('/forgot-password', forgotPasswordLimiter, forgotPasswordController)
 userRouter.put('/verify-forgot-password',passwordOtpLimiter,verifyForgotPasswordOtp)
 userRouter.put('/reset-password',passwordResetLimiter,resetpassword)
-userRouter.post('/refresh-token',refreshToken)
+userRouter.post('/refresh-token',refreshTokenLimiter,refreshToken)
 userRouter.get('/user-details',auth,userDetails)
 export default userRouter;
