@@ -14,6 +14,7 @@ export default function Myorders() {
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [deliveryOtp, setDeliveryOtp] = useState(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState("");
 
   useEffect(() => {
     Axios.get("/api/v1/orders/mine")
@@ -56,6 +57,18 @@ export default function Myorders() {
     } finally { setOtpLoading(false); }
   };
 
+  const cancelOrder = async (order) => {
+    if (!window.confirm(`Cancel order ${order.orderId}? ${order.paymentMethod === "RAZORPAY" ? "A full refund will be requested." : "Reserved stock will be released."}`)) return;
+    setCancellingOrder(order.id);
+    try {
+      const response = await Axios.post(`/api/v1/orders/${order.id}/cancel`);
+      toast.success(response.data?.message || "Order cancelled");
+      const refreshed = await Axios.get("/api/v1/orders/mine");
+      setOrders(refreshed.data?.data || []);
+    } catch (error) { toast.error(error.response?.data?.message || "Unable to cancel order"); }
+    finally { setCancellingOrder(""); }
+  };
+
   const openTracking = (orderId) => {
     setTrackingOrderId(current => current === orderId ? "" : orderId);
     setTracking(current => trackingOrderId === orderId ? null : current);
@@ -75,8 +88,10 @@ export default function Myorders() {
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold capitalize text-amber-800">{String(order.deliveryStatus || "processing").replaceAll("_", " ")}</span>
             </div>
             <div className="mt-4 space-y-2">{order.items.map((item,index) => <div key={String(item.productId) + index} className="flex justify-between gap-3 text-sm"><span className="text-gray-600">{item.name} × {item.quantity}</span><strong>₹{Number(item.lineTotal || 0).toFixed(2)}</strong></div>)}</div>
-            <div className="mt-4 flex flex-wrap justify-between gap-3 border-t pt-3 text-sm"><span className="text-gray-500">Cash on Delivery · Payment {order.paymentStatus}</span><strong>Total ₹{Number(order.total || 0).toFixed(2)}</strong></div>
+            <div className="mt-4 flex flex-wrap justify-between gap-3 border-t pt-3 text-sm"><span className="text-gray-500">{order.paymentMethod === "RAZORPAY" ? "Razorpay" : "Cash on Delivery"} · Payment {order.paymentStatus}{order.refundStatus && order.refundStatus !== "not_required" ? ` · Refund ${order.refundStatus}` : ""}</span><strong>Total ₹{Number(order.total || 0).toFixed(2)}</strong></div>
             <p className="mt-2 text-xs text-gray-500">Deliver to: {order.address?.address_line}, {order.address?.city}, {order.address?.state} - {order.address?.pincode}</p>
+            {order.deliveryStatus === "processing" && <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-gray-500">Cancellation is available before picker assignment.</span><button disabled={cancellingOrder === order.id} onClick={() => cancelOrder(order)} className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">{cancellingOrder === order.id ? "Cancelling…" : "Cancel order"}</button></div>}
+            {order.refundStatus && order.refundStatus !== "not_required" && <p className="mt-2 text-xs font-medium text-indigo-700">Refund status: {order.refundStatus}{order.refundAmount ? ` · ₹${Number(order.refundAmount).toFixed(2)}` : ""}</p>}
             {activeTrackingStatuses.includes(order.deliveryStatus) && <div className="mt-4"><button onClick={() => openTracking(order.id)} className="rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">{trackingOrderId === order.id ? "Hide live tracking" : "Track delivery"}</button>
               {trackingOrderId === order.id && <div className="mt-3 rounded-xl border border-green-100 bg-green-50 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold capitalize text-green-900">{String(tracking?.deliveryStatus || order.deliveryStatus).replaceAll("_", " ")}</p><span className="text-xs text-green-800">{trackingLoading ? "Refreshing…" : "Refreshes every 10 seconds"}</span></div>
