@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const bannerSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
-  imageUrl: { type: String, required: true, trim: true },
+  imageUrl: { type: String, default: "", trim: true },
   mobileImageUrl: { type: String, default: "" },
   linkType: { type: String, enum: ["none", "product", "category", "url"], default: "none" },
   linkId: { type: mongoose.Schema.Types.ObjectId, default: null },
