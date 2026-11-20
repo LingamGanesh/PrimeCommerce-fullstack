@@ -90,3 +90,17 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Admin-only `GET /api/v1/admin/reports/sales?period=7d|30d|90d` returns daily paid revenue, paid-order counts, total order counts and fulfilment status totals for the selected period. Unpaid COD orders are not represented as paid revenue.
 - The admin workspace includes a paginated customer search table and sales report with period selection, daily revenue bars and fulfilment status breakdown.
 - These reports are operational summaries, not a financial ledger; refunds, chargebacks, tax, delivery fees and settlement reconciliation are not yet modelled.
+
+
+## Picker and rider operations (current phase)
+
+- User roles now include `picker` and `rider`; public registration still creates only normal customer accounts. An administrator can promote an existing active customer account to picker/rider, or return it to the customer role.
+- Admin-only `GET /api/v1/admin/staff` lists active fulfilment staff. Admin-only `POST /api/v1/admin/staff/role` updates an existing account role.
+- Admin dispatch endpoints: `PATCH /api/v1/admin/orders/:id/assign-picker` assigns a picker to a processing order and moves it to `picking`; `PATCH /api/v1/admin/orders/:id/assign-rider` assigns a rider only after the order reaches `packed`, then moves it to `rider_assigned`.
+- Orders store `pickerId`, `riderId`, `pickedAt` and `deliveredAt` assignment/timestamp fields.
+- Picker APIs: `GET /api/v1/fulfilment/picker/orders` and `PATCH /api/v1/fulfilment/picker/orders/:id/status` (picker can mark its own assigned `picking` order as `packed`).
+- Rider APIs: `GET /api/v1/fulfilment/rider/orders` and `PATCH /api/v1/fulfilment/rider/orders/:id/status` (assigned rider advances through `picked_up`, `out_for_delivery`, and `delivered`).
+- Staff APIs verify the active account role from the database on each request; a picker/rider can only read and update orders assigned to their own account.
+- Dedicated `/picker` and `/rider` workspaces show assigned orders, item snapshots and delivery address details. Login redirects each role to its workspace.
+- This phase provides manual refresh and status updates only. It does not yet provide GPS location capture, live map tracking, Socket.io updates, proof-of-delivery photos/OTP, rider earnings, route optimisation, FCM notifications or dedicated staff onboarding/password provisioning.
+- The older admin order status endpoint remains for legacy `processing → shipped → delivered` orders. Newly dispatched orders use the picker/rider lifecycle above.
