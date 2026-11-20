@@ -67,9 +67,9 @@ export async function listAdminCustomers(req, res) {
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
         { name: { $regex: escaped, $options: "i" } },
-        { email: { $regex: escaped, $options: "i" } },
-        { mobile: { $regex: escaped, $options: "i" } }
+        { email: { $regex: escaped, $options: "i" } }
       ];
+      if (/^\\d+$/.test(search)) filter.$or.push({ mobile: Number(search) });
     }
     const [customers, total] = await Promise.all([
       UserModel.find(filter)
@@ -105,8 +105,8 @@ export async function getAdminSalesReport(req, res) {
     const period = periods[String(req.query.period || "7d")] ? String(req.query.period || "7d") : "7d";
     const days = periods[period];
     const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (days - 1));
+    start.setUTCHours(0, 0, 0, 0);
+    start.setUTCDate(start.getUTCDate() - (days - 1));
     const [daily, statuses, totals] = await Promise.all([
       OrderModel.aggregate([
         { $match: { createdAt: { $gte: start }, payment_status: { $in: ["paid", "completed"] } } },
@@ -126,7 +126,7 @@ export async function getAdminSalesReport(req, res) {
     const byDate = new Map(daily.map((entry) => [entry._id, entry]));
     const series = Array.from({ length: days }, (_, index) => {
       const date = new Date(start);
-      date.setDate(start.getDate() + index);
+      date.setUTCDate(start.getUTCDate() + index);
       const key = date.toISOString().slice(0, 10);
       return { date: key, revenue: byDate.get(key)?.revenue || 0, paidOrders: byDate.get(key)?.orders || 0 };
     });
