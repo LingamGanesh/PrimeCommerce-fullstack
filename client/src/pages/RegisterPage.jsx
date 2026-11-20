@@ -58,10 +58,10 @@ const RegisterPage = () => {
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+    <section className="flex min-h-[75vh] items-center justify-center bg-[#f7f8f3] px-4 py-10">
+      <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-7 shadow-xl shadow-green-950/5 sm:p-9">
 
-        <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6">
+        <p className="mb-3 text-center text-xs font-extrabold uppercase tracking-[.2em] text-green-700">PrimeCommerce · Join us</p>\n        <h1 className="text-center text-3xl font-black tracking-tight text-slate-900 mb-6">
           Create your account
         </h1>
 
@@ -69,7 +69,7 @@ const RegisterPage = () => {
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-bold text-slate-700">
               Name
             </label>
             <input
@@ -77,14 +77,14 @@ const RegisterPage = () => {
               name="name"
               value={data.name}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
               required
             />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-bold text-slate-700">
               Email
             </label>
             <input
@@ -92,14 +92,14 @@ const RegisterPage = () => {
               name="email"
               value={data.email}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
               required
             />
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-bold text-slate-700">
               Password
             </label>
             <div className="relative">
@@ -108,12 +108,12 @@ const RegisterPage = () => {
                 name="password"
                 value={data.password}
                 onChange={handleChange}
-                className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 pr-10 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
                 required
               />
               <span
                 onClick={() => setShowPassword(prev => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500"
               >
                 {showPassword ? <FaEye /> : <FaEyeSlash />}
               </span>
@@ -122,7 +122,7 @@ const RegisterPage = () => {
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-bold text-slate-700">
               Confirm Password
             </label>
             <div className="relative">
@@ -131,12 +131,12 @@ const RegisterPage = () => {
                 name="confirmPassword"
                 value={data.confirmPassword}
                 onChange={handleChange}
-                className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 pr-10 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
                 required
               />
               <span
                 onClick={() => setShowConfirmPassword(prev => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500"
               >
                 {showConfirmPassword ? <FaEye /> : <FaEyeSlash />}
               </span>
@@ -146,15 +146,15 @@ const RegisterPage = () => {
           {/* Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+            className="w-full rounded-xl bg-[#123d2a] py-3 font-extrabold text-white shadow-sm transition hover:bg-green-900 disabled:opacity-60"
           >
             Register
           </button>
         </form>
 
-        <p className="text-sm text-center text-gray-600 mt-5">
+        <p className="mt-5 text-center text-sm text-slate-500">
           Already have an account?
-          <Link to="/login" className="text-blue-600 font-medium ml-1 hover:underline">
+          <Link to="/login" className="ml-1 font-extrabold text-green-800 hover:underline">
             Login
           </Link>
         </p>
