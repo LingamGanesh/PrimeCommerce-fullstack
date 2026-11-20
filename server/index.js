@@ -20,7 +20,10 @@ import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers
 dotenv.config();
 
 const app = express();
-app.use(cors({ credentials: true, origin: process.env.FRONTEND_URL }));
+app.use(cors({
+  credentials: true,
+  origin: process.env.FRONTEND_URL || "http://localhost:5173"
+}));
 app.post("/api/v1/payments/razorpay/webhook", express.raw({ type: "application/json" }), handleRazorpayWebhook);
 app.use(express.json());
 app.use(cookieParser());
