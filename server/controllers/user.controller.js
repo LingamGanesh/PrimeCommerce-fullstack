@@ -9,6 +9,7 @@ import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
 import crypto from "node:crypto"
 import generateAccessToken from '../utils/generatedAccessToken.js';
+import { normalizeMobileNumber } from "../utils/mobileNumber.js";
 
 
 // ===============================================
@@ -313,11 +314,11 @@ export async function updateUserDetails(request, response) {
     }
 
     if (mobile !== undefined) {
-      const normalizedMobile = String(mobile).replace(/\D/g, "");
+      const normalizedMobile = normalizeMobileNumber(mobile);
       if (normalizedMobile && !/^\d{10}$/.test(normalizedMobile)) {
         return response.status(400).json({ message: "Enter a valid 10-digit mobile number", error: true, success: false });
       }
-      updates.mobile = normalizedMobile ? Number(normalizedMobile) : null;
+      updates.mobile = normalizedMobile || null;
     }
 
     if (password !== undefined && password !== "") {
