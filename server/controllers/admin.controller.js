@@ -3,7 +3,6 @@ import UserModel from "../models/user.model.js";
 import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import OrderModel from "../models/order.model.js";
-import { isFulfilmentPaymentEligible } from "../utils/paymentSecurity.js";
 
 export async function getAdminOverview(req, res) {
   try {
@@ -41,22 +40,16 @@ export async function listAdminOrders(req, res) {
 }
 
 export async function updateAdminOrderStatus(req, res) {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
-    const allowed = ["processing", "shipped", "delivered"];
-    const status = String(req.body.delivery_status || "");
-    if (!allowed.includes(status)) return res.status(400).json({ success: false, message: "Unsupported order status" });
-    const order = await OrderModel.findById(req.params.id);
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-    if (!isFulfilmentPaymentEligible(order)) return res.status(409).json({ success: false, message: "Online payment must be captured before fulfilment" });
-    const transitions = { processing: ["shipped"], shipped: ["delivered"] };
-    if (!transitions[order.delivery_status]?.includes(status)) return res.status(409).json({ success: false, message: `Cannot move an order from ${order.delivery_status} to ${status}` });
-    order.delivery_status = status;
-    await order.save();
-    return res.json({ success: true, message: "Order status updated", data: order });
-  } catch {
-    return res.status(500).json({ success: false, message: "Unable to update order status" });
+  // Delivery state is owned by the picker/rider workflow. In particular, an
+  // administrator must never mark an order delivered: only the assigned rider
+  // can complete delivery after verifying the customer's one-time OTP.
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: "Invalid order id" });
   }
+  return res.status(409).json({
+    success: false,
+    message: "Manual order status changes are disabled. Assign a picker and rider; delivery completion requires customer OTP verification."
+  });
 }
 
 export async function listAdminCustomers(req, res) {
