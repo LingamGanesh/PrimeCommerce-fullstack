@@ -73,6 +73,7 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 | AUD-030 | MEDIUM | PENDING | Ticket message append-only history tests |
 | AUD-031 | MEDIUM | PENDING | Required domain models and migration tests |
 | AUD-032 | MEDIUM | PENDING | Unit, integration, component and Playwright suites; CI gates |
+| AUD-033 | LOW | PENDING | Single dotenv initialization at process entrypoint; startup log smoke test |
 
 ## Test evidence log
 
