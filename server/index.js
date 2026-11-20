@@ -20,7 +20,26 @@ import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers
 dotenv.config();
 
 const app = express();
-app.use(cors({ credentials: true, origin: process.env.FRONTEND_URL }));
+const allowedOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map(origin => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+if (process.env.NODE_ENV === "production" && allowedOrigins.length === 0) {
+  throw new Error("FRONTEND_URL must contain the deployed frontend origin in production");
+}
+
+app.use(cors({
+  credentials: true,
+  origin(origin, callback) {
+    // Allow server-to-server and local non-browser requests without an Origin header.
+    if (!origin || process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin.replace(/\/$/, ""))) return callback(null, true);
+    return callback(new Error("Origin is not allowed by CORS"));
+  }
+}));
 app.post("/api/v1/payments/razorpay/webhook", express.raw({ type: "application/json" }), handleRazorpayWebhook);
 app.use(express.json());
 app.use(cookieParser());
