@@ -137,15 +137,35 @@ export async function handleRazorpayWebhook(req, res) {
       // the expiry worker is the single place that releases abandoned stock.
       return res.json({ success: true, ignored: true, reason: "payment_attempt_failed_reservation_retained" });
     } else {
-      const paidEntity = payment || (gatewayOrder ? { amount: gatewayOrder.amount_paid, currency: gatewayOrder.currency, status: gatewayOrder.status, id: null } : null);
-      const amountIsValid = isValidRazorpayAmount(paidEntity, Math.round(Number(order.totalAmt) * 100));
-      const captured = event.event === "payment.captured" ? payment?.status === "captured" : gatewayOrder?.status === "paid" || payment?.status === "captured";
-      if (!paidEntity || !amountIsValid || !captured) return res.status(400).json({ success: false, message: "Webhook payment amount, currency or capture state is invalid" });
-      if (order.payment_status === "expired" || order.inventoryReleased) {
-        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id } });
-      } else {
-        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
+      // order.paid webhooks carry the order entity, not necessarily a payment
+      // entity. Resolve the captured payment from Razorpay so refunds always
+      // have the payment_id required by the refunds API.
+      let paidPayment = payment;
+      if (event.event === "order.paid" && !paidPayment?.id) {
+        const paymentList = await gatewayRequest(`/orders/${encodeURIComponent(gatewayOrderId)}/payments`);
+        paidPayment = (paymentList.items || []).find(item =>
+          item.order_id === gatewayOrderId &&
+          item.status === "captured" &&
+          Number(item.amount) === Math.round(Number(order.totalAmt) * 100) &&
+          item.currency === "INR"
+        ) || null;
       }
+      const paidEntity = paidPayment || (event.event === "order.paid" && gatewayOrder ? {
+        amount: gatewayOrder.amount_paid, currency: gatewayOrder.currency, status: gatewayOrder.status
+      } : null);
+      const amountIsValid = isValidRazorpayAmount(paidEntity, Math.round(Number(order.totalAmt) * 100));
+      const captured = event.event === "payment.captured" ? paidPayment?.status === "captured" : gatewayOrder?.status === "paid" || paidPayment?.status === "captured";
+      if (!paidEntity || !amountIsValid || !captured || (event.event === "order.paid" && !paidPayment?.id)) {
+        return res.status(400).json({ success: false, message: "Webhook payment amount, currency or captured payment ID could not be verified" });
+      }
+      const update = {
+        payment_status: order.payment_status === "expired" || order.inventoryReleased ? "paid_review_required" : "paid",
+        payment_id: paidPayment.id
+      };
+      await OrderModel.updateOne(
+        { _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } },
+        { $set: update }
+      );
     }
     return res.json({ success: true });
   } catch (error) { return res.status(400).json({ success: false, message: error.message || "Webhook processing failed" }); }
