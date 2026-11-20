@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema(
       default: 0,
       select: false,
     },
+    staffAssignmentVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
     verify_email: {
       type: Boolean,
       default: false,
