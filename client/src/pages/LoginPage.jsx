@@ -50,9 +50,13 @@ const Login = () => {
       if (response.data?.success) {
 
         toast.success(response.data.message)
-        const userDetails =  await fetchUserDetails()
-            dispatch(setUserDetails(userDetails.data))
-        navigate(userDetails.data?.role === 'admin' ? '/admin' : userDetails.data?.role === 'picker' ? '/picker' : userDetails.data?.role === 'rider' ? '/rider' : '/')
+        const userDetails = await fetchUserDetails()
+        if (!userDetails?.success || !userDetails?.data) {
+          toast.error("Login succeeded, but your profile could not be loaded. Please try again.")
+          return
+        }
+        dispatch(setUserDetails(userDetails.data))
+        navigate(userDetails.data.role === "admin" ? "/admin" : userDetails.data.role === "picker" ? "/picker" : userDetails.data.role === "rider" ? "/rider" : "/")
       }
 
     } catch (error) {
