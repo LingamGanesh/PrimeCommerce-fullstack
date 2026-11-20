@@ -6,6 +6,7 @@ import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import ForgotPage from "../pages/ForgotPage";
 import VerificationOtpPage from "../pages/VerificationOtpPage";
+import VerifyEmail from "../pages/VerifyEmail";
 import ResetPassword from "../pages/ResetPassword";
 import Dashboard from "../layout/Dashboard";
 import Profile from "../pages/Profile";
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPage /> },
       { path: "verification-page", element: <VerificationOtpPage /> },
+      { path: "verify-email", element: <VerifyEmail /> },
       { path: "reset-password", element: <ResetPassword /> },
       {
         path: "dashboard",
