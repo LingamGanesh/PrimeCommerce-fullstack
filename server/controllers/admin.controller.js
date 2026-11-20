@@ -56,3 +56,92 @@ export async function updateAdminOrderStatus(req, res) {
     return res.status(500).json({ success: false, message: "Unable to update order status" });
   }
 }
+
+export async function listAdminCustomers(req, res) {
+  try {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 20));
+    const search = String(req.query.search || "").trim().slice(0, 100);
+    const filter = { role: "user" };
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.$or = [
+        { name: { $regex: escaped, $options: "i" } },
+        { email: { $regex: escaped, $options: "i" } },
+        { mobile: { $regex: escaped, $options: "i" } }
+      ];
+    }
+    const [customers, total] = await Promise.all([
+      UserModel.find(filter)
+        .select("name email mobile avatar status verify_email last_login_date createdAt")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      UserModel.countDocuments(filter)
+    ]);
+    const customerIds = customers.map((customer) => customer._id);
+    const orderCounts = customerIds.length
+      ? await OrderModel.aggregate([
+          { $match: { userId: { $in: customerIds } } },
+          { $group: { _id: "$userId", orders: { $sum: 1 }, spend: { $sum: { $cond: [{ $in: ["$payment_status", ["paid", "completed"]] }, "$totalAmt", 0] } } } }
+        ])
+      : [];
+    const stats = new Map(orderCounts.map((entry) => [String(entry._id), entry]));
+    const data = customers.map((customer) => ({
+      ...customer,
+      orderCount: stats.get(String(customer._id))?.orders || 0,
+      paidSpend: stats.get(String(customer._id))?.spend || 0
+    }));
+    return res.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to load customers" });
+  }
+}
+
+export async function getAdminSalesReport(req, res) {
+  try {
+    const periods = { "7d": 7, "30d": 30, "90d": 90 };
+    const period = periods[String(req.query.period || "7d")] ? String(req.query.period || "7d") : "7d";
+    const days = periods[period];
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (days - 1));
+    const [daily, statuses, totals] = await Promise.all([
+      OrderModel.aggregate([
+        { $match: { createdAt: { $gte: start }, payment_status: { $in: ["paid", "completed"] } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, revenue: { $sum: "$totalAmt" }, orders: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]),
+      OrderModel.aggregate([
+        { $match: { createdAt: { $gte: start } } },
+        { $group: { _id: { $ifNull: ["$delivery_status", "processing"] }, count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      OrderModel.aggregate([
+        { $match: { createdAt: { $gte: start } } },
+        { $group: { _id: null, orderCount: { $sum: 1 }, paidRevenue: { $sum: { $cond: [{ $in: ["$payment_status", ["paid", "completed"]] }, "$totalAmt", 0] } }, paidOrders: { $sum: { $cond: [{ $in: ["$payment_status", ["paid", "completed"]] }, 1, 0] } } } }
+      ])
+    ]);
+    const byDate = new Map(daily.map((entry) => [entry._id, entry]));
+    const series = Array.from({ length: days }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const key = date.toISOString().slice(0, 10);
+      return { date: key, revenue: byDate.get(key)?.revenue || 0, paidOrders: byDate.get(key)?.orders || 0 };
+    });
+    return res.json({
+      success: true,
+      data: {
+        period,
+        startDate: start,
+        endDate: new Date(),
+        totals: totals[0] || { orderCount: 0, paidRevenue: 0, paidOrders: 0 },
+        daily: series,
+        statuses: statuses.map((item) => ({ status: item._id, count: item.count }))
+      }
+    });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to load sales report" });
+  }
+}
