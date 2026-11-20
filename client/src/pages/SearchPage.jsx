@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -52,7 +52,7 @@ export default function SearchPage() {
 
   useEffect(() => { setQuery(params.get("q") || ""); }, [params]);
 
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     if (!user?._id) { setCart({}); return; }
     try {
       const response = await Axios.get("/api/v1/cart");
@@ -61,7 +61,7 @@ export default function SearchPage() {
       setCart(next);
       window.dispatchEvent(new Event("cart:updated"));
     } catch { setCart({}); }
-  };
+  }, [user?._id]);
 
   useEffect(() => {
     let active = true;
@@ -81,7 +81,7 @@ export default function SearchPage() {
     return () => { active = false; };
   }, []);
 
-  useEffect(() => { refreshCart(); }, [user?._id]);
+  useEffect(() => { refreshCart(); }, [refreshCart]);
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
