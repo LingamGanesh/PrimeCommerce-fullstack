@@ -72,3 +72,12 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - `PATCH /api/v1/admin/products/:id` uses the existing catalog admin endpoint for stock updates.
 - `PATCH /api/v1/admin/orders/:id/status` allows processing, shipped and delivered status changes. Terminal cancellation/refund is intentionally not exposed in this UI because stock restoration and payment refunds are not implemented.
 - Product creation/editing, customer management, picker/rider operations, delivery tracking, payment refunds and audit logs remain future work.
+
+
+## Admin catalogue management (current phase)
+
+- The protected admin workspace now includes product creation and editing, stock/price/discount/unit/description fields, image URL, publish visibility, and product unpublishing.
+- Category creation/editing and subcategory creation are available from the admin catalogue section. Existing public category/subcategory read APIs are reused.
+- Admin product writes use the existing `/api/v1/catalog/admin/*` endpoints, which enforce JWT authentication and the database-backed admin role.
+- Product creation and updates validate that selected subcategories belong to the selected categories. Product images are currently supplied as URLs; a dedicated upload flow is not included yet.
+- Category deletion, subcategory editing/deletion, bulk imports, image uploads and audit history remain future work.
