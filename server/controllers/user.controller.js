@@ -401,16 +401,28 @@ export async function verifyForgotPasswordOtp(request,response){
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
-    await UserModel.findByIdAndUpdate(user._id, {
-      $set: {
-        forgot_password_otp: "",
-        forgot_password_otp_hash: "",
-        forgot_password_attempts: 0,
-        forgot_password_expiry: null,
-        password_reset_token_hash: resetTokenHash,
-        password_reset_expires_at: new Date(Date.now() + 10 * 60 * 1000)
-      }
-    });
+    const resetSession = await UserModel.findOneAndUpdate(
+      {
+        _id: user._id,
+        forgot_password_otp_hash: user.forgot_password_otp_hash,
+        forgot_password_expiry: { $gt: new Date() },
+        forgot_password_attempts: { $lt: 5 }
+      },
+      {
+        $set: {
+          forgot_password_otp: "",
+          forgot_password_otp_hash: "",
+          forgot_password_attempts: 0,
+          forgot_password_expiry: null,
+          password_reset_token_hash: resetTokenHash,
+          password_reset_expires_at: new Date(Date.now() + 10 * 60 * 1000)
+        }
+      },
+      { new: true }
+    ).select("_id");
+    if (!resetSession) {
+      return response.status(400).json({ message: "Code is invalid, expired or already used. Request a new code.", error: true, success: false });
+    }
     return response.json({
       message: "Code verified. Set a new password within 10 minutes.",
       error: false,
@@ -448,12 +460,25 @@ export async function resetpassword(request,response){
 
         const salt = await bcrypt.genSalt(10)
         const hashPassword = await bcrypt.hash(newPassword, salt)
-        await UserModel.findByIdAndUpdate(user._id, {
-            password: hashPassword,
-            password_reset_token_hash: "",
-            password_reset_expires_at: null,
-            refresh_token: ""
-        })
+        const updatedUser = await UserModel.findOneAndUpdate(
+            {
+                _id: user._id,
+                password_reset_token_hash: resetTokenHash,
+                password_reset_expires_at: { $gt: new Date() }
+            },
+            {
+                $set: {
+                    password: hashPassword,
+                    password_reset_token_hash: "",
+                    password_reset_expires_at: null,
+                    refresh_token: ""
+                }
+            },
+            { new: true }
+        ).select("_id");
+        if (!updatedUser) {
+            return response.status(400).json({ message: "Password reset session is invalid, expired or already used. Verify your OTP again.", error: true, success: false });
+        }
         const isProduction = process.env.NODE_ENV === "production";
         const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax", path: "/" };
         response.clearCookie("accessToken", cookieOptions);
