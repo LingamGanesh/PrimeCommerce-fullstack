@@ -26,18 +26,10 @@ Axios.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !originalRequest.url?.includes(SummaryApi.refreshToken.url)) {
             originalRequest._retry = true;
-
-            const refreshToken = localStorage.getItem("refreshtoken");
-
-            if (refreshToken) {
-                const newAccessToken = await refreshAccessToken(refreshToken);
-
-                if (newAccessToken) {
-                    return Axios(originalRequest);
-                }
-            }
+            const refreshed = await refreshAccessToken();
+            if (refreshed) return Axios(originalRequest);
         }
 
         return Promise.reject(error);
