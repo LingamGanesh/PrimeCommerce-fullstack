@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import OrderModel from "../models/order.model.js";
 
 export async function listMyOrders(req, res) {
@@ -21,5 +22,32 @@ export async function listMyOrders(req, res) {
     return res.json({ success: true, error: false, data });
   } catch {
     return res.status(500).json({ success: false, error: true, message: "Unable to load your orders" });
+  }
+}
+
+export async function getMyOrderTracking(req, res) {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid order id" });
+    }
+    const order = await OrderModel.findOne({ _id: req.params.id, userId: req.userId })
+      .select("orderId delivery_status riderId riderLocation pickedAt deliveredAt updatedAt")
+      .populate("riderId", "name mobile")
+      .lean();
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    return res.json({
+      success: true,
+      data: {
+        orderId: order.orderId,
+        deliveryStatus: order.delivery_status,
+        rider: order.riderId ? { name: order.riderId.name, mobile: order.riderId.mobile } : null,
+        location: order.delivery_status === "delivered" ? null : order.riderLocation,
+        pickedAt: order.pickedAt,
+        deliveredAt: order.deliveredAt,
+        updatedAt: order.updatedAt
+      }
+    });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to load delivery tracking" });
   }
 }
