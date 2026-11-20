@@ -20,6 +20,13 @@ export default function AdminDashboard() {
   const [stockDraft, setStockDraft] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerPage, setCustomerPage] = useState(1);
+  const [customerPagination, setCustomerPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [reportPeriod, setReportPeriod] = useState("7d");
+  const [report, setReport] = useState(null);
+  const [sectionLoading, setSectionLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -38,6 +45,30 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const loadCustomers = useCallback(async () => {
+    setSectionLoading(true);
+    try {
+      const response = await Axios.get("/api/v1/admin/customers", { params: { search: customerSearch, page: customerPage, limit: 20 } });
+      setCustomers(response.data?.data || []);
+      setCustomerPagination(response.data?.pagination || { page: 1, pages: 1, total: 0 });
+    } catch (error) { toast.error(error.response?.data?.message || "Could not load customers"); }
+    finally { setSectionLoading(false); }
+  }, [customerSearch, customerPage]);
+
+  const loadReport = useCallback(async () => {
+    setSectionLoading(true);
+    try {
+      const response = await Axios.get("/api/v1/admin/reports/sales", { params: { period: reportPeriod } });
+      setReport(response.data?.data || null);
+    } catch (error) { toast.error(error.response?.data?.message || "Could not load sales report"); }
+    finally { setSectionLoading(false); }
+  }, [reportPeriod]);
+
+  useEffect(() => {
+    if (section === "customers") loadCustomers();
+    if (section === "reports") loadReport();
+  }, [section, loadCustomers, loadReport]);
 
   const updateStock = async (product) => {
     const value = Number(stockDraft[product._id] ?? product.stock);
@@ -63,7 +94,7 @@ export default function AdminDashboard() {
   };
 
   const signOut = () => { dispatch(logout()); localStorage.clear(); navigate("/login"); };
-  const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }];
+  const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }];
   const metrics = [
     { label: "Total orders", value: overview?.orders ?? "—", note: "All recorded orders", icon: "▣" },
     { label: "Gross paid revenue", value: money(overview?.revenue), note: "Paid / completed payments", icon: "₹" },
@@ -93,6 +124,21 @@ export default function AdminDashboard() {
             {section === "products" && <section className="rounded-2xl border border-slate-200 bg-white p-5"><div className="mb-5"><h2 className="text-lg font-extrabold text-slate-900">Product inventory</h2><p className="text-sm text-slate-500">Update available stock for existing catalogue products.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400"><th className="pb-3">Product</th><th className="pb-3">Price</th><th className="pb-3">Stock</th><th className="pb-3">Visibility</th><th className="pb-3">Action</th></tr></thead><tbody>{products.map((product) => <tr key={product._id} className="border-b border-slate-50"><td className="py-4"><p className="font-bold text-slate-800">{product.name}</p><p className="text-xs text-slate-400">{product.unit || "—"}</p></td><td className="py-4 font-semibold">{money(product.price)}</td><td className="py-4"><input type="number" min="0" step="1" value={stockDraft[product._id] ?? product.stock ?? 0} onChange={(event) => setStockDraft((current) => ({ ...current, [product._id]: event.target.value }))} className="w-24 rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-emerald-500" /></td><td className="py-4"><span className={`rounded-full px-2 py-1 text-xs font-bold ${product.publish ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{product.publish ? "Published" : "Hidden"}</span></td><td className="py-4"><button disabled={busy === product._id} onClick={() => updateStock(product)} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busy === product._id ? "Saving…" : "Save stock"}</button></td></tr>)}</tbody></table>{!products.length && <p className="py-10 text-center text-sm text-slate-400">No products found.</p>}</div></section>}
             {section === "catalog" && <AdminCatalog products={products} onRefresh={loadData} />}
             {section === "orders" && <section className="rounded-2xl border border-slate-200 bg-white p-5"><div className="mb-5"><h2 className="text-lg font-extrabold text-slate-900">Order management</h2><p className="text-sm text-slate-500">Review orders and update the current fulfilment status.</p></div><div className="space-y-3">{orders.map((order) => <div key={order._id} className="flex flex-col justify-between gap-3 rounded-xl border border-slate-100 p-4 lg:flex-row lg:items-center"><div className="min-w-0"><p className="font-bold text-slate-900">Order #{order.orderId || String(order._id).slice(-7)}</p><p className="mt-1 text-xs text-slate-500">{order.userId?.name || "Customer"} · {order.userId?.email || "—"}</p><p className="mt-1 text-xs text-slate-400">{dateLabel(order.createdAt)} · {order.payment_status || "pending"} payment</p></div><div className="flex flex-wrap items-center gap-3"><span className="font-extrabold text-slate-900">{money(order.totalAmt)}</span><span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusTone(order.delivery_status)}`}>{order.delivery_status || "processing"}</span><select aria-label="Update order status" disabled={busy === order._id || ["delivered", "cancelled"].includes(order.delivery_status)} value={order.delivery_status || "processing"} onChange={(event) => updateOrder(order._id, event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:bg-slate-100"><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option></select></div></div>)}{!orders.length && <p className="py-10 text-center text-sm text-slate-400">No orders found.</p>}</div></section>}
+
+            {section === "customers" && <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-extrabold text-slate-900">Customer management</h2><p className="text-sm text-slate-500">Search customers and review account and paid-order activity. Sensitive authentication fields are never returned.</p></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{customerPagination.total || 0} customers</span></div>
+              <div className="mb-4 flex flex-wrap gap-3"><input value={customerSearch} onChange={(event) => { setCustomerSearch(event.target.value); setCustomerPage(1); }} placeholder="Search name, email or mobile…" className="w-full max-w-md rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500" /><button onClick={loadCustomers} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Search</button></div>
+              {sectionLoading ? <p className="py-10 text-center text-sm text-slate-400">Loading customers…</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400"><th className="pb-3">Customer</th><th className="pb-3">Mobile</th><th className="pb-3">Account</th><th className="pb-3">Orders</th><th className="pb-3">Paid spend</th><th className="pb-3">Joined</th></tr></thead><tbody>{customers.map((customer) => <tr key={customer._id} className="border-b border-slate-50"><td className="py-4"><p className="font-bold text-slate-800">{customer.name}</p><p className="text-xs text-slate-400">{customer.email}</p></td><td className="py-4">{customer.mobile || "—"}</td><td className="py-4"><span className={`rounded-full px-2 py-1 text-xs font-bold capitalize ${customer.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{customer.status || "unknown"}</span></td><td className="py-4 font-semibold">{customer.orderCount}</td><td className="py-4 font-semibold">{money(customer.paidSpend)}</td><td className="py-4 text-slate-500">{dateLabel(customer.createdAt)}</td></tr>)}</tbody></table>{!customers.length && <p className="py-10 text-center text-sm text-slate-400">No customers match this search.</p>}</div>}
+              <div className="mt-5 flex items-center justify-between"><p className="text-xs text-slate-400">Page {customerPagination.page || 1} of {Math.max(1, customerPagination.pages || 1)}</p><div className="flex gap-2"><button disabled={customerPage <= 1 || sectionLoading} onClick={() => setCustomerPage((page) => Math.max(1, page - 1))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold disabled:opacity-40">Previous</button><button disabled={customerPage >= (customerPagination.pages || 1) || sectionLoading} onClick={() => setCustomerPage((page) => page + 1)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold disabled:opacity-40">Next</button></div></div>
+            </section>}
+            {section === "reports" && <section className="space-y-5">
+              <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-extrabold text-slate-900">Sales analytics</h2><p className="text-sm text-slate-500">Revenue includes orders with paid or completed payment status only.</p></div><select value={reportPeriod} onChange={(event) => setReportPeriod(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold"><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option></select></div>
+              {sectionLoading || !report ? <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400">Loading sales report…</div> : <>
+                <div className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-sm text-slate-500">Paid revenue</p><p className="mt-2 text-2xl font-black text-slate-900">{money(report.totals?.paidRevenue)}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-sm text-slate-500">All orders</p><p className="mt-2 text-2xl font-black text-slate-900">{report.totals?.orderCount || 0}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-sm text-slate-500">Paid orders</p><p className="mt-2 text-2xl font-black text-slate-900">{report.totals?.paidOrders || 0}</p></div></div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5"><h3 className="font-bold text-slate-900">Daily paid revenue</h3><p className="mb-5 text-xs text-slate-400">Each bar represents paid revenue for that day</p><div className="space-y-3">{report.daily?.map((day) => { const max = Math.max(1, ...(report.daily || []).map((item) => item.revenue || 0)); return <div key={day.date} className="grid grid-cols-[76px_1fr_92px] items-center gap-3 text-xs"><span className="text-slate-500">{new Date(day.date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-lime-400" style={{ width: `${Math.max(day.revenue > 0 ? 2 : 0, (day.revenue / max) * 100)}%` }} /></div><span className="text-right font-semibold text-slate-700">{money(day.revenue)}</span></div>; })}</div></div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5"><h3 className="mb-4 font-bold text-slate-900">Order fulfilment status</h3><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(report.statuses || []).map((item) => <div key={item.status} className="rounded-xl bg-slate-50 p-4"><p className="text-xs capitalize text-slate-500">{String(item.status).replaceAll("_", " ")}</p><p className="mt-1 text-2xl font-black text-slate-900">{item.count}</p></div>)}{!report.statuses?.length && <p className="text-sm text-slate-400">No orders in this period.</p>}</div></div>
+              </>}
+            </section>}
           </>}</div>
       </main>
     </div>
