@@ -3,6 +3,7 @@ import { logoutController,loginController,registerUserController ,verifyEmailCon
 import auth from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import upload from '../middleware/multer.js';
+import validateImageUpload from "../middleware/validateImageUpload.js";
 
 const userRouter = Router();
 const loginLimiter = createRateLimiter({ name: "login", windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === "production" ? 10 : 30 });
@@ -18,7 +19,7 @@ userRouter.post('/register', registrationLimiter, registerUserController);
 userRouter.post('/verify-email',emailVerificationLimiter,verifyEmailController)
 userRouter.post('/login',loginLimiter,loginController)
 userRouter.post('/logout', auth, logoutController)
-userRouter.put('/upload-avatar',auth,avatarUploadLimiter,upload.single('avatar'),uploadAvatar)
+userRouter.put('/upload-avatar',auth,avatarUploadLimiter,upload.single('avatar'),validateImageUpload,uploadAvatar)
 userRouter.put('/update-user',auth,updateUserDetails)
 userRouter.post('/forgot-password', forgotPasswordLimiter, forgotPasswordController)
 userRouter.put('/verify-forgot-password',passwordOtpLimiter,verifyForgotPasswordOtp)
