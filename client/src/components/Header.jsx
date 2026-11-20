@@ -19,8 +19,6 @@ const Header = () => {
   const user = useSelector((state) => state.user);
   const [cartCount, setCartCount] = useState(0);
   useEffect(() => { if (user?._id) Axios.get("/api/v1/cart").then(r => setCartCount(r.data?.data?.itemCount || 0)).catch(() => setCartCount(0)); else setCartCount(0); }, [user?._id, location.pathname]);
-  const [cartCount, setCartCount] = useState(0);
-  useEffect(() => { if (user?._id) Axios.get("/api/v1/cart").then(r => setCartCount(r.data?.data?.itemCount || 0)).catch(() => setCartCount(0)); else setCartCount(0); }, [user?._id, location.pathname]);
   const isSearchPage = location.pathname === "/search";
 
   const toggleMenu = () => setOpenMenu((prev) => !prev);
