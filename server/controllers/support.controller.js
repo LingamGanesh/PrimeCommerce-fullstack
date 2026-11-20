@@ -17,7 +17,7 @@ export async function createMySupportTicket(req, res) {
     }
     const ticket = await SupportTicketModel.create({ userId: req.userId, orderId: linkedOrder?._id || null, subject, message });
     if (process.env.SUPPORT_EMAIL) {
-      void sendNotificationEmail({ to: process.env.SUPPORT_EMAIL, subject: `New support ticket: ${subject}`, text: `Ticket ID: ${ticket._id}\\nCustomer ID: ${req.userId}\\n\\n${message}` });
+      void sendNotificationEmail({ to: process.env.SUPPORT_EMAIL, subject: `New support ticket: ${subject}`, text: `Ticket ID: ${ticket._id}\nCustomer ID: ${req.userId}\n\n${message}` });
     }
     return res.status(201).json({ success: true, data: ticket });
   } catch { return res.status(500).json({ success: false, message: "Unable to create support ticket" }); }
@@ -43,7 +43,7 @@ export async function updateAdminSupportTicket(req, res) {
     const ticket = await SupportTicketModel.findByIdAndUpdate(req.params.id, { $set: update }, { new: true, runValidators: true }).populate("userId", "name email mobile").populate("orderId", "orderId");
     if (!ticket) return res.status(404).json({ success: false, message: "Support ticket not found" });
     if (adminReply && ticket.userId?.email) {
-      void sendNotificationEmail({ to: ticket.userId.email, subject: `Update on your support request: ${ticket.subject}`, text: `Our support team replied to your request.\\n\\n${adminReply}\\n\\nTicket status: ${ticket.status}`, html: `<h2>Support team reply</h2><p>${escapeEmailHtml(adminReply).replace(/\\n/g, "<br>")}</p><p>Ticket status: ${escapeEmailHtml(ticket.status)}</p>` });
+      void sendNotificationEmail({ to: ticket.userId.email, subject: `Update on your support request: ${ticket.subject}`, text: `Our support team replied to your request.\n\n${adminReply}\n\nTicket status: ${ticket.status}`, html: `<h2>Support team reply</h2><p>${escapeEmailHtml(adminReply).replace(/\n/g, "<br>")}</p><p>Ticket status: ${escapeEmailHtml(ticket.status)}</p>` });
     }
     return res.json({ success: true, data: ticket });
   } catch { return res.status(500).json({ success: false, message: "Unable to update support ticket" }); }
