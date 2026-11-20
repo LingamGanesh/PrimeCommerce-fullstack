@@ -221,12 +221,8 @@ export async function listAdminStaff(req, res) {
 
 export async function listAdminRefunds(req, res) {
   try {
-<<<<<<< HEAD
-    const refunds = await OrderModel.find({ refund_status: { $in: ["initiating", "pending", "processed", "failed"] } }).populate("userId", "name email mobile").sort({ updatedAt: -1 }).limit(100).lean();
-=======
     const refunds = await OrderModel.find({ refund_status: { $in: ["initiating", "pending", "processed", "failed"] } })
       .populate("userId", "name email mobile").sort({ updatedAt: -1 }).limit(100).lean();
->>>>>>> b8dec3f4ca3eceb2bc6a95953f5357cef830a7a0
     return res.json({ success: true, data: refunds.map(order => ({ id: order._id, orderId: order.orderId, customer: order.userId, total: order.totalAmt, refundAmount: order.refund_amount, refundId: order.refund_id, refundStatus: order.refund_status, deliveryStatus: order.delivery_status, paymentId: order.payment_id, updatedAt: order.updatedAt })) });
   } catch { return res.status(500).json({ success: false, message: "Unable to load refunds" }); }
 }
