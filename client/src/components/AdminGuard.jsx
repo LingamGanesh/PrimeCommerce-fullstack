@@ -11,8 +11,8 @@ export default function AdminGuard() {
   const [verified, setVerified] = useState(Boolean(user?._id));
 
   useEffect(() => {
+    if (user?._id) return undefined;
     let active = true;
-    if (user?._id) { setChecking(false); setVerified(true); return () => { active = false; }; }
     fetchUserDetails().then((response) => {
       if (!active) return;
       if (response?.data) { dispatch(setUserDetails(response.data)); setVerified(true); }
