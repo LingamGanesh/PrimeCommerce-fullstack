@@ -15,7 +15,7 @@ export async function createMySupportTicket(req, res) {
       linkedOrder = await OrderModel.findOne({ _id: orderId, userId: req.userId }).select("_id");
       if (!linkedOrder) return res.status(404).json({ success: false, message: "Order not found" });
     }
-    const ticket = await SupportTicketModel.create({ userId: req.userId, orderId: linkedOrder?._id || null, subject, message });
+    const ticket = await SupportTicketModel.create({ userId: req.userId, orderId: linkedOrder?._id || null, subject, message, messages: [{ senderRole: "customer", senderId: req.userId, body: message }] });
     if (process.env.SUPPORT_EMAIL) {
       void sendNotificationEmail({ to: process.env.SUPPORT_EMAIL, subject: `New support ticket: ${subject}`, text: `Ticket ID: ${ticket._id}\nCustomer ID: ${req.userId}\n\n${message}` });
     }
@@ -47,11 +47,13 @@ export async function updateAdminSupportTicket(req, res) {
     const replyChanged = hasAdminReply && adminReply.length > 0 && adminReply !== previousTicket.adminReply;
     const update = { status, adminReply, repliedAt: replyChanged ? new Date() : (adminReply ? undefined : null) };
     if (update.repliedAt === undefined) delete update.repliedAt;
+    const updateOperation = { $set: update };
+    if (replyChanged) updateOperation.$push = { messages: { senderRole: "admin", senderId: req.userId, body: adminReply, createdAt: new Date() } };
     // Compare the reply we just read so concurrent admin updates cannot both
     // send the same "new reply" email from a stale previousReply snapshot.
     const ticket = await SupportTicketModel.findOneAndUpdate(
       { _id: req.params.id, adminReply: previousTicket.adminReply },
-      { $set: update },
+      updateOperation,
       { new: true, runValidators: true }
     ).populate("userId", "name email mobile").populate("orderId", "orderId");
     if (!ticket) return res.status(409).json({ success: false, message: "This ticket was updated by another admin. Refresh and try again." });
@@ -60,4 +62,27 @@ export async function updateAdminSupportTicket(req, res) {
     }
     return res.json({ success: true, data: ticket });
   } catch { return res.status(500).json({ success: false, message: "Unable to update support ticket" }); }
+}
+export async function replyMySupportTicket(req, res) {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ticket id" });
+    const body = String(req.body?.message || "").trim();
+    if (body.length < 2 || body.length > 3000) return res.status(400).json({ success: false, message: "Reply must be between 2 and 3000 characters" });
+    const ticket = await SupportTicketModel.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId, status: { $in: ["open", "in_progress"] } },
+      { $push: { messages: { senderRole: "customer", senderId: req.userId, body, createdAt: new Date() } }, $set: { status: "open" } },
+      { new: true, runValidators: true }
+    );
+    if (!ticket) {
+      const existing = await SupportTicketModel.findOne({ _id: req.params.id, userId: req.userId }).select("status");
+      if (!existing) return res.status(404).json({ success: false, message: "Support ticket not found" });
+      return res.status(409).json({ success: false, message: "This ticket is closed or resolved. Create a new request if you still need help." });
+    }
+    if (process.env.SUPPORT_EMAIL) {
+      void sendNotificationEmail({ to: process.env.SUPPORT_EMAIL, subject: "Customer replied to support ticket: " + ticket.subject, text: "Ticket ID: " + ticket._id + "\\nCustomer ID: " + req.userId + "\\n\\n" + body });
+    }
+    return res.json({ success: true, data: ticket });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to send support reply" });
+  }
 }
