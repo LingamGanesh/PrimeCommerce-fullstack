@@ -51,10 +51,31 @@ const reserveStock = async (items) => {
     throw error;
   }
 };
-const restoreOrderStock = async (order) => {
-  let items = [];
-  try { items = JSON.parse(order.product_details || "[]"); } catch { return; }
-  await Promise.all(items.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: Number(item.quantity) || 0 } })));
+const restoreOrderStock = async (order, session) => {
+  let items;
+  try {
+    items = JSON.parse(order.product_details || "[]");
+  } catch {
+    throw new Error(`Cannot restore inventory for order ${order.orderId}: invalid product snapshot`);
+  }
+  if (!Array.isArray(items) || items.some(item =>
+    !mongoose.isValidObjectId(item.productId) ||
+    !Number.isSafeInteger(Number(item.quantity)) ||
+    Number(item.quantity) < 1
+  )) {
+    throw new Error(`Cannot restore inventory for order ${order.orderId}: invalid product quantities`);
+  }
+
+  for (const item of items) {
+    const result = await ProductModel.updateOne(
+      { _id: item.productId },
+      { $inc: { stock: Number(item.quantity) } },
+      { session }
+    );
+    if (result.matchedCount !== 1) {
+      throw new Error(`Cannot restore inventory for order ${order.orderId}: product ${item.productId} no longer exists`);
+    }
+  }
 };
 
 export async function createRazorpayOrder(req, res) {
@@ -172,9 +193,39 @@ export async function handleRazorpayWebhook(req, res) {
 }
 
 export async function expireRazorpayReservations() {
-  const expired = await OrderModel.find({ paymentMethod: "RAZORPAY", payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }).limit(100);
-  for (const order of expired) {
-    const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }, { $set: { payment_status: "expired", inventoryReleased: true, delivery_status: "cancelled", cancelledAt: new Date() } }, { new: true });
-    if (claimed) await restoreOrderStock(claimed);
+  const expired = await OrderModel.find({
+    paymentMethod: "RAZORPAY",
+    payment_status: { $in: ["pending", "authorized"] },
+    inventoryReleased: false,
+    paymentReservationExpiresAt: { $lte: new Date() }
+  }).select("_id").limit(100).lean();
+
+  for (const candidate of expired) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        // Expire the order and restore every product in one MongoDB transaction.
+        // A crash cannot leave the order marked released while stock remains deducted,
+        // and concurrent workers cannot restore the same reservation twice.
+        const claimed = await OrderModel.findOneAndUpdate({
+          _id: candidate._id,
+          paymentMethod: "RAZORPAY",
+          payment_status: { $in: ["pending", "authorized"] },
+          inventoryReleased: false,
+          paymentReservationExpiresAt: { $lte: new Date() }
+        }, {
+          $set: {
+            payment_status: "expired",
+            inventoryReleased: true,
+            delivery_status: "cancelled",
+            cancelledAt: new Date()
+          }
+        }, { new: true, session });
+
+        if (claimed) await restoreOrderStock(claimed, session);
+      });
+    } finally {
+      await session.endSession();
+    }
   }
 }
