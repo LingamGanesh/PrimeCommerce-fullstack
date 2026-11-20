@@ -339,11 +339,12 @@ export async function forgotPasswordController(request,response) {
         }
 
         const otp = generatedOtp()
-        const expireTime = new Date() + 60 * 60 * 1000 // 1hr
+        const expireTime = new Date(Date.now() + 60 * 60 * 1000);
 
-        const update = await UserModel.findByIdAndUpdate(user._id,{
-            forgot_password_otp : otp,
-            forgot_password_expiry : new Date(expireTime).toISOString()
+        await UserModel.findByIdAndUpdate(user._id, {
+            forgot_password_otp: otp,
+            forgot_password_expiry: expireTime,
+            passwordResetVerifiedUntil: null
         })
 
         await sendEmail({
@@ -394,9 +395,7 @@ export async function verifyForgotPasswordOtp(request,response){
             })
         }
 
-        const currentTime = new Date().toISOString()
-
-        if(user.forgot_password_expiry < currentTime  ){
+        if (!user.forgot_password_expiry || user.forgot_password_expiry <= new Date()) {
             return response.status(400).json({
                 message : "Otp is expired",
                 error : true,
