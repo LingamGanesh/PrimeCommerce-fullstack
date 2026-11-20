@@ -108,8 +108,8 @@ export async function loginController(request, response) {
     const user = await UserModel.findOne({ email }).select('+password')
 
     if (!user) {
-      return response.status(404).json({
-        message: 'User not found',
+      return response.status(401).json({
+        message: "Invalid email or password",
         error: true,
         success: false
       })
@@ -426,7 +426,7 @@ export async function refreshToken(request,response){
         if (!refreshSecret) {
             return response.status(500).json({ message: "Refresh-token secret is not configured", error: true, success: false });
         }
-        const decoded = jwt.verify(refreshToken, refreshSecret);
+        const decoded = jwt.verify(refreshToken, refreshSecret, { algorithms: ["HS256"] });
         const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
         const user = await UserModel.findOne({ _id: decoded.id, refresh_token: refreshTokenHash }).select("+refresh_token");
         if (!user || user.status !== "active") {
