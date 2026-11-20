@@ -5,6 +5,7 @@ import ProductModel from "../models/product.model.js";
 import AddressModel from "../models/address.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
+import { verifyHmacHex, isValidRazorpayAmount } from "../utils/paymentSecurity.js";
 
 const roundMoney = (value) => Math.round(Number(value) * 100) / 100;
 const razorpayAuth = () => {
@@ -109,23 +110,29 @@ export async function handleRazorpayWebhook(req, res) {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!secret) return res.status(503).json({ success: false, message: "Webhook is not configured" });
     if (!Buffer.isBuffer(req.body)) return res.status(400).json({ success: false, message: "Raw webhook body is required" });
-    const supplied = Buffer.from(String(req.headers["x-razorpay-signature"] || ""), "hex");
-    const expected = crypto.createHmac("sha256", secret).update(req.body).digest();
-    if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return res.status(400).json({ success: false, message: "Invalid webhook signature" });
+    const signature = String(req.headers["x-razorpay-signature"] || "");
+    if (!verifyHmacHex(req.body, signature, secret)) return res.status(400).json({ success: false, message: "Invalid webhook signature" });
     const event = JSON.parse(req.body.toString("utf8"));
     if (!["payment.captured", "order.paid", "payment.failed"].includes(event.event)) return res.json({ success: true, ignored: true });
     const payment = event.payload?.payment?.entity;
-    const gatewayOrderId = payment?.order_id || event.payload?.order?.entity?.id;
+    const gatewayOrder = event.payload?.order?.entity;
+    const gatewayOrderId = payment?.order_id || gatewayOrder?.id;
     if (!gatewayOrderId) return res.json({ success: true, ignored: true });
     const order = await OrderModel.findOne({ razorpayOrderId: gatewayOrderId });
     if (!order) return res.json({ success: true, ignored: true });
     if (event.event === "payment.failed") {
       const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false }, { $set: { payment_status: "failed", inventoryReleased: true } }, { new: true });
       if (claimed) await restoreOrderStock(claimed);
-    } else if (order.payment_status === "expired" || order.inventoryReleased || (payment && Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100)) || (payment && payment.currency !== "INR")) {
-      await OrderModel.updateOne({ _id: order._id, payment_status: "expired" }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id } });
     } else {
-      await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
+      const paidEntity = payment || (gatewayOrder ? { amount: gatewayOrder.amount_paid, currency: gatewayOrder.currency, status: gatewayOrder.status, id: null } : null);
+      const amountIsValid = isValidRazorpayAmount(paidEntity, Math.round(Number(order.totalAmt) * 100));
+      const captured = event.event === "payment.captured" ? payment?.status === "captured" : gatewayOrder?.status === "paid" || payment?.status === "captured";
+      if (!paidEntity || !amountIsValid || !captured) return res.status(400).json({ success: false, message: "Webhook payment amount, currency or capture state is invalid" });
+      if (order.payment_status === "expired" || order.inventoryReleased) {
+        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id } });
+      } else {
+        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
+      }
     }
     return res.json({ success: true });
   } catch (error) { return res.status(400).json({ success: false, message: error.message || "Webhook processing failed" }); }
