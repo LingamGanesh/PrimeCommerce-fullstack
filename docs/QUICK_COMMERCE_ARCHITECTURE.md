@@ -57,7 +57,7 @@ Cancellation/refund transitions must be validated against current order state. P
 
 ## Current change
 
-The storefront now loads published products and categories from `/api/v1/products` and `/api/v1/categories`; it displays an explicit empty/loading/error state rather than silently substituting demo products. The existing Product, Category and SubCategory schemas are retained. Public catalog endpoints include `GET /api/v1/products`, `GET /api/v1/products/:id`, `GET /api/v1/categories` and `GET /api/v1/subcategories`. Admin-only endpoints include `POST/PATCH /api/v1/admin/categories`, `POST /api/v1/admin/subcategories`, `POST /api/v1/admin/products`, `PATCH /api/v1/admin/products/:id` and `DELETE /api/v1/admin/products/:id` (soft-unpublishes). Admin endpoints require the existing JWT auth middleware and an active user with `role: admin`. Product creation validates category/subcategory references and price/discount/stock values. Customer cart is now server-backed through authenticated cart APIs, saved addresses are scoped to the owning user, and a Cash on Delivery checkout creates an order after re-reading current database prices and atomically reserving available stock. Customers can view their own order history. Online payments, delivery fees/ETA, live inventory synchronization, cancellation/refunds and delivery tracking are not implemented yet.
+The storefront now loads published products and categories from `/api/v1/products` and `/api/v1/categories`; it displays an explicit empty/loading/error state rather than silently substituting demo products. The existing Product, Category and SubCategory schemas are retained. Public catalog endpoints include `GET /api/v1/products`, `GET /api/v1/products/:id`, `GET /api/v1/categories` and `GET /api/v1/subcategories`. Admin-only endpoints include `POST/PATCH /api/v1/admin/categories`, `POST /api/v1/admin/subcategories`, `POST /api/v1/admin/products`, `PATCH /api/v1/admin/products/:id` and `DELETE /api/v1/admin/products/:id` (soft-unpublishes). Admin endpoints require the existing JWT auth middleware and an active user with `role: admin`. Product creation validates category/subcategory references and price/discount/stock values. Customer cart is now server-backed through authenticated cart APIs, saved addresses are scoped to the owning user, and a Cash on Delivery checkout creates an order after re-reading current database prices and atomically reserving available stock. Customers can view their own order history. Online payments, delivery fees/ETA, live inventory synchronization and cancellation/refunds are not implemented yet. Periodic rider GPS updates and customer tracking are implemented as described below.
 
 ## Verification still required
 
@@ -71,7 +71,7 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - `GET /api/v1/admin/products` and `GET /api/v1/admin/orders` provide admin-only inventory and order lists (latest 100).
 - `PATCH /api/v1/admin/products/:id` uses the existing catalog admin endpoint for stock updates.
 - `PATCH /api/v1/admin/orders/:id/status` allows processing, shipped and delivered status changes. Terminal cancellation/refund is intentionally not exposed in this UI because stock restoration and payment refunds are not implemented.
-- Product creation/editing, customer management, picker/rider operations, delivery tracking, payment refunds and audit logs remain future work.
+- Product creation/editing, customer management, picker/rider operations and periodic delivery tracking are implemented. Payment refunds and audit logs remain future work.
 
 
 ## Admin catalogue management (current phase)
@@ -102,7 +102,7 @@ Run the client install/build/lint and server test suite in a checked-out environ
 - Rider APIs: `GET /api/v1/fulfilment/rider/orders` and `PATCH /api/v1/fulfilment/rider/orders/:id/status` (assigned rider advances through `picked_up`, `out_for_delivery`, and `delivered`).
 - Staff APIs verify the active account role from the database on each request; a picker/rider can only read and update orders assigned to their own account.
 - Dedicated `/picker` and `/rider` workspaces show assigned orders, item snapshots and delivery address details. Login redirects each role to its workspace.
-- This phase provides manual refresh and status updates only. It does not yet provide GPS location capture, live map tracking, Socket.io updates, proof-of-delivery photos/OTP, rider earnings, route optimisation, FCM notifications or dedicated staff onboarding/password provisioning.
+- This phase provides manual refresh, status updates and opt-in periodic GPS sharing. It does not provide Socket.io updates, proof-of-delivery photos/OTP, rider earnings, route optimisation, FCM notifications or dedicated staff onboarding/password provisioning.
 - The older admin order status endpoint remains for legacy `processing → shipped → delivered` orders. Newly dispatched orders use the picker/rider lifecycle above.
 
 
