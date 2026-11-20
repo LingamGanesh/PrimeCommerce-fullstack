@@ -24,8 +24,10 @@ const gatewayRequest = async (path, options = {}) => {
   if (!response.ok) throw new Error(body.error?.description || "Payment gateway request failed");
   return body;
 };
-const getCartSnapshot = async (userId) => {
-  const rows = await CartProductModel.find({ userId }).populate({ path: "productId", select: "name image unit price stock publish" });
+const getCartSnapshot = async (userId, session) => {
+  let query = CartProductModel.find({ userId }).populate({ path: "productId", select: "name image unit price stock publish" });
+  if (session) query = query.session(session);
+  const rows = await query;
   if (!rows.length) throw new Error("Your cart is empty");
   const items = []; let subtotal = 0;
   for (const row of rows) {
@@ -35,7 +37,11 @@ const getCartSnapshot = async (userId) => {
     const lineTotal = roundMoney(unitPrice * row.quantity); subtotal = roundMoney(subtotal + lineTotal);
     items.push({ productId: product._id, name: product.name, image: product.image || [], unit: product.unit, unitPrice, quantity: row.quantity, lineTotal });
   }
-  return { items, subtotal, cartRowIds: rows.map(row => row._id) };
+  const cartRowIds = rows.map(row => String(row._id)).sort();
+  const fingerprint = items
+    .map(item => ({ productId: String(item.productId), quantity: item.quantity, unitPrice: item.unitPrice }))
+    .sort((a, b) => a.productId.localeCompare(b.productId));
+  return { items, subtotal, cartRowIds, fingerprint: JSON.stringify(fingerprint) };
 };
 const reserveStock = async (items, session) => {
   for (const item of items) {
@@ -149,7 +155,18 @@ export async function createRazorpayOrder(req, res) {
     let responseData;
 
     await session.withTransaction(async () => {
-      await reserveStock(items, session);
+      // Re-read the cart inside the transaction. The gateway order was created
+      // from an earlier snapshot; reject if quantity, product, or price changed
+      // while the customer was being redirected to the payment gateway.
+      const currentCart = await getCartSnapshot(req.userId, session);
+      if (currentCart.fingerprint !== JSON.stringify(items
+        .map(item => ({ productId: String(item.productId), quantity: item.quantity, unitPrice: item.unitPrice }))
+        .sort((a, b) => a.productId.localeCompare(b.productId))) ||
+        currentCart.subtotal !== subtotal ||
+        currentCart.cartRowIds.join(",") !== cartRowIds.map(String).sort().join(",")) {
+        throw new Error("Your cart changed during checkout. Please review it and try again.");
+      }
+      await reserveStock(currentCart.items, session);
       const [savedOrder] = await OrderModel.create([{
         userId: req.userId, orderId, product_details: JSON.stringify(items), payment_id: "", payment_status: "pending",
         paymentMethod: "RAZORPAY", razorpayOrderId: gatewayOrder.id, paymentReservationExpiresAt: expiresAt, inventoryReleased: false,
