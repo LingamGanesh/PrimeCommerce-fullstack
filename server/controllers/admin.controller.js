@@ -3,6 +3,7 @@ import UserModel from "../models/user.model.js";
 import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import OrderModel from "../models/order.model.js";
+import { isFulfilmentPaymentEligible } from "../utils/paymentSecurity.js";
 
 export async function getAdminOverview(req, res) {
   try {
@@ -47,6 +48,7 @@ export async function updateAdminOrderStatus(req, res) {
     if (!allowed.includes(status)) return res.status(400).json({ success: false, message: "Unsupported order status" });
     const order = await OrderModel.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    if (!isFulfilmentPaymentEligible(order)) return res.status(409).json({ success: false, message: "Online payment must be captured before fulfilment" });
     const transitions = { processing: ["shipped"], shipped: ["delivered"] };
     if (!transitions[order.delivery_status]?.includes(status)) return res.status(409).json({ success: false, message: `Cannot move an order from ${order.delivery_status} to ${status}` });
     order.delivery_status = status;
@@ -174,7 +176,7 @@ export async function assignOrderPicker(req, res) {
     const picker = await UserModel.findOne({ _id: pickerId, role: "picker", status: "active" }).select("_id");
     if (!picker) return res.status(404).json({ success: false, message: "Active picker account not found" });
     const order = await OrderModel.findOneAndUpdate(
-      { _id: req.params.id, delivery_status: "processing" },
+      { _id: req.params.id, delivery_status: "processing", $or: [{ paymentMethod: { $ne: "RAZORPAY" } }, { payment_status: { $in: ["paid", "completed"] } }] },
       { $set: { pickerId: picker._id, delivery_status: "picking" } },
       { new: true }
     );
@@ -194,7 +196,7 @@ export async function assignOrderRider(req, res) {
     const rider = await UserModel.findOne({ _id: riderId, role: "rider", status: "active" }).select("_id");
     if (!rider) return res.status(404).json({ success: false, message: "Active rider account not found" });
     const order = await OrderModel.findOneAndUpdate(
-      { _id: req.params.id, delivery_status: "packed" },
+      { _id: req.params.id, delivery_status: "packed", $or: [{ paymentMethod: { $ne: "RAZORPAY" } }, { payment_status: { $in: ["paid", "completed"] } }] },
       { $set: { riderId: rider._id, delivery_status: "rider_assigned" } },
       { new: true }
     );
