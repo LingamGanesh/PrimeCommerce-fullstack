@@ -61,7 +61,7 @@ The storefront now loads published products and categories from `/api/v1/product
 
 ## Verification still required
 
-The GitHub Actions workflow runs frontend install/lint/build and backend install/tests on the audit branch and its pull request. Browser-based end-to-end tests, live MongoDB integration and Razorpay sandbox tests still require a configured environment. Add integration tests for catalog filtering/pagination, product CRUD and RBAC, server-authoritative pricing, stock reservation, payment webhook idempotency and delivery state transitions before production use. Existing admin accounts must be granted `role: admin` through a trusted database/admin provisioning process; public registration must never accept a role field.
+The GitHub Actions workflow runs frontend install/lint/build and backend install/tests on the audit branch and its pull request. Browser-based end-to-end tests, live MongoDB integration and Razorpay sandbox tests still require a configured environment. Add integration tests for catalog filtering/pagination, product CRUD and RBAC, server-authoritative pricing, stock reservation, payment webhook idempotency and delivery state transitions before production use. Existing admin accounts must be granted `role: admin` through a trusted database/admin provisioning process; public registration must never accept a role field. New registrations require email verification; legacy accounts without a pending verification token are kept compatible. COD orders are marked paid when delivery OTP verification succeeds. Profile updates validate name/mobile/password values, revoke refresh sessions on password changes, and do not yet support changing the account email.
 
 
 ## Admin operations dashboard (current phase)
