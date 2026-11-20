@@ -7,6 +7,7 @@ import uploadImageClodinary from '../utils/uploadImageClodinary.js';
 import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
+import crypto from "node:crypto"
 import generateAccessToken from '../utils/generatedAccessToken.js';
 
 
@@ -361,115 +362,70 @@ export async function forgotPasswordController(request,response) {
 //verify forgot password otp
 export async function verifyForgotPasswordOtp(request,response){
     try {
-        const { email , otp }  = request.body
-
-        if(!email || !otp){
-            return response.status(400).json({
-                message : "Provide required field email, otp.",
-                error : true,
-                success : false
-            })
+        const { email, otp } = request.body
+        if (!email || !otp) {
+            return response.status(400).json({ message: "Provide required field email, otp.", error: true, success: false })
         }
-
         const user = await UserModel.findOne({ email })
-
-        if(!user){
-            return response.status(400).json({
-                message : "Email not available",
-                error : true,
-                success : false
-            })
+        if (!user) {
+            return response.status(400).json({ message: "Email not available", error: true, success: false })
+        }
+        if (!user.forgot_password_expiry || user.forgot_password_expiry <= new Date()) {
+            return response.status(400).json({ message: "Otp is expired", error: true, success: false })
+        }
+        if (otp !== user.forgot_password_otp) {
+            return response.status(400).json({ message: "Invalid otp", error: true, success: false })
         }
 
-        const currentTime = new Date().toISOString()
-
-        if(user.forgot_password_expiry < currentTime  ){
-            return response.status(400).json({
-                message : "Otp is expired",
-                error : true,
-                success : false
-            })
-        }
-
-        if(otp !== user.forgot_password_otp){
-            return response.status(400).json({
-                message : "Invalid otp",
-                error : true,
-                success : false
-            })
-        }
-
-        //if otp is not expired
-        //otp === user.forgot_password_otp
-
-        const updateUser = await UserModel.findByIdAndUpdate(user?._id,{
-            forgot_password_otp : "",
-            forgot_password_expiry : ""
+        const resetToken = crypto.randomBytes(32).toString("hex")
+        const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
+        await UserModel.findByIdAndUpdate(user._id, {
+            forgot_password_otp: "",
+            forgot_password_expiry: null,
+            password_reset_token_hash: resetTokenHash,
+            password_reset_expires_at: new Date(Date.now() + 10 * 60 * 1000)
         })
-        
         return response.json({
-            message : "Verify otp successfully",
-            error : false,
-            success : true
+            message: "OTP verified. Set a new password within 10 minutes.",
+            error: false,
+            success: true,
+            data: { resetToken }
         })
-
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        return response.status(500).json({ message: error.message || error, error: true, success: false })
     }
 }
 
-//reset the password
+// Reset password requires the short-lived token issued after OTP verification.
 export async function resetpassword(request,response){
     try {
-        const { email , newPassword, confirmPassword } = request.body 
-
-        if(!email || !newPassword || !confirmPassword){
-            return response.status(400).json({
-                message : "provide required fields email, newPassword, confirmPassword"
-            })
+        const { email, newPassword, confirmPassword, resetToken } = request.body
+        if (!email || !newPassword || !confirmPassword || !resetToken) {
+            return response.status(400).json({ message: "Provide email, new password, confirmation and reset token", error: true, success: false })
         }
-
-        const user = await UserModel.findOne({ email })
-
-        if(!user){
-            return response.status(400).json({
-                message : "Email is not available",
-                error : true,
-                success : false
-            })
+        if (newPassword !== confirmPassword) {
+            return response.status(400).json({ message: "New password and confirmation must match", error: true, success: false })
         }
-
-        if(newPassword !== confirmPassword){
-            return response.status(400).json({
-                message : "newPassword and confirmPassword must be same.",
-                error : true,
-                success : false,
-            })
+        const resetTokenHash = crypto.createHash("sha256").update(String(resetToken)).digest("hex")
+        const user = await UserModel.findOne({
+            email,
+            password_reset_token_hash: resetTokenHash,
+            password_reset_expires_at: { $gt: new Date() }
+        }).select("+password_reset_token_hash +password_reset_expires_at")
+        if (!user) {
+            return response.status(400).json({ message: "Password reset session is invalid or expired. Verify your OTP again.", error: true, success: false })
         }
 
         const salt = await bcrypt.genSalt(10)
-        const hashPassword = await bcrypt.hash(newPassword,salt)
-
-        const update = await UserModel.findOneAndUpdate(user._id,{
-            password : hashPassword
+        const hashPassword = await bcrypt.hash(newPassword, salt)
+        await UserModel.findByIdAndUpdate(user._id, {
+            password: hashPassword,
+            password_reset_token_hash: "",
+            password_reset_expires_at: null
         })
-
-        return response.json({
-            message : "Password updated successfully.",
-            error : false,
-            success : true
-        })
-
+        return response.json({ message: "Password updated successfully.", error: false, success: true })
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        return response.status(500).json({ message: error.message || error, error: true, success: false })
     }
 }
 
