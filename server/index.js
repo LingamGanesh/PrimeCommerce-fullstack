@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 import userRouter from './routes/user.routes.js';
+import catalogRouter from './routes/catalog.routes.js';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/user', userRouter);
+app.use('/api/v1', catalogRouter);
 
 const PORT = process.env.PORT || 8080;
 
