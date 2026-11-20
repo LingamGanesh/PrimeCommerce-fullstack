@@ -13,6 +13,8 @@ import Myorders from "../pages/Myorders";
 import Address from "../pages/Address";
 import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
+import AdminGuard from "../components/AdminGuard";
+import AdminDashboard from "../pages/AdminDashboard";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +25,7 @@ const router = createBrowserRouter([
       { path: "search", element: <SearchPage /> },
       { path: "cart", element: <Cart /> },
       { path: "checkout", element: <Checkout /> },
+      { path: "admin", element: <AdminGuard />, children: [{ path: "", element: <AdminDashboard /> }] },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPage /> },
