@@ -148,12 +148,46 @@ export async function assignFulfilmentRole(req, res) {
     if (!mongoose.isValidObjectId(userId) || !["user", "picker", "rider"].includes(role)) {
       return res.status(400).json({ success: false, message: "Choose a valid customer and staff role" });
     }
+    const currentUser = await UserModel.findOne({
+      _id: userId,
+      status: "active",
+      role: { $in: ["user", "picker", "rider"] }
+    }).select("_id role");
+    if (!currentUser) return res.status(404).json({ success: false, message: "Active customer or staff account not found" });
+
+    // Never remove a staff role while that person still owns work in progress.
+    // Otherwise active picker/rider queues become orphaned and cannot progress.
+    if (currentUser.role === "picker" && role !== "picker") {
+      const activePickingOrders = await OrderModel.countDocuments({
+        pickerId: currentUser._id,
+        delivery_status: { $in: ["picking", "packed"] }
+      });
+      if (activePickingOrders) {
+        return res.status(409).json({
+          success: false,
+          message: "This picker still has active orders. Reassign or complete those orders before changing the role."
+        });
+      }
+    }
+    if (currentUser.role === "rider" && role !== "rider") {
+      const activeRiderOrders = await OrderModel.countDocuments({
+        riderId: currentUser._id,
+        delivery_status: { $in: ["rider_assigned", "picked_up", "out_for_delivery"] }
+      });
+      if (activeRiderOrders) {
+        return res.status(409).json({
+          success: false,
+          message: "This rider still has active deliveries. Reassign or complete those deliveries before changing the role."
+        });
+      }
+    }
+
     const user = await UserModel.findOneAndUpdate(
-      { _id: userId, status: "active", role: { $in: ["user", "picker", "rider"] } },
+      { _id: currentUser._id, status: "active", role: currentUser.role },
       { $set: { role } },
       { new: true, runValidators: true }
     ).select("name email mobile role status");
-    if (!user) return res.status(404).json({ success: false, message: "Active customer account not found" });
+    if (!user) return res.status(409).json({ success: false, message: "Account role changed concurrently. Refresh and try again." });
     return res.json({ success: true, message: `Account role updated to ${role}`, data: user });
   } catch {
     return res.status(500).json({ success: false, message: "Unable to update staff role" });
