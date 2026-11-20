@@ -72,6 +72,13 @@ export const Usermenu = () => {
         </Link>
 
         <Link
+          to="/dashboard/support"
+          className="px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+        >
+          🎧 Customer Support
+        </Link>
+
+        <Link
           to="/dashboard/address"
           className="px-3 py-2 rounded-lg hover:bg-gray-100 transition"
         >
