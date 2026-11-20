@@ -4,7 +4,7 @@ import UserModel from "../models/user.model.js";
 const auth = async (req, res, next) => {
   try {
     const authorization = req.headers?.authorization || "";
-    const bearerToken = /^Bearer\\s+(.+)$/i.exec(authorization)?.[1];
+    const bearerToken = /^Bearer\s+(.+)$/i.exec(authorization)?.[1];
     const token = req.cookies?.accessToken || bearerToken;
 
     if (!token) {
