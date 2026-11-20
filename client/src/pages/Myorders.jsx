@@ -12,6 +12,8 @@ export default function Myorders() {
   const [trackingOrderId, setTrackingOrderId] = useState("");
   const [tracking, setTracking] = useState(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [deliveryOtp, setDeliveryOtp] = useState(null);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   useEffect(() => {
     Axios.get("/api/v1/orders/mine")
@@ -42,6 +44,18 @@ export default function Myorders() {
     };
   }, [trackingOrderId]);
 
+  const generateDeliveryOtp = async (orderId) => {
+    setOtpLoading(true);
+    setDeliveryOtp(null);
+    try {
+      const response = await Axios.post(`/api/v1/orders/${orderId}/delivery-otp`);
+      setDeliveryOtp({ orderId, ...response.data.data });
+      toast.success("Delivery OTP generated. Share it with your rider only when they arrive.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to generate delivery OTP");
+    } finally { setOtpLoading(false); }
+  };
+
   const openTracking = (orderId) => {
     setTrackingOrderId(current => current === orderId ? "" : orderId);
     setTracking(current => trackingOrderId === orderId ? null : current);
@@ -67,6 +81,11 @@ export default function Myorders() {
               {trackingOrderId === order.id && <div className="mt-3 rounded-xl border border-green-100 bg-green-50 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold capitalize text-green-900">{String(tracking?.deliveryStatus || order.deliveryStatus).replaceAll("_", " ")}</p><span className="text-xs text-green-800">{trackingLoading ? "Refreshing…" : "Refreshes every 10 seconds"}</span></div>
                 {tracking?.rider && <p className="mt-2 text-sm text-green-900">Rider: {tracking.rider.name || "Assigned rider"} {tracking.rider.mobile ? `· ${tracking.rider.mobile}` : ""}</p>}
+                {order.deliveryStatus === "out_for_delivery" && <div className="mt-4 rounded-xl border border-green-200 bg-white p-3">
+                  <p className="text-sm font-bold text-slate-900">Delivery verification OTP</p>
+                  <p className="mt-1 text-xs text-slate-600">Generate a one-time code and share it with your rider only when your order arrives. It expires in 30 minutes.</p>
+                  {deliveryOtp?.orderId === order.id ? <div className="mt-2 flex items-center justify-between gap-3"><strong className="text-2xl tracking-[.3em] text-green-800">{deliveryOtp.otp}</strong><span className="text-xs text-slate-500">Expires {new Date(deliveryOtp.expiresAt).toLocaleTimeString()}</span></div> : <button disabled={otpLoading} onClick={() => generateDeliveryOtp(order.id)} className="mt-3 rounded-lg bg-green-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{otpLoading ? "Generating…" : "Generate delivery OTP"}</button>}
+                </div>}
                 {Number.isFinite(tracking?.location?.lat) && Number.isFinite(tracking?.location?.lng) ? <div className="mt-3"><p className="text-xs text-green-800">Last GPS update: {tracking.location.updatedAt ? new Date(tracking.location.updatedAt).toLocaleString() : "Just now"}</p><a className="mt-2 inline-flex rounded-lg bg-white px-3 py-2 text-sm font-bold text-green-800 underline" href={`https://www.openstreetmap.org/?mlat=${tracking.location.lat}&mlon=${tracking.location.lng}#map=16/${tracking.location.lat}/${tracking.location.lng}`} target="_blank" rel="noreferrer">View rider location on map</a></div> : <p className="mt-2 text-sm text-green-800">Rider GPS location is not available yet. It appears after the rider starts sharing location.</p>}
               </div>}
             </div>}
