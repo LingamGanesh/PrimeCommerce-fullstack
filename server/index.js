@@ -14,6 +14,7 @@ import ordersRouter from "./routes/orders.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import fulfilmentRouter from "./routes/fulfilment.routes.js";
 import paymentsRouter from "./routes/payments.routes.js";
+import supportRouter from "./routes/support.routes.js";
 import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers/payments.controller.js";
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use("/api/v1/orders", ordersRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/fulfilment", fulfilmentRouter);
 app.use("/api/v1/payments", paymentsRouter);
+app.use("/api/v1/support", supportRouter);
 
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
