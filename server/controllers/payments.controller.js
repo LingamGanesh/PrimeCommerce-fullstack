@@ -214,6 +214,51 @@ export async function createRazorpayOrder(req, res) {
   }
 }
 
+export async function retryRazorpayPayment(req, res) {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid order id" });
+    }
+    const order = await OrderModel.findOne({
+      _id: req.params.id,
+      userId: req.userId,
+      paymentMethod: "RAZORPAY",
+      payment_status: { $in: ["pending", "authorized"] },
+      delivery_status: "processing",
+      inventoryReleased: false,
+      paymentReservationExpiresAt: { $gt: new Date() }
+    }).lean();
+    if (!order?.razorpayOrderId) {
+      return res.status(409).json({ success: false, message: "This payment reservation has expired or is no longer payable. Start a new checkout." });
+    }
+
+    // Confirm the gateway order is still payable; do not reopen a paid/closed order.
+    const gatewayOrder = await gatewayRequest(`/orders/${encodeURIComponent(order.razorpayOrderId)}`);
+    if (!["created", "attempted"].includes(gatewayOrder.status) ||
+        Number(gatewayOrder.amount) !== Math.round(Number(order.totalAmt) * 100) ||
+        gatewayOrder.currency !== "INR") {
+      return res.status(409).json({ success: false, message: "This Razorpay order is no longer payable. Refresh your orders and contact support if you were charged." });
+    }
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    if (!keyId) return res.status(503).json({ success: false, message: "Online payments are not configured" });
+    return res.json({
+      success: true,
+      data: {
+        orderDbId: order._id,
+        orderId: order.orderId,
+        razorpayOrderId: order.razorpayOrderId,
+        amount: gatewayOrder.amount,
+        currency: gatewayOrder.currency,
+        keyId,
+        expiresAt: order.paymentReservationExpiresAt,
+        contact: String(order.delivery_address?.mobile || "")
+      }
+    });
+  } catch (error) {
+    return res.status(502).json({ success: false, message: error.message || "Unable to retry this payment" });
+  }
+}
+
 export async function verifyRazorpayPayment(req, res) {
   try {
     const { razorpay_order_id: gatewayOrderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = req.body;
