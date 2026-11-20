@@ -20,7 +20,7 @@ import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers
 dotenv.config();
 
 const app = express();
-const allowedOrigins = (process.env.FRONTEND_URL || "")
+const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "")
   .split(",")
   .map(origin => origin.trim().replace(/\/$/, ""))
   .filter(Boolean);
