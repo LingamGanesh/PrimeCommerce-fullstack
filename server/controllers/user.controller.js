@@ -105,7 +105,7 @@ export async function loginController(request, response) {
     }
 
     // 2️⃣ Check user
-    const user = await UserModel.findOne({ email }).select('+password')
+    const user = await UserModel.findOne({ email }).select('+password +email_verification_token_hash')
 
     if (!user) {
       return response.status(401).json({
