@@ -34,8 +34,19 @@ const addressSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
       index: true,
     },
+    label: { type: String, enum: ["Home", "Work", "Other"], default: "Home" },
+    house: { type: String, trim: true, default: "" },
+    floor: { type: String, trim: true, default: "" },
+    landmark: { type: String, trim: true, default: "" },
+    geo: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], default: undefined }
+    },
+    isDefault: { type: Boolean, default: false, index: true },
+    deliveryInstructions: { type: String, trim: true, maxlength: 500, default: "" },
   },
   {
     timestamps: true, // adds createdAt and updatedAt
