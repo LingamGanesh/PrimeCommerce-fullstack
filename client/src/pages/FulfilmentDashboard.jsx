@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import Axios from "../utils/Axios";
 import toast from "react-hot-toast";
@@ -13,6 +13,9 @@ export default function FulfilmentDashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
+  const [sharingOrderId, setSharingOrderId] = useState("");
+  const watchIdRef = useRef(null);
+  const lastLocationSentAt = useRef(0);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -25,10 +28,48 @@ export default function FulfilmentDashboard() {
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
+  const stopLocationSharing = useCallback(() => {
+    if (watchIdRef.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchIdRef.current);
+    watchIdRef.current = null;
+    setSharingOrderId("");
+  }, []);
+
+  useEffect(() => () => {
+    if (watchIdRef.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchIdRef.current);
+  }, []);
+
+  const startLocationSharing = (order) => {
+    if (!navigator.geolocation) {
+      toast.error("This browser does not support location sharing");
+      return;
+    }
+    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    lastLocationSentAt.current = 0;
+    setSharingOrderId(order._id);
+    watchIdRef.current = navigator.geolocation.watchPosition(async (position) => {
+      const now = Date.now();
+      if (now - lastLocationSentAt.current < 5000) return;
+      lastLocationSentAt.current = now;
+      try {
+        await Axios.patch(`/api/v1/fulfilment/rider/orders/${order._id}/location`, {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Unable to share location");
+        stopLocationSharing();
+      }
+    }, (error) => {
+      toast.error(error.code === 1 ? "Allow location permission to share your delivery location" : "Unable to read your current location");
+      stopLocationSharing();
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+  };
+
   const updateStatus = async (order, status) => {
     setBusy(order._id);
     try {
       await Axios.patch(`/api/v1/fulfilment/${role}/orders/${order._id}/status`, { delivery_status: status });
+      if (status === "delivered" && sharingOrderId === order._id) stopLocationSharing();
       toast.success(isPicker ? "Order packed successfully" : `Delivery updated: ${status.replaceAll("_", " ")}`);
       await loadOrders();
     } catch (error) { toast.error(error.response?.data?.message || "Status update failed"); }
@@ -47,7 +88,7 @@ export default function FulfilmentDashboard() {
   return <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
     <div className="mx-auto max-w-6xl">
       <header className="mb-7 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-950 p-6 text-white">
-        <div><p className="text-xs font-bold uppercase tracking-[.2em] text-lime-300">{isPicker ? "Picker workspace" : "Rider workspace"}</p><h1 className="mt-2 text-2xl font-black">Hello, {user?.name || (isPicker ? "Picker" : "Rider")}</h1><p className="mt-1 text-sm text-slate-300">{isPicker ? "Pick and pack the orders assigned to you." : "Manage your assigned deliveries and update delivery progress."}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[.2em] text-lime-300">{isPicker ? "Picker workspace" : "Rider workspace"}</p><h1 className="mt-2 text-2xl font-black">Hello, {user?.name || (isPicker ? "Picker" : "Rider")}</h1><p className="mt-1 text-sm text-slate-300">{isPicker ? "Pick and pack the orders assigned to you." : "Manage deliveries and share your location while on the road."}</p></div>
         <button onClick={loadOrders} className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold hover:bg-white/20">↻ Refresh queue</button>
       </header>
       <div className="mb-5 flex items-center justify-between"><div><h2 className="text-xl font-extrabold text-slate-900">{isPicker ? "My picking queue" : "My deliveries"}</h2><p className="text-sm text-slate-500">Only orders assigned to your staff account are shown.</p></div><span className="rounded-full bg-lime-100 px-3 py-1.5 text-sm font-bold text-lime-800">{orders.length} active</span></div>
@@ -58,7 +99,8 @@ export default function FulfilmentDashboard() {
             <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold text-slate-400">ORDER #{order.orderId || String(order._id).slice(-7)}</p><h3 className="mt-1 font-extrabold text-slate-900">{order.userId?.name || "Customer"}</h3><p className="text-sm text-slate-500">{order.userId?.mobile || order.delivery_address?.mobile || "No phone number"}</p></div><span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold capitalize text-amber-800">{String(order.delivery_status).replaceAll("_", " ")}</span></div>
             <div className="my-4 rounded-xl bg-slate-50 p-3"><p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Items</p>{(order.items || []).map((item, index) => <div key={item.productId || item._id || index} className="flex justify-between gap-3 py-1 text-sm"><span className="text-slate-700">{item.name || item.product_name || "Product"} × {item.quantity || 1}</span><b className="text-slate-900">{money(item.lineTotal ?? item.price * (item.quantity || 1))}</b></div>)}{!order.items?.length && <p className="text-sm text-slate-400">Order item details unavailable</p>}</div>
             <div className="space-y-1 text-sm"><p className="font-semibold text-slate-800">Delivery address</p><p className="text-slate-500">{address(order.delivery_address)}</p></div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4"><div><p className="text-xs text-slate-400">Order total · {dateLabel(order.createdAt)}</p><p className="text-lg font-black text-slate-900">{money(order.totalAmt)}</p></div>{action && <button disabled={busy === order._id} onClick={() => updateStatus(order, action.next)} className="rounded-xl bg-lime-400 px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-50">{busy === order._id ? "Updating…" : action.label}</button>}</div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4"><div><p className="text-xs text-slate-400">Order total · {dateLabel(order.createdAt)}</p><p className="text-lg font-black text-slate-900">{money(order.totalAmt)}</p></div><div className="flex flex-wrap gap-2">{!isPicker && ["picked_up", "out_for_delivery"].includes(order.delivery_status) && (sharingOrderId === order._id ? <button onClick={stopLocationSharing} className="rounded-xl border border-amber-300 px-3 py-3 text-sm font-bold text-amber-800">Stop location</button> : <button onClick={() => startLocationSharing(order)} className="rounded-xl border border-slate-300 px-3 py-3 text-sm font-bold text-slate-700">Share GPS</button>)}{action && <button disabled={busy === order._id} onClick={() => updateStatus(order, action.next)} className="rounded-xl bg-lime-400 px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-50">{busy === order._id ? "Updating…" : action.label}</button>}</div></div>
+            {!isPicker && sharingOrderId === order._id && <p className="mt-3 text-xs font-medium text-green-700">GPS sharing is active while this dashboard remains open. Keep location permission enabled.</p>}
           </article>;
         })}
         {!orders.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center lg:col-span-2"><p className="font-bold text-slate-700">No active {isPicker ? "picking" : "delivery"} orders</p><p className="mt-1 text-sm text-slate-400">New orders appear here after an administrator assigns them to you.</p></div>}
