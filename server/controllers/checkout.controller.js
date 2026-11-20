@@ -5,7 +5,7 @@ import AddressModel from "../models/address.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
 
-const discountedPrice = (product) => Math.round(Number(product.price) * (1 - Math.max(0, Math.min(100, Number(product.discount) || 0)) / 100) * 100) / 100;
+const discountedPrice = (product) => Math.round(Number(product.price) * 100) / 100;
 
 export async function createCashOnDeliveryOrder(req, res) {
   const reserved = [];
