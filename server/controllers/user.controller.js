@@ -4,7 +4,6 @@ import bcrypt from 'bcryptjs';
 import verifyEmailTemplate from '../utils/verifyEmailTemplate.js';
 import generatedRefreshToken from '../utils/generatedRefreshToken.js';
 import uploadImageClodinary from '../utils/uploadImageClodinary.js';
-import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
 import crypto from "node:crypto"
@@ -16,59 +15,48 @@ import generateAccessToken from '../utils/generatedAccessToken.js';
 // ===============================================
 export async function registerUserController(request, response) {
   try {
-    const { name, email, password } = request.body;
-
-    // Check required fields
-    if (!name || !email || !password) {
-      return response.status(400).json({
-        message: "Provide name, email, and password",
-        error: true,
-        success: false
-      });
+    const name = String(request.body?.name || "").trim();
+    const email = String(request.body?.email || "").trim().toLowerCase();
+    const password = String(request.body?.password || "");
+    if (name.length < 2 || name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || password.length > 128) {
+      return response.status(400).json({ message: "Enter a valid name and email, and a password between 8 and 128 characters", error: true, success: false });
+    }
+    if (await UserModel.findOne({ email }).select("_id")) {
+      return response.status(409).json({ message: "Email is already registered", error: true, success: false });
     }
 
-    // Check if email already exists
-    const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
-      return response.status(400).json({
-        message: 'Email is already registered',
-        error: true,
-        success: false
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const newUser = new UserModel({
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const newUser = await UserModel.create({
       name,
       email,
-      password: hashedPassword,
-      verify_email: false
+      password: await bcrypt.hash(password, 12),
+      verify_email: false,
+      email_verification_token_hash: crypto.createHash("sha256").update(verificationToken).digest("hex"),
+      email_verification_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
     });
 
-    const savedUser = await newUser.save();
-
-    // Verification email link
-    const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${savedUser._id}`;
-
-    await sendEmail({
-      sendTo: email,
-      subject: 'Verify your email - PrimeCommerce',
-      html: verifyEmailTemplate({ name, url: verifyEmailUrl })
-    });
+    const frontendUrl = String(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+    const verifyEmailUrl = frontendUrl + "/verify-email?token=" + encodeURIComponent(verificationToken);
+    try {
+      await sendEmail({
+        sendTo: email,
+        subject: "Verify your email - PrimeCommerce",
+        html: verifyEmailTemplate({ name, url: verifyEmailUrl })
+      });
+    } catch (emailError) {
+      await UserModel.deleteOne({ _id: newUser._id });
+      throw emailError;
+    }
 
     return response.status(201).json({
-      message: 'User registered successfully! Please check your email to verify.',
+      message: "Account created. Please check your email to verify your address.",
       success: true,
       error: false,
-      data: savedUser
+      data: { _id: newUser._id, name: newUser.name, email: newUser.email, verify_email: false }
     });
-
   } catch (error) {
     return response.status(500).json({
-      message: error.message || 'Something went wrong',
+      message: error.message || "Unable to register account",
       error: true,
       success: false
     });
@@ -80,40 +68,20 @@ export async function registerUserController(request, response) {
 // ===============================================
 export async function verifyEmailController(request, response) {
   try {
-    const { code } = request.body;
-
-    if (!code) {
-      return response.status(400).json({
-        message: "Verification code is required",
-        error: true,
-        success: false
-      });
+    const token = String(request.body?.token || "");
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      return response.status(400).json({ message: "Verification link is invalid or expired", error: true, success: false });
     }
-
-    const user = await UserModel.findById(code);
-
-    if (!user) {
-      return response.status(400).json({
-        message: "Invalid verification link",
-        error: true,
-        success: false
-      });
-    }
-
-    await UserModel.updateOne({ _id: code }, { verify_email: true });
-
-    return response.json({
-      message: "Email verified successfully!",
-      success: true,
-      error: false
-    });
-
-  } catch (error) {
-    return response.status(500).json({
-      message: error.message || 'Server Error',
-      error: true,
-      success: false
-    });
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await UserModel.findOneAndUpdate(
+      { email_verification_token_hash: tokenHash, email_verification_expires_at: { $gt: new Date() }, verify_email: false },
+      { $set: { verify_email: true, email_verification_token_hash: "", email_verification_expires_at: null } },
+      { new: true }
+    ).select("_id email verify_email");
+    if (!user) return response.status(400).json({ message: "Verification link is invalid, expired or already used", error: true, success: false });
+    return response.json({ message: "Email verified successfully. You can now log in.", success: true, error: false });
+  } catch {
+    return response.status(500).json({ message: "Unable to verify email", error: true, success: false });
   }
 }
 
@@ -124,7 +92,7 @@ export async function verifyEmailController(request, response) {
 
 export async function loginController(request, response) {
   try {
-    const { email, password } = request.body
+    const email = String(request.body?.email || "").trim().toLowerCase()\n    const password = String(request.body?.password || "")
 
     // 1️⃣ Validate input
     if (!email || !password) {
@@ -320,87 +288,89 @@ export async function updateUserDetails(request,response){
 
 //forgot password not login
 export async function forgotPasswordController(request,response) {
-    try {
-        const { email } = request.body 
-
-        const user = await UserModel.findOne({ email })
-
-        if(!user){
-            return response.status(400).json({
-                message : "Email not available",
-                error : true,
-                success : false
-            })
-        }
-
-        const otp = generatedOtp()
-        const expireTime = new Date() + 60 * 60 * 1000 // 1hr
-
-        const update = await UserModel.findByIdAndUpdate(user._id,{
-            forgot_password_otp : otp,
-            forgot_password_expiry : new Date(expireTime).toISOString()
-        })
-
-        await sendEmail({
-            sendTo : email,
-            subject : "Forgot password from Binkeyit",
-            html : forgotPasswordTemplate({
-                name : user.name,
-                otp : otp
-            })
-        })
-
-        return response.json({
-            message : "check your email",
-            error : false,
-            success : true
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+  try {
+    const email = String(request.body?.email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return response.status(400).json({ message: "Enter a valid email address", error: true, success: false });
     }
-}
+    const user = await UserModel.findOne({ email }).select("_id name email");
+    // Do not reveal whether an email address has an account.
+    if (!user) return response.json({ message: "If the account exists, a password reset code has been sent.", error: false, success: true });
 
+    const otp = String(crypto.randomInt(100000, 1000000));
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+    await UserModel.updateOne({ _id: user._id }, {
+      $set: {
+        forgot_password_otp: "",
+        forgot_password_otp_hash: otpHash,
+        forgot_password_attempts: 0,
+        forgot_password_expiry: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
+    await sendEmail({
+      sendTo: email,
+      subject: "Password reset code - PrimeCommerce",
+      html: forgotPasswordTemplate({ name: user.name, otp })
+    });
+    return response.json({ message: "If the account exists, a password reset code has been sent.", error: false, success: true });
+  } catch (error) {
+    return response.status(503).json({ message: error.message || "Unable to send password reset email", error: true, success: false });
+  }
+}
 
 //verify forgot password otp
 export async function verifyForgotPasswordOtp(request,response){
-    try {
-        const { email, otp } = request.body
-        if (!email || !otp) {
-            return response.status(400).json({ message: "Provide required field email, otp.", error: true, success: false })
-        }
-        const user = await UserModel.findOne({ email })
-        if (!user) {
-            return response.status(400).json({ message: "Email not available", error: true, success: false })
-        }
-        if (!user.forgot_password_expiry || user.forgot_password_expiry <= new Date()) {
-            return response.status(400).json({ message: "Otp is expired", error: true, success: false })
-        }
-        if (otp !== user.forgot_password_otp) {
-            return response.status(400).json({ message: "Invalid otp", error: true, success: false })
-        }
-
-        const resetToken = crypto.randomBytes(32).toString("hex")
-        const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
-        await UserModel.findByIdAndUpdate(user._id, {
-            forgot_password_otp: "",
-            forgot_password_expiry: null,
-            password_reset_token_hash: resetTokenHash,
-            password_reset_expires_at: new Date(Date.now() + 10 * 60 * 1000)
-        })
-        return response.json({
-            message: "OTP verified. Set a new password within 10 minutes.",
-            error: false,
-            success: true,
-            data: { resetToken }
-        })
-    } catch (error) {
-        return response.status(500).json({ message: error.message || error, error: true, success: false })
+  try {
+    const email = String(request.body?.email || "").trim().toLowerCase();
+    const otp = String(request.body?.otp || "");
+    if (!email || !/^\d{6}$/.test(otp)) {
+      return response.status(400).json({ message: "Enter your email and the 6-digit code", error: true, success: false });
     }
+    const user = await UserModel.findOne({ email }).select("+forgot_password_otp_hash +forgot_password_attempts");
+    if (!user || !user.forgot_password_expiry || user.forgot_password_expiry <= new Date() || !user.forgot_password_otp_hash) {
+      return response.status(400).json({ message: "Code is invalid or expired. Request a new code.", error: true, success: false });
+    }
+    if (user.forgot_password_attempts >= 5) {
+      return response.status(429).json({ message: "Too many incorrect attempts. Request a new code.", error: true, success: false });
+    }
+    const submittedHash = crypto.createHash("sha256").update(otp).digest();
+    const savedHash = Buffer.from(user.forgot_password_otp_hash, "hex");
+    const matches = savedHash.length === submittedHash.length && crypto.timingSafeEqual(savedHash, submittedHash);
+    if (!matches) {
+      user.forgot_password_attempts += 1;
+      if (user.forgot_password_attempts >= 5) {
+        user.forgot_password_otp_hash = "";
+        user.forgot_password_expiry = null;
+      }
+      await user.save();
+      return response.status(user.forgot_password_attempts >= 5 ? 429 : 400).json({
+        message: user.forgot_password_attempts >= 5 ? "Too many incorrect attempts. Request a new code." : "Invalid code",
+        error: true,
+        success: false
+      });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+    await UserModel.findByIdAndUpdate(user._id, {
+      $set: {
+        forgot_password_otp: "",
+        forgot_password_otp_hash: "",
+        forgot_password_attempts: 0,
+        forgot_password_expiry: null,
+        password_reset_token_hash: resetTokenHash,
+        password_reset_expires_at: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
+    return response.json({
+      message: "Code verified. Set a new password within 10 minutes.",
+      error: false,
+      success: true,
+      data: { resetToken }
+    });
+  } catch {
+    return response.status(500).json({ message: "Unable to verify password reset code", error: true, success: false });
+  }
 }
 
 // Reset password requires the short-lived token issued after OTP verification.
@@ -410,7 +380,7 @@ export async function resetpassword(request,response){
         if (!email || !newPassword || !confirmPassword || !resetToken) {
             return response.status(400).json({ message: "Provide email, new password, confirmation and reset token", error: true, success: false })
         }
-        if (newPassword !== confirmPassword) {
+        if (String(newPassword).length < 8 || String(newPassword).length > 128) {\n            return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false })\n        }\n        if (newPassword !== confirmPassword) {
             return response.status(400).json({ message: "New password and confirmation must match", error: true, success: false })
         }
         const resetTokenHash = crypto.createHash("sha256").update(String(resetToken)).digest("hex")
