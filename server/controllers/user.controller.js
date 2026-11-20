@@ -92,7 +92,8 @@ export async function verifyEmailController(request, response) {
 
 export async function loginController(request, response) {
   try {
-    const email = String(request.body?.email || "").trim().toLowerCase()\n    const password = String(request.body?.password || "")
+    const email = String(request.body?.email || "").trim().toLowerCase()
+    const password = String(request.body?.password || "")
 
     // 1️⃣ Validate input
     if (!email || !password) {
@@ -376,11 +377,15 @@ export async function verifyForgotPasswordOtp(request,response){
 // Reset password requires the short-lived token issued after OTP verification.
 export async function resetpassword(request,response){
     try {
-        const { email, newPassword, confirmPassword, resetToken } = request.body
+        const email = String(request.body?.email || "").trim().toLowerCase();
+        const { newPassword, confirmPassword, resetToken } = request.body || {}
         if (!email || !newPassword || !confirmPassword || !resetToken) {
             return response.status(400).json({ message: "Provide email, new password, confirmation and reset token", error: true, success: false })
         }
-        if (String(newPassword).length < 8 || String(newPassword).length > 128) {\n            return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false })\n        }\n        if (newPassword !== confirmPassword) {
+        if (String(newPassword).length < 8 || String(newPassword).length > 128) {
+            return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false })
+        }
+        if (newPassword !== confirmPassword) {
             return response.status(400).json({ message: "New password and confirmation must match", error: true, success: false })
         }
         const resetTokenHash = crypto.createHash("sha256").update(String(resetToken)).digest("hex")
@@ -398,9 +403,14 @@ export async function resetpassword(request,response){
         await UserModel.findByIdAndUpdate(user._id, {
             password: hashPassword,
             password_reset_token_hash: "",
-            password_reset_expires_at: null
+            password_reset_expires_at: null,
+            refresh_token: ""
         })
-        return response.json({ message: "Password updated successfully.", error: false, success: true })
+        const isProduction = process.env.NODE_ENV === "production";
+        const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: isProduction ? "none" : "lax", path: "/" };
+        response.clearCookie("accessToken", cookieOptions);
+        response.clearCookie("refreshToken", cookieOptions);
+        return response.json({ message: "Password updated successfully. Please log in again.", error: false, success: true })
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false })
     }
