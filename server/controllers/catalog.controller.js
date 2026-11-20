@@ -3,6 +3,20 @@ import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import SubCategoryModel from "../models/subCategory.model.js";
 
+const normalizeImageUrl = (value, field = "image") => {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string" || value.length > 2048) throw new Error(`${field} must be a valid HTTPS image URL`);
+  let parsed;
+  try { parsed = new URL(value); } catch { throw new Error(`${field} must be a valid HTTPS image URL`); }
+  if (parsed.protocol !== "https:" || !parsed.hostname) throw new Error(`${field} must be a valid HTTPS image URL`);
+  return value;
+};
+
+const normalizeProductImages = (value) => {
+  if (!Array.isArray(value) || value.length > 8) throw new Error("Product images must be an array containing at most 8 image URLs");
+  return value.map((url, index) => normalizeImageUrl(url, `Image ${index + 1}`));
+};
+
 const productPayload = (product) => {
   const item = product.toObject ? product.toObject() : product;
   const discount = Math.min(100, Math.max(0, Number(item.discount) || 0));
@@ -22,7 +36,10 @@ export async function listProducts(req, res) {
     const currentPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const pageSize = Math.min(60, Math.max(1, Number.parseInt(limit, 10) || 24));
     const filter = { publish: true };
-    if (category && mongoose.isValidObjectId(category)) filter.categoryId = category;
+    if (category) {
+      if (!mongoose.isValidObjectId(category)) return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
+      filter.categoryId = category;
+    }
     if (featured === "true") filter.discount = { $gt: 0 };
     if (search?.trim()) filter.name = { $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
 
@@ -73,7 +90,7 @@ export async function listSubCategories(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [] } = req.body;
+    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [] } = req.body || {};
     if (!name?.trim() || !unit?.trim() || !Array.isArray(categoryId) || !categoryId.length || !Array.isArray(sub_categoryId) || !sub_categoryId.length || price === undefined) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
     }
@@ -97,9 +114,13 @@ export async function createProduct(req, res) {
     if (validSubCategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) {
       return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
     }
+    if (typeof name !== "string" || typeof unit !== "string" || typeof description !== "string" || description.length > 5000) {
+      return res.status(400).json({ success: false, error: true, message: "Product name, unit and description must be valid text" });
+    }
+    const images = normalizeProductImages(image);
     const product = await ProductModel.create({
       name: name.trim(), categoryId, sub_categoryId, unit: unit.trim(), price: values[0],
-      discount: values[1], stock: values[2], description, image: Array.isArray(image) ? image : []
+      discount: values[1], stock: values[2], description: description.trim(), image: images
     });
     return res.status(201).json({ success: true, error: false, message: "Product created", data: productPayload(product) });
   } catch (error) {
@@ -114,6 +135,15 @@ export async function updateProduct(req, res) {
     const updates = {};
     for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
     for (const key of ["price", "discount", "stock"]) if (updates[key] !== undefined) updates[key] = Number(updates[key]);
+    for (const key of ["name", "unit", "description"]) {
+      if (updates[key] !== undefined && typeof updates[key] !== "string") return res.status(400).json({ success: false, error: true, message: `${key} must be text` });
+      if (updates[key] !== undefined) updates[key] = updates[key].trim();
+    }
+    if (updates.name !== undefined && (!updates.name || updates.name.length > 160)) return res.status(400).json({ success: false, error: true, message: "Product name must be between 1 and 160 characters" });
+    if (updates.unit !== undefined && (!updates.unit || updates.unit.length > 60)) return res.status(400).json({ success: false, error: true, message: "Product unit must be between 1 and 60 characters" });
+    if (updates.description !== undefined && updates.description.length > 5000) return res.status(400).json({ success: false, error: true, message: "Product description is too long" });
+    if (updates.image !== undefined) updates.image = normalizeProductImages(updates.image);
+    if (updates.publish !== undefined && typeof updates.publish !== "boolean") return res.status(400).json({ success: false, error: true, message: "Publish must be true or false" });
     for (const key of ["categoryId", "sub_categoryId"]) {
       if (updates[key] !== undefined && (!Array.isArray(updates[key]) || updates[key].length === 0 || updates[key].some(id => !mongoose.isValidObjectId(id)))) {
         return res.status(400).json({ success: false, error: true, message: `Invalid ${key} selection` });
@@ -165,9 +195,10 @@ export async function archiveProduct(req, res) {
 
 export async function createCategory(req, res) {
   try {
-    const name = req.body.name?.trim();
-    if (!name) return res.status(400).json({ success: false, error: true, message: "Category name is required" });
-    const category = await CategoryModel.create({ name, image: req.body.image || "" });
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    if (!name || name.length > 100) return res.status(400).json({ success: false, error: true, message: "Category name must be between 1 and 100 characters" });
+    const image = normalizeImageUrl(req.body?.image, "Category image");
+    const category = await CategoryModel.create({ name, image });
     return res.status(201).json({ success: true, error: false, message: "Category created", data: category });
   } catch (error) {
     return res.status(400).json({ success: false, error: true, message: error.message || "Unable to create category" });
@@ -178,9 +209,12 @@ export async function updateCategory(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid category id" });
     const updates = {};
-    if (req.body.name !== undefined) updates.name = String(req.body.name).trim();
-    if (req.body.image !== undefined) updates.image = String(req.body.image);
-    if (updates.name === "") return res.status(400).json({ success: false, error: true, message: "Category name cannot be empty" });
+    if (req.body?.name !== undefined) {
+      if (typeof req.body.name !== "string" || !req.body.name.trim() || req.body.name.trim().length > 100) return res.status(400).json({ success: false, error: true, message: "Category name must be between 1 and 100 characters" });
+      updates.name = req.body.name.trim();
+    }
+    if (req.body?.image !== undefined) updates.image = normalizeImageUrl(req.body.image, "Category image");
+    if (!Object.keys(updates).length) return res.status(400).json({ success: false, error: true, message: "No category changes were provided" });
     const category = await CategoryModel.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     if (!category) return res.status(404).json({ success: false, error: true, message: "Category not found" });
     return res.json({ success: true, error: false, message: "Category updated", data: category });
@@ -191,16 +225,17 @@ export async function updateCategory(req, res) {
 
 export async function createSubCategory(req, res) {
   try {
-    const name = req.body.name?.trim();
-    const categoryId = req.body.categoryId;
-    if (!name || !Array.isArray(categoryId) || !categoryId.length) {
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    const categoryId = req.body?.categoryId;
+    if (!name || name.length > 100 || !Array.isArray(categoryId) || !categoryId.length || categoryId.some(id => !mongoose.isValidObjectId(id))) {
       return res.status(400).json({ success: false, error: true, message: "Subcategory name and at least one category are required" });
     }
     const validCount = await CategoryModel.countDocuments({ _id: { $in: categoryId } });
     if (validCount !== new Set(categoryId.map(String)).size) {
       return res.status(400).json({ success: false, error: true, message: "Select valid categories" });
     }
-    const subcategory = await SubCategoryModel.create({ name, categoryId, image: req.body.image || "" });
+    const image = normalizeImageUrl(req.body?.image, "Subcategory image");
+    const subcategory = await SubCategoryModel.create({ name, categoryId, image });
     return res.status(201).json({ success: true, error: false, message: "Subcategory created", data: subcategory });
   } catch (error) {
     return res.status(400).json({ success: false, error: true, message: error.message || "Unable to create subcategory" });
