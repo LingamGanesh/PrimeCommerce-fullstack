@@ -421,7 +421,15 @@ export async function handleRazorpayWebhook(req, res) {
       }
     }
     return res.json({ success: true });
-  } catch (error) { return res.status(400).json({ success: false, message: error.message || "Webhook processing failed" }); }
+  } catch (error) {
+    // Signature/body errors are permanent client-side webhook failures. For
+    // transient gateway, database, or transaction errors, return 5xx so
+    // Razorpay can retry delivery instead of silently losing reconciliation.
+    if (error instanceof SyntaxError || /Refund webhook amount or currency does not match the order|Webhook payment amount, currency or captured payment ID could not be verified|Refund response is missing/i.test(error.message || "")) {
+      return res.status(400).json({ success: false, message: error.message || "Invalid webhook payload" });
+    }
+    return res.status(503).json({ success: false, message: "Webhook processing is temporarily unavailable; retry delivery" });
+  }
 }
 
 export async function expireRazorpayReservations() {
