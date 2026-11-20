@@ -16,12 +16,25 @@ const razorpayAuth = () => {
 };
 const gatewayRequest = async (path, options = {}) => {
   const { header } = razorpayAuth();
-  const response = await fetch(`https://api.razorpay.com/v1${path}`, {
-    ...options, signal: AbortSignal.timeout(15000),
-    headers: { Authorization: header, "Content-Type": "application/json", ...(options.headers || {}) }
-  });
+  let response;
+  try {
+    response = await fetch(`https://api.razorpay.com/v1${path}`, {
+      ...options, signal: AbortSignal.timeout(15000),
+      headers: { Authorization: header, "Content-Type": "application/json", ...(options.headers || {}) }
+    });
+  } catch (cause) {
+    const error = new Error("Payment provider is temporarily unreachable. Please check your orders before retrying.");
+    error.gatewayFailure = true;
+    error.cause = cause;
+    throw error;
+  }
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error?.description || "Payment gateway request failed");
+  if (!response.ok) {
+    const error = new Error(body.error?.description || "Payment gateway request failed");
+    error.gatewayFailure = true;
+    error.gatewayStatus = response.status;
+    throw error;
+  }
   return body;
 };
 const getCartSnapshot = async (userId, session) => {
@@ -208,7 +221,8 @@ export async function createRazorpayOrder(req, res) {
     return res.status(201).json({ success: true, data: responseData });
   } catch (error) {
     const conflict = /cart changed|cart is empty|insufficient stock|no longer available|write conflict|transienttransactionerror/i.test(error.message || "");
-    return res.status(conflict ? 409 : 400).json({ success: false, message: error.message || "Unable to start online payment" });
+    const unavailable = error.gatewayFailure || /online payments are not configured/i.test(error.message || "");
+    return res.status(conflict ? 409 : unavailable ? 503 : 400).json({ success: false, message: error.message || "Unable to start online payment" });
   } finally {
     await session.endSession();
   }
@@ -328,7 +342,10 @@ export async function verifyRazorpayPayment(req, res) {
         latest.payment_status === "paid_review_required" ? "Payment received. Support will review this order." :
         "Payment authorized; final confirmation is pending"
     });
-  } catch (error) { return res.status(400).json({ success: false, message: error.message || "Unable to verify payment" }); }
+  } catch (error) {
+    const unavailable = error.gatewayFailure || /online payments are not configured/i.test(error.message || "");
+    return res.status(unavailable ? 503 : 400).json({ success: false, message: error.message || "Unable to verify payment" });
+  }
 }
 
 export async function handleRazorpayWebhook(req, res) {
