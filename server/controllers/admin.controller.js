@@ -143,95 +143,139 @@ export async function getAdminSalesReport(req, res) {
 
 
 export async function assignFulfilmentRole(req, res) {
-  try {
-    const { userId, role } = req.body || {};
-    if (!mongoose.isValidObjectId(userId) || !["user", "picker", "rider"].includes(role)) {
-      return res.status(400).json({ success: false, message: "Choose a valid customer and staff role" });
-    }
-    const currentUser = await UserModel.findOne({
-      _id: userId,
-      status: "active",
-      role: { $in: ["user", "picker", "rider"] }
-    }).select("_id role");
-    if (!currentUser) return res.status(404).json({ success: false, message: "Active customer or staff account not found" });
-
-    // Never remove a staff role while that person still owns work in progress.
-    // Otherwise active picker/rider queues become orphaned and cannot progress.
-    if (currentUser.role === "picker" && role !== "picker") {
-      const activePickingOrders = await OrderModel.countDocuments({
-        pickerId: currentUser._id,
-        delivery_status: { $in: ["picking", "packed"] }
-      });
-      if (activePickingOrders) {
-        return res.status(409).json({
-          success: false,
-          message: "This picker still has active orders. Reassign or complete those orders before changing the role."
-        });
-      }
-    }
-    if (currentUser.role === "rider" && role !== "rider") {
-      const activeRiderOrders = await OrderModel.countDocuments({
-        riderId: currentUser._id,
-        delivery_status: { $in: ["rider_assigned", "picked_up", "out_for_delivery"] }
-      });
-      if (activeRiderOrders) {
-        return res.status(409).json({
-          success: false,
-          message: "This rider still has active deliveries. Reassign or complete those deliveries before changing the role."
-        });
-      }
-    }
-
-    const user = await UserModel.findOneAndUpdate(
-      { _id: currentUser._id, status: "active", role: currentUser.role },
-      { $set: { role } },
-      { new: true, runValidators: true }
-    ).select("name email mobile role status");
-    if (!user) return res.status(409).json({ success: false, message: "Account role changed concurrently. Refresh and try again." });
-    return res.json({ success: true, message: `Account role updated to ${role}`, data: user });
-  } catch {
-    return res.status(500).json({ success: false, message: "Unable to update staff role" });
+  if (!mongoose.isValidObjectId(req.body?.userId) || !["user", "picker", "rider"].includes(req.body?.role)) {
+    return res.status(400).json({ success: false, message: "Choose a valid customer and staff role" });
   }
+
+  const session = await mongoose.startSession();
+  let outcome = "not_found";
+  let updatedUser = null;
+  try {
+    await session.withTransaction(async () => {
+      const { userId, role } = req.body;
+      const currentUser = await UserModel.findOne({
+        _id: userId,
+        status: "active",
+        role: { $in: ["user", "picker", "rider"] }
+      }).select("_id role").session(session);
+      if (!currentUser) {
+        outcome = "not_found";
+        return;
+      }
+
+      // The user-document write is deliberately shared with assignment transactions.
+      // MongoDB then serializes role changes against concurrent staff assignments.
+      if (currentUser.role === "picker" && role !== "picker") {
+        const activeCount = await OrderModel.countDocuments({
+          pickerId: currentUser._id,
+          delivery_status: { $in: ["picking", "packed"] }
+        }).session(session);
+        if (activeCount) {
+          outcome = "picker_busy";
+          return;
+        }
+      }
+      if (currentUser.role === "rider" && role !== "rider") {
+        const activeCount = await OrderModel.countDocuments({
+          riderId: currentUser._id,
+          delivery_status: { $in: ["rider_assigned", "picked_up", "out_for_delivery"] }
+        }).session(session);
+        if (activeCount) {
+          outcome = "rider_busy";
+          return;
+        }
+      }
+
+      updatedUser = await UserModel.findOneAndUpdate(
+        { _id: currentUser._id, status: "active", role: currentUser.role },
+        { $set: { role }, $inc: { staffAssignmentVersion: 1 } },
+        { new: true, runValidators: true, session }
+      ).select("name email mobile role status");
+      outcome = updatedUser ? "updated" : "changed";
+    });
+  } catch {
+    return res.status(503).json({ success: false, message: "Unable to safely update staff role. Please retry." });
+  } finally {
+    await session.endSession();
+  }
+
+  if (outcome === "not_found") return res.status(404).json({ success: false, message: "Active customer or staff account not found" });
+  if (outcome === "picker_busy") return res.status(409).json({ success: false, message: "This picker still has active orders. Reassign or complete those orders before changing the role." });
+  if (outcome === "rider_busy") return res.status(409).json({ success: false, message: "This rider still has active deliveries. Reassign or complete those deliveries before changing the role." });
+  if (outcome !== "updated") return res.status(409).json({ success: false, message: "Account role changed concurrently. Refresh and try again." });
+  return res.json({ success: true, message: `Account role updated to ${req.body.role}`, data: updatedUser });
 }
 
 export async function assignOrderPicker(req, res) {
-  try {
-    const { pickerId } = req.body || {};
-    if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(pickerId)) {
-      return res.status(400).json({ success: false, message: "Invalid order or picker id" });
-    }
-    const picker = await UserModel.findOne({ _id: pickerId, role: "picker", status: "active" }).select("_id");
-    if (!picker) return res.status(404).json({ success: false, message: "Active picker account not found" });
-    const order = await OrderModel.findOneAndUpdate(
-      { _id: req.params.id, delivery_status: "processing", $or: [{ paymentMethod: { $ne: "RAZORPAY" } }, { payment_status: { $in: ["paid", "completed"] } }] },
-      { $set: { pickerId: picker._id, delivery_status: "picking" } },
-      { new: true }
-    );
-    if (!order) return res.status(409).json({ success: false, message: "Only processing orders can be assigned to a picker" });
-    return res.json({ success: true, message: "Picker assigned; order is ready for picking", data: order });
-  } catch {
-    return res.status(500).json({ success: false, message: "Unable to assign picker" });
+  const { pickerId } = req.body || {};
+  if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(pickerId)) {
+    return res.status(400).json({ success: false, message: "Invalid order or picker id" });
   }
+  const session = await mongoose.startSession();
+  let outcome = "not_found";
+  let order = null;
+  try {
+    await session.withTransaction(async () => {
+      const picker = await UserModel.findOneAndUpdate(
+        { _id: pickerId, role: "picker", status: "active" },
+        { $inc: { staffAssignmentVersion: 1 } },
+        { new: true, session }
+      ).select("_id");
+      if (!picker) {
+        outcome = "not_found";
+        return;
+      }
+      order = await OrderModel.findOneAndUpdate(
+        { _id: req.params.id, delivery_status: "processing", $or: [{ paymentMethod: { $ne: "RAZORPAY" } }, { payment_status: { $in: ["paid", "completed"] } }] },
+        { $set: { pickerId: picker._id, delivery_status: "picking" } },
+        { new: true, session }
+      );
+      outcome = order ? "assigned" : "order_conflict";
+    });
+  } catch {
+    return res.status(503).json({ success: false, message: "Unable to safely assign picker. Please retry." });
+  } finally {
+    await session.endSession();
+  }
+  if (outcome === "not_found") return res.status(404).json({ success: false, message: "Active picker account not found" });
+  if (outcome !== "assigned") return res.status(409).json({ success: false, message: "Only processing orders can be assigned to a picker" });
+  return res.json({ success: true, message: "Picker assigned; order is ready for picking", data: order });
 }
 
 export async function assignOrderRider(req, res) {
-  try {
-    const { riderId } = req.body || {};
-    if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(riderId)) {
-      return res.status(400).json({ success: false, message: "Invalid order or rider id" });
-    }
-    const rider = await UserModel.findOne({ _id: riderId, role: "rider", status: "active" }).select("_id");
-    if (!rider) return res.status(404).json({ success: false, message: "Active rider account not found" });
-    const order = await OrderModel.findOneAndUpdate(
-      { _id: req.params.id, delivery_status: "packed", $or: [{ paymentMethod: { $ne: "RAZORPAY" } }, { payment_status: { $in: ["paid", "completed"] } }] },
-      { $set: { riderId: rider._id, delivery_status: "rider_assigned" } },
-      { new: true }
-    );
-    if (!order) return res.status(409).json({ success: false, message: "Only packed orders can be assigned to a rider" });
-    return res.json({ success: true, message: "Rider assigned; delivery is ready", data: order });
-  } catch {
-    return res.status(500).json({ success: false, message: "Unable to assign rider" });
+  const { riderId } = req.body || {};
+  if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(riderId)) {
+    return res.status(400).json({ success: false, message: "Invalid order or rider id" });
   }
+  const session = await mongoose.startSession();
+  let outcome = "not_found";
+  let order = null;
+  try {
+    await session.withTransaction(async () => {
+      const rider = await UserModel.findOneAndUpdate(
+        { _id: riderId, role: "rider", status: "active" },
+        { $inc: { staffAssignmentVersion: 1 } },
+        { new: true, session }
+      ).select("_id");
+      if (!rider) {
+        outcome = "not_found";
+        return;
+      }
+      order = await OrderModel.findOneAndUpdate(
+        { _id: req.params.id, delivery_status: "packed", $or: [{ paymentMethod: { $ne: "RAZORPAY" } }, { payment_status: { $in: ["paid", "completed"] } }] },
+        { $set: { riderId: rider._id, delivery_status: "rider_assigned" } },
+        { new: true, session }
+      );
+      outcome = order ? "assigned" : "order_conflict";
+    });
+  } catch {
+    return res.status(503).json({ success: false, message: "Unable to safely assign rider. Please retry." });
+  } finally {
+    await session.endSession();
+  }
+  if (outcome === "not_found") return res.status(404).json({ success: false, message: "Active rider account not found" });
+  if (outcome !== "assigned") return res.status(409).json({ success: false, message: "Only packed orders can be assigned to a rider" });
+  return res.json({ success: true, message: "Rider assigned; delivery is ready", data: order });
 }
 
 
