@@ -11,13 +11,13 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
-  const [openMenu, setOpenMenu] = useState(false);
+  const [openMenuForPath, setOpenMenuForPath] = useState(null);
+  const openMenu = openMenuForPath === location.pathname;
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     let active = true;
     if (!user?._id) {
-      setCartCount(0);
       return () => { active = false; };
     }
     Axios.get("/api/v1/cart")
@@ -29,10 +29,6 @@ const Header = () => {
       });
     return () => { active = false; };
   }, [user?._id, location.pathname]);
-
-  useEffect(() => {
-    setOpenMenu(false);
-  }, [location.pathname]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#eee9df] bg-white">
@@ -58,7 +54,7 @@ const Header = () => {
           <div className="relative">
             <button
               type="button"
-              onClick={() => setOpenMenu((value) => !value)}
+              onClick={() => setOpenMenuForPath(openMenu ? null : location.pathname)}
               aria-expanded={openMenu}
               aria-label={user?._id ? "Open account menu" : "Login"}
               className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-gray-700 transition hover:bg-[#f7f7f2]"
