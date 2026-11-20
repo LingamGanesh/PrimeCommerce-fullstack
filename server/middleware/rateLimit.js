@@ -40,7 +40,6 @@ export function createRateLimiter({ name, windowMs, max }) {
         return incrementBucket(bucketKey, expiresAt);
       }));
 
-      const remaining = Math.max(0, ...buckets.map(bucket => max - bucket.count));
       const allowed = buckets.every(bucket => bucket.count <= max);
       res.set("RateLimit-Limit", String(max));
       res.set("RateLimit-Remaining", String(Math.min(...buckets.map(bucket => Math.max(0, max - bucket.count)))));
