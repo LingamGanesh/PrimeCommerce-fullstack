@@ -70,6 +70,7 @@ const UserProfileAvatarEdit = ({ close }) => {
           {loading ? "Uploading..." : "Choose Image"}
           <input
             type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
             onChange={handleUploadAvatar}
           />
