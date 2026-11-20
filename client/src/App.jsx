@@ -1,39 +1,43 @@
-
-import { Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { Toaster } from 'react-hot-toast'
 import './App.css'
-import Home from './pages/Home'
 import Header from './components/Header'
 import Footer from './components/Footer'
-import toast, { Toaster } from 'react-hot-toast';
 import fetchUserDetails from './utils/fetchUserDetails'
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { setUserDetails } from './store/userSlice'
-import { useDispatch } from 'react-redux'
+import { setUserDetails } from './store/UserSlice.js'
 
 function App() {
- const dispatch = useDispatch()
- const location = useLocation()
- const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/picker') || location.pathname.startsWith('/rider')
-  const fetchUserData = async() =>{
-    const userData = await fetchUserDetails()
+  const dispatch = useDispatch()
+  const location = useLocation()
+  const isStaffRoute = ['/admin', '/picker', '/rider'].some((path) =>
+    location.pathname.startsWith(path)
+  )
 
-    dispatch(setUserDetails(userData.data))
-  }
+  useEffect(() => {
+    let mounted = true
 
-  useEffect(()=>{
-    fetchUserData()
-  },[])
+    fetchUserDetails().then((userData) => {
+      if (mounted && userData?.data) {
+        dispatch(setUserDetails(userData.data))
+      }
+    })
+
+    return () => {
+      mounted = false
+    }
+  }, [dispatch])
 
   return (
-  <>
-  {!isAdminRoute && <Header/>}
-   <main className='min-h-[60vh]'>
-      <Outlet />
-   </main>
-   {!isAdminRoute && <Footer/>}
-    <Toaster />
-  </>
+    <>
+      {!isStaffRoute && <Header />}
+      <main className="min-h-[60vh]">
+        <Outlet />
+      </main>
+      {!isStaffRoute && <Footer />}
+      <Toaster />
+    </>
   )
 }
 
