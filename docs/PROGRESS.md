@@ -27,6 +27,7 @@ Status meanings:
 | Phase 1 — catalogue active/deactivation visibility | DONE | Customer catalogue now excludes explicitly inactive categories/subcategories/products; legacy records without isActive remain visible; category/product deactivation and publish synchronization supported; CI 44774872063 passed 10/10 backend tests and frontend lint/build |
 | Phase 1 — avatar upload file-signature validation | DONE | Added JPEG/PNG/GIF/WebP magic-byte validation after Multer and MIME-match enforcement; CI 44775373218 passed 12/12 backend tests and frontend lint/build |
 | Phase 1 — mobile fields stored as strings | DONE for schema/write path | User and Address mobile fields are strings; profile/address writes and admin search preserve digit strings; idempotent `npm run migrate:mobile-to-string` converts existing numeric DB values; CI 44775958656 passed 14/14 backend tests and frontend lint/build |
+| Phase 1 — address GeoJSON and default-address integrity | PARTIAL | Optional GeoJSON Point validation and 2dsphere index; create-address accepts location/labels/instructions; first address/default replacement/deletion fallback; `npm run migrate:address-indexes` cleans legacy geo and creates unique partial default index; address edit endpoint remains pending; CI 44776652885 passed 18/18 backend tests and frontend lint/build |
 | Phase 2 — canonical MongoDB schemas and migration | PARTIAL | Several models exist, but old/new duplicate fields remain; see AUD-004 to AUD-008 and AUD-021 |
 | Phase 2 — full idempotent seed data | PARTIAL | Existing seed creates 15 categories, 30 subcategories, 60 products, one store, admin/customer/rider; required second store, manager/support/picker, 100+ products and sample orders are absent |
 | Phase 3 — modular backend API foundation | PARTIAL | Existing auth/catalog/cart/address/checkout/orders/payments/admin/fulfilment/support routes; many target modules absent |
@@ -52,7 +53,8 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 
 | AUD-004 | HIGH | DONE | User.mobile is String; controller/admin query paths use strings; migration script added; 2 normalization tests; CI 44775958656 passed |
 
-| AUD-005 | HIGH | PARTIAL | Address.mobile now String and migration covers legacy numeric values; geo/index/default/edit APIs remain pending |
+| AUD-005 | HIGH | PARTIAL | String mobile, GeoJSON validation, geospatial index, default-address transactions and unique partial index migration implemented; address edit API still pending |
+
 
 | AUD-006 | HIGH | PENDING | Variant-aware product/cart API and regression tests |
 | AUD-007 | CRITICAL | PENDING | Atomic Inventory reservation/consume/release concurrency tests |
@@ -91,15 +93,15 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 
 Latest fix commit: 0b306fc25eade66a3985b5b287de34f59f000482. An earlier CI attempt exposed a syntax error in the newly added test; the test was corrected and the latest run passes. No failed run is being represented as a pass.
 
-Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44775958656
+Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44776652885
 
 | Command | Result |
 |---|---|
 | client: npm ci | PASS |
-| client: npm run lint | PASS (latest fix CI 44775958656) |
+| client: npm run lint | PASS (latest fix CI 44776652885) |
 | client: npm run build | PASS (baseline and latest CI 44775373218) |
 | server: npm ci | PASS |
-| server: npm test | PASS — latest CI 44775958656: 14 tests, 14 passed, 0 failed |
+| server: npm test | PASS — latest CI 44776652885: 18 tests, 18 passed, 0 failed |
 | client: npm audit | 21 advisories — 1 low, 4 moderate, 16 high |
 | server: npm audit | 15 advisories — 5 moderate, 8 high, 2 critical |
 | server: npm run seed against the user’s Atlas database | NOT VERIFIED |
