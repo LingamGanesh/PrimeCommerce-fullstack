@@ -22,8 +22,6 @@ const auth = (req, res, next) => {
     // ✅ FIXED LINE
     req.userId = decoded.id;
 
-    console.log("AUTH USER ID:", req.userId);
-
     next();
   } catch (error) {
     return res.status(401).json({
