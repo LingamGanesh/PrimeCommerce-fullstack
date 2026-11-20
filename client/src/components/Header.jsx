@@ -20,14 +20,21 @@ const Header = () => {
     if (!user?._id) {
       return () => { active = false; };
     }
-    Axios.get("/api/v1/cart")
-      .then((response) => {
-        if (active) setCartCount(response.data?.data?.itemCount || 0);
-      })
-      .catch(() => {
-        if (active) setCartCount(0);
-      });
-    return () => { active = false; };
+    const loadCartCount = () => {
+      Axios.get("/api/v1/cart")
+        .then((response) => {
+          if (active) setCartCount(response.data?.data?.itemCount || 0);
+        })
+        .catch(() => {
+          if (active) setCartCount(0);
+        });
+    };
+    loadCartCount();
+    window.addEventListener("cart:updated", loadCartCount);
+    return () => {
+      active = false;
+      window.removeEventListener("cart:updated", loadCartCount);
+    };
   }, [user?._id, location.pathname]);
 
   return (
