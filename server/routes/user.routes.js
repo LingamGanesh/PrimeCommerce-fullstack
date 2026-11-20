@@ -5,9 +5,9 @@ import { createRateLimiter } from '../middleware/rateLimit.js';
 import upload from '../middleware/multer.js';
 
 const userRouter = Router();
-const loginLimiter = createRateLimiter({ name: "login", windowMs: 15 * 60 * 1000, max: 10 });
-const registrationLimiter = createRateLimiter({ name: "register", windowMs: 60 * 60 * 1000, max: 5 });
-const forgotPasswordLimiter = createRateLimiter({ name: "forgot-password", windowMs: 60 * 60 * 1000, max: 3 });
+const loginLimiter = createRateLimiter({ name: "login", windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === "production" ? 10 : 30 });
+const registrationLimiter = createRateLimiter({ name: "register", windowMs: 60 * 60 * 1000, max: process.env.NODE_ENV === "production" ? 5 : 30 });
+const forgotPasswordLimiter = createRateLimiter({ name: "forgot-password", windowMs: 60 * 60 * 1000, max: process.env.NODE_ENV === "production" ? 3 : 10 });
 const passwordOtpLimiter = createRateLimiter({ name: "password-otp", windowMs: 15 * 60 * 1000, max: 10 });
 const passwordResetLimiter = createRateLimiter({ name: "password-reset", windowMs: 15 * 60 * 1000, max: 10 });
 const emailVerificationLimiter = createRateLimiter({ name: "email-verification", windowMs: 60 * 60 * 1000, max: 10 });
