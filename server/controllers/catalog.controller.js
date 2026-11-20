@@ -78,7 +78,7 @@ export async function createProduct(req, res) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
     }
     const values = [Number(price), Number(discount), Number(stock)];
-    if (!values.every(Number.isFinite) || values[0] < 0 || values[1] < 0 || values[1] > 100 || values[2] < 0) {
+    if (!values.every(Number.isFinite) || values[0] < 0 || values[1] < 0 || values[1] >= 100 || values[2] < 0) {
       return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
     }
     const [validCategories, validSubCategories] = await Promise.all([
@@ -125,7 +125,7 @@ export async function updateProduct(req, res) {
       const selectedCategoryIds = new Set(categoryIds.map(String));
       if (selectedSubcategories.some(subcategory => !subcategory.categoryId.some(id => selectedCategoryIds.has(String(id))))) return res.status(400).json({ success: false, error: true, message: "Each subcategory must belong to a selected category" });
     }
-    if (["price", "discount", "stock"].some(key => updates[key] !== undefined && (!Number.isFinite(updates[key]) || updates[key] < 0)) || (updates.discount !== undefined && updates.discount > 100)) {
+    if (["price", "discount", "stock"].some(key => updates[key] !== undefined && (!Number.isFinite(updates[key]) || updates[key] < 0)) || (updates.discount !== undefined && updates.discount >= 100)) {
       return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
     }
     const product = await ProductModel.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
