@@ -114,10 +114,14 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     role: {
-      type: String, // e.g., 'user', 'admin'
-      enum: ["user", "admin", "picker", "rider"],
+      type: String,
+      enum: ["user", "admin", "store_manager", "support", "marketing", "picker", "rider"],
       default: "user",
+      index: true,
     },
+    permissions: { type: [String], default: [] },
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    walletBalance: { type: Number, default: 0, min: 0 },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
