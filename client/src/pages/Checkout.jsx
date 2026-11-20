@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Axios from "../utils/Axios";
+import loadRazorpayCheckout from "../utils/loadRazorpayCheckout";
 
 const emptyAddress = { address_line: "", city: "", state: "", pincode: "", country: "India", mobile: "" };
 
@@ -60,18 +61,11 @@ export default function Checkout() {
     if (!selected) { toast.error("Please select a delivery address"); return; }
     setSaving(true);
     try {
-      const scriptLoaded = await new Promise((resolve, reject) => {
-        if (window.Razorpay) return resolve(true);
-        const existing = document.querySelector('script[data-razorpay-checkout]');
-        if (existing) { existing.addEventListener("load", () => resolve(true), { once: true }); existing.addEventListener("error", () => reject(new Error("Unable to load payment checkout")), { once: true }); return; }
-        const script = document.createElement("script"); script.src = "https://checkout.razorpay.com/v1/checkout.js"; script.async = true; script.dataset.razorpayCheckout = "true";
-        script.onload = () => resolve(true); script.onerror = () => reject(new Error("Unable to load payment checkout")); document.body.appendChild(script);
-      });
-      if (!scriptLoaded || !window.Razorpay) throw new Error("Payment checkout is unavailable");
+      const Razorpay = await loadRazorpayCheckout();
       const response = await Axios.post("/api/v1/payments/razorpay/order", { addressId: selected });
       const paymentOrder = response.data?.data;
       if (!paymentOrder?.keyId || !paymentOrder?.razorpayOrderId) throw new Error("Payment gateway configuration is incomplete");
-      const checkout = new window.Razorpay({
+      const checkout = new Razorpay({
         key: paymentOrder.keyId, amount: paymentOrder.amount, currency: paymentOrder.currency, name: "PrimeCommerce",
         description: `Order ${paymentOrder.orderId}`, order_id: paymentOrder.razorpayOrderId,
         prefill: { contact: form.mobile || addresses.find(item => item._id === selected)?.mobile || "" },
