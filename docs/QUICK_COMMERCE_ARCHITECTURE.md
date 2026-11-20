@@ -6,7 +6,7 @@
 - Frontend: React 19 + Vite 7, React Router 7, Redux Toolkit, Tailwind CSS 4, Axios and react-hot-toast (`client/package.json`).
 - Backend: Express 5, Mongoose 9 / MongoDB, JWT, bcryptjs, Helmet, Multer and Cloudinary (`server/package.json`).
 - Existing working foundation: email/password registration and login routes, refresh-token route, user details/profile routes, avatar upload, React Router customer pages and Redux user state.
-- The current homepage is a placeholder. The Express app currently mounts only `/api/user`; quick-commerce catalog/cart/order/admin/delivery APIs are not yet present.
+- The repository now includes a Blinkit-inspired storefront, catalog/cart/address/checkout/order/payment APIs, admin operations, picker/rider fulfilment, delivery tracking and support-ticket workflows. See the implementation sections below for current boundaries and remaining production work.
 - The repository is already a monorepo with `client/` and `server/`; retain this structure and evolve the backend as a modular monolith.
 
 ## Target architecture
@@ -61,7 +61,7 @@ The storefront now loads published products and categories from `/api/v1/product
 
 ## Verification still required
 
-Run the client install/build/lint and server test suite in a checked-out environment. This GitHub connector can commit source files but does not execute the repository's npm scripts. Add integration tests for catalog filtering/pagination, product CRUD and RBAC, server-authoritative pricing, stock reservation, payment webhook idempotency and delivery state transitions before production use. Existing admin accounts must be granted `role: admin` through a trusted database/admin provisioning process; public registration must never accept a role field.
+The GitHub Actions workflow runs frontend install/lint/build and backend install/tests on the audit branch and its pull request. Browser-based end-to-end tests, live MongoDB integration and Razorpay sandbox tests still require a configured environment. Add integration tests for catalog filtering/pagination, product CRUD and RBAC, server-authoritative pricing, stock reservation, payment webhook idempotency and delivery state transitions before production use. Existing admin accounts must be granted `role: admin` through a trusted database/admin provisioning process; public registration must never accept a role field.
 
 
 ## Admin operations dashboard (current phase)
