@@ -17,6 +17,7 @@ import AdminGuard from "../components/AdminGuard";
 import AdminDashboard from "../pages/AdminDashboard";
 import StaffGuard from "../components/StaffGuard";
 import FulfilmentDashboard from "../pages/FulfilmentDashboard";
+import Support from "../pages/Support";
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
         children: [
           { path: "profile", element: <Profile /> },
           { path: "myorders", element: <Myorders /> },
+          { path: "support", element: <Support /> },
           { path: "address", element: <Address /> }
         ]
       }
