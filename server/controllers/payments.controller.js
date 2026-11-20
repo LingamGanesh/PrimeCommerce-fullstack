@@ -207,7 +207,7 @@ export async function createRazorpayOrder(req, res) {
     if (!responseData) throw new Error("Unable to start online payment");
     return res.status(201).json({ success: true, data: responseData });
   } catch (error) {
-    const conflict = /cart changed|cart is empty/i.test(error.message);
+    const conflict = /cart changed|cart is empty|insufficient stock|no longer available|write conflict|transienttransactionerror/i.test(error.message || "");
     return res.status(conflict ? 409 : 400).json({ success: false, message: error.message || "Unable to start online payment" });
   } finally {
     await session.endSession();
