@@ -29,7 +29,6 @@ const UserProfileAvatarEdit = ({ close }) => {
         data: formData,
       });
 
-      console.log("UPLOAD RESPONSE:", response.data);
 
       const url =
         response?.data?.data?.avatar ||
