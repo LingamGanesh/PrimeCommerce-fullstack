@@ -135,6 +135,14 @@ export async function loginController(request, response) {
       })
     }
 
+    if (!user.verify_email) {
+      return response.status(403).json({
+        message: "Please verify your email address before logging in.",
+        error: true,
+        success: false
+      })
+    }
+
     // 5️⃣ Generate tokens
  const accessToken = await generateAccessToken(user._id)
 const refreshToken = await generatedRefreshToken(user._id)
