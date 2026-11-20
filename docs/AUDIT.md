@@ -170,6 +170,9 @@ The user’s local server log reports:
 
 This proves the local server is still reading a MongoDB URI with the literal placeholder host. The local server/.env file is gitignored and is not accessible through the repository audit. Replace the placeholder with the exact MongoDB Atlas driver hostname locally. A MongoDB credential was exposed in the conversation; rotate it in Atlas and use only the new value in the local ignored .env file. No credential is reproduced in this report.
 
+
+| AUD-033 | LOW | server/index.js:1-5; server/app.js:1-20; server/config/connectDB.js:1-8 | Starting the server prints repeated dotenv injection messages (the user’s terminal shows one populated load followed by several zero-variable loads) | dotenv.config() is called by the entrypoint, app module and DB module | Load environment once at the process entrypoint; keep imported modules side-effect free and add a startup smoke check | OPEN |
+
 ## 5. Architecture mapping: existing code to target
 
 | Target module | Existing location | Current boundary |
