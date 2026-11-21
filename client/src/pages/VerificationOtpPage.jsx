@@ -15,13 +15,19 @@ const VerificationOtpPage = () => {
     if (!location?.state?.email) {
       navigate('/forgot-password')
     }
-  }, [])
+  }, [location?.state?.email, navigate])
 
   const [data, setData] = useState(['', '', '', '', '', ''])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    if (data.join('').length !== 6) {
+      toast.error('Enter the complete 6-digit OTP')
+      return
+    }
+    setIsSubmitting(true)
     try {
       const response = await Axios({
         ...SummaryApi.forgot_password_verification_otp,
@@ -49,6 +55,8 @@ const VerificationOtpPage = () => {
 
     } catch (error) {
       AxiosToastError(error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -74,17 +82,23 @@ const VerificationOtpPage = () => {
                 ref={(ref) => inputRef.current[index] = ref}
                 type="text"
                 value={value}
-                maxLength={1}
+                maxLength={6}
+                inputMode="numeric"
+                autoComplete={index === 0 ? 'one-time-code' : 'off'}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '')
-                  const newData = [...data]
-                  newData[index] = val
-                  setData(newData)
-
-                  if (val && index < 5) {
-                    inputRef.current[index + 1]?.focus()
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  const next = [...data]
+                  if (digits.length > 1) {
+                    digits.split('').forEach((digit, offset) => { if (index + offset < 6) next[index + offset] = digit })
+                    setData(next)
+                    inputRef.current[Math.min(index + digits.length, 5)]?.focus()
+                    return
                   }
+                  next[index] = digits
+                  setData(next)
+                  if (digits && index < 5) inputRef.current[index + 1]?.focus()
                 }}
+                onKeyDown={(e) => { if (e.key === 'Backspace' && !data[index] && index > 0) inputRef.current[index - 1]?.focus() }}
                 className="w-12 h-12 text-center text-lg font-semibold border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             ))}
@@ -93,9 +107,10 @@ const VerificationOtpPage = () => {
           {/* Button */}
           <button
             type="submit"
+            disabled={isSubmitting || data.join('').length !== 6}
             className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Verify OTP
+            {isSubmitting ? 'Verifying…' : 'Verify OTP'}
           </button>
         </form>
 
