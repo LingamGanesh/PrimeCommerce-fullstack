@@ -96,6 +96,10 @@ export async function verifyEmailController(request, response) {
       });
     }
 
+    if (typeof code !== "string" || !/^[a-f\d]{24}$/i.test(code)) {
+      return response.status(400).json({ message: "Invalid verification code", error: true, success: false });
+    }
+
     const user = await UserModel.findById(code);
 
     if (!user) {
