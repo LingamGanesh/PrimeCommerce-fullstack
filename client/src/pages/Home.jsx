@@ -138,7 +138,7 @@ export default function Home() {
     try {
       const response = await Axios.get("/api/v1/cart");
       const next = {};
-      for (const item of response.data?.data?.items || []) next[item.product.id] = { quantity: item.quantity, cartItemId: item.cartItemId };
+      for (const item of response.data?.data?.items || []) { const id = item.product.id; next[id] = { quantity: (next[id]?.quantity || 0) + item.quantity, cartItemId: item.cartItemId }; }
       setCart(next);
     } catch { setCart({}); }
   }, [user?._id]);
