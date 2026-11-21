@@ -279,21 +279,40 @@ export default function Home() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        <section id="categories" className="scroll-mt-36 py-9 sm:py-12">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-emerald-700">Explore the good stuff</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Shop by category <span>✳</span></h2><p className="mt-1 text-sm text-slate-500">Your everyday favourites, thoughtfully brought together.</p></div>
-            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-[#e5e9df] bg-white px-4 py-2.5 text-[10px] font-extrabold text-[#315b3f] shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50">View all products ↗</button>
+        <section id="categories" className="scroll-mt-36 py-10 sm:py-14">
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[.24em] text-emerald-700">Find your favourites</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Shop by category <span className="text-emerald-600">✳</span></h2>
+              <p className="mt-1 text-sm text-slate-500">A little inspiration for every aisle of your day.</p>
+            </div>
+            <span className="rounded-full border border-emerald-100 bg-white px-4 py-2 text-[10px] font-extrabold text-emerald-800 shadow-sm">{categories.length} curated collections</span>
           </div>
-          {categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
+          {categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} aria-pressed={activeCategory === "All"} className={`group relative overflow-hidden rounded-[24px] border p-3 text-left transition-all duration-300 hover:-translate-y-1 sm:rounded-[28px] sm:p-4 ${activeCategory === "All" ? "border-emerald-500 bg-emerald-50 shadow-[0_14px_32px_rgba(22,107,59,.14)] ring-2 ring-emerald-100" : "border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,.05)] hover:border-emerald-200 hover:shadow-[0_18px_36px_rgba(15,23,42,.10)]"}`}>
+              <div className="relative mb-3 grid aspect-[1.35/1] place-items-center overflow-hidden rounded-[19px] bg-gradient-to-br from-emerald-100 via-lime-50 to-white">
+                <span className="absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/70 blur-xl" />
+                <span className="relative text-5xl transition-transform duration-500 group-hover:scale-110">🛍️</span>
+                <span className="absolute bottom-2 left-2 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-extrabold text-emerald-800 backdrop-blur">ALL AISLES</span>
+              </div>
+              <div className="flex items-center justify-between gap-2"><span className="text-xs font-black text-slate-900">All products</span><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-700 text-xs font-black text-white">↗</span></div>
+              <p className="mt-1 text-[10px] font-medium text-slate-500">{availableProducts.length} items to explore</p>
+            </button>
             {categories.map((category, index) => {
               const visual = visualFor(category.name);
               const tones = ["from-[#edf7eb] to-[#f8fbf4]", "from-[#eff5fb] to-[#f8fbff]", "from-[#fff3e8] to-[#fffaf4]", "from-[#f1f0fb] to-[#faf9ff]", "from-[#fff5e8] to-[#fffdf7]", "from-[#fceef1] to-[#fff9fa]"];
-              return <button key={category._id} type="button" onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group relative overflow-hidden rounded-[22px] border border-[#edf0e8] bg-white p-3 text-left shadow-[0_6px_22px_rgba(25,50,30,.045)] transition duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_16px_35px_rgba(25,70,40,.11)] sm:rounded-[26px] sm:p-4">
-                <div className={`relative mb-3 grid aspect-[1.25/1] place-items-center overflow-hidden rounded-[17px] bg-gradient-to-br ${tones[index % tones.length]}`}>
-                  <span className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/60 blur-xl" />
-                  {categoryImageFor(category) ? <img src={categoryImageFor(category)} alt={category.name} loading="lazy" className="relative h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <span className="relative text-5xl transition duration-500 group-hover:scale-110" aria-hidden="true">{visual.emoji}</span>}
+              const selected = activeCategory === category._id;
+              const count = products.filter((product) => (product.categoryId || []).some((entry) => String(typeof entry === "object" ? entry?._id : entry) === String(category._id))).length;
+              const categoryImage = categoryImageFor(category);
+              return <button key={category._id} type="button" aria-pressed={selected} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className={`group relative overflow-hidden rounded-[24px] border p-3 text-left transition-all duration-300 hover:-translate-y-1 sm:rounded-[28px] sm:p-4 ${selected ? "border-emerald-500 bg-emerald-50 shadow-[0_14px_32px_rgba(22,107,59,.14)] ring-2 ring-emerald-100" : "border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,.05)] hover:border-emerald-200 hover:shadow-[0_18px_36px_rgba(15,23,42,.10)]"}`}>
+                <div className={`relative mb-3 grid aspect-[1.35/1] place-items-center overflow-hidden rounded-[19px] bg-gradient-to-br ${tones[index % tones.length]}`}>
+                  <span className="absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/60 blur-xl" />
+                  {categoryImage ? <img src={categoryImage} alt={category.name} loading="lazy" className="relative h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <span className="relative text-5xl transition duration-500 group-hover:scale-110" aria-hidden="true">{visual.emoji}</span>}
+                  <span className="absolute bottom-2 left-2 rounded-full border border-white/80 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold text-slate-700 backdrop-blur">{count} ITEMS</span>
+                  {selected && <span className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-emerald-700 text-xs font-black text-white shadow-lg">✓</span>}
                 </div>
-                <div className="flex items-center justify-between gap-1"><span className="line-clamp-1 text-[11px] font-extrabold text-slate-800 sm:text-xs">{category.name}</span><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#edf5ec] text-[11px] font-black text-[#28613d] transition group-hover:bg-[#176b3b] group-hover:text-white">↗</span></div>
+                <div className="flex items-center justify-between gap-2"><span className="line-clamp-1 text-xs font-black text-slate-900">{category.name}</span><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black transition ${selected ? "bg-emerald-700 text-white" : "bg-emerald-50 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white"}`}>↗</span></div>
+                <p className="mt-1 text-[10px] font-medium text-slate-500">{selected ? "Currently selected" : "Explore collection"}</p>
               </button>;
             })}
           </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-7 text-center text-sm text-slate-500">Categories added by your store admin will appear here.</div>}
