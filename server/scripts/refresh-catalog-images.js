@@ -14,17 +14,13 @@ const STOP_WORDS = new Set([
   "royal", "gala", "ruby", "green", "seedless", "tender", "whole",
   "wheat", "stoneground", "multigrain", "cold", "pressed", "split",
   "kabuli", "country", "farm", "toned", "a2", "greek", "malai",
-  "salted", "cheddar", "slices", "probiotic", "mozzarella", "brioche",
-  "butter", "chocolate", "jeera", "garlic", "cinnamon", "fruit",
-  "organic", "toor", "moong", "masoor", "groundnut", "peri", "peri",
-  "potato", "banana", "roasted", "baked", "millet", "kara", "peanut",
-  "cheese", "nachos", "wholegrain", "orange", "mango", "sparkling",
-  "lime", "coffee", "masala", "pomegranate", "green", "filter",
-  "almond", "aloe", "vera", "nourishing", "herbal", "neem", "vitamin",
-  "cocoa", "mint", "soft", "bristle", "rose", "lemon", "liquid",
-  "laundry", "bathroom", "microfiber", "kitchen", "paper", "garbage",
-  "fabric", "steel", "handwash", "frozen", "sweet", "veggie", "paneer",
-  "french", "mixed", "paratha", "mini", "hara", "bhara", "ready", "cook"
+  "salted", "cheddar", "slices", "probiotic", "brioche", "jeera",
+  "garlic", "cinnamon", "organic", "peri", "roasted", "baked",
+  "kara", "sparkling", "masala", "filter", "nourishing", "herbal",
+  "neem", "vitamin", "soft", "bristle", "rose", "liquid",
+  "bathroom", "microfiber", "kitchen", "paper", "garbage",
+  "fabric", "steel", "frozen", "sweet", "veggie", "french",
+  "mixed", "mini", "hara", "bhara", "ready", "cook"
 ]);
 
 const CATEGORY_QUERIES = {
