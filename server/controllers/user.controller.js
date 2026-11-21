@@ -54,7 +54,8 @@ export async function registerUserController(request, response) {
     user = await UserModel.create({ name, email, password: hashedPassword, verify_email: false });
 
     const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
-    const verifyEmailUrl = `${frontendUrl}/verify-email?code=${user._id}`;
+    const verificationToken = jwt.sign({ id: user._id, purpose: "email-verification" }, process.env.SECRET_KEY_ACCESS_TOKEN, { expiresIn: "24h" });
+    const verifyEmailUrl = `${frontendUrl}/verify-email?code=${encodeURIComponent(verificationToken)}`;
 
     try {
       await sendEmail({
@@ -96,21 +97,27 @@ export async function verifyEmailController(request, response) {
       });
     }
 
-    if (typeof code !== "string" || !/^[a-f\d]{24}$/i.test(code)) {
+    if (typeof code !== "string") {
       return response.status(400).json({ message: "Invalid verification code", error: true, success: false });
     }
 
-    const user = await UserModel.findById(code);
-
-    if (!user) {
-      return response.status(400).json({
-        message: "Invalid verification link",
-        error: true,
-        success: false
-      });
+    let verificationPayload;
+    try {
+      verificationPayload = jwt.verify(code, process.env.SECRET_KEY_ACCESS_TOKEN);
+    } catch {
+      return response.status(400).json({ message: "Verification link is invalid or expired. Request a new email.", error: true, success: false });
     }
 
-    await UserModel.updateOne({ _id: code }, { verify_email: true });
+    if (verificationPayload?.purpose !== "email-verification" || !verificationPayload?.id) {
+      return response.status(400).json({ message: "Invalid verification code", error: true, success: false });
+    }
+
+    const user = await UserModel.findById(verificationPayload.id);
+    if (!user) {
+      return response.status(400).json({ message: "Invalid verification link", error: true, success: false });
+    }
+
+    await UserModel.updateOne({ _id: user._id }, { $set: { verify_email: true } });
 
     return response.json({
       message: "Email verified successfully!",
@@ -141,7 +148,8 @@ export async function resendVerificationEmailController(request, response) {
       return response.status(200).json({ message: "Email is already verified. You can log in.", error: false, success: true });
     }
     const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
-    const verifyEmailUrl = `${frontendUrl}/verify-email?code=${user._id}`;
+    const verificationToken = jwt.sign({ id: user._id, purpose: "email-verification" }, process.env.SECRET_KEY_ACCESS_TOKEN, { expiresIn: "24h" });
+    const verifyEmailUrl = `${frontendUrl}/verify-email?code=${encodeURIComponent(verificationToken)}`;
     await sendEmail({
       sendTo: user.email,
       subject: "Verify your email - PrimeCommerce",
