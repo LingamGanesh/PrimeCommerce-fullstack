@@ -210,6 +210,35 @@ export default function Home() {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+        <section className="pb-8 pt-2">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">A little inspiration</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">The Prime collection <span className="text-xl">✦</span></h2><p className="mt-1 text-sm text-slate-500">A preview of everyday essentials in our signature shopping style.</p></div>
+            <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800">Sample showcase</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { name: "Farm Fresh Avocados", category: "Fresh produce", unit: "2 pcs", price: 89, mrp: 110, icon: "🥑", bg: "from-lime-50 to-emerald-100", tag: "Farm pick" },
+              { name: "Organic A2 Milk", category: "Dairy & breakfast", unit: "500 ml", price: 42, mrp: 50, icon: "🥛", bg: "from-sky-50 to-blue-100", tag: "Daily essential" },
+              { name: "Premium Strawberries", category: "Fresh produce", unit: "1 box", price: 119, mrp: 149, icon: "🍓", bg: "from-rose-50 to-pink-100", tag: "Fresh choice" },
+              { name: "Artisan Sourdough", category: "Bakery", unit: "400 g", price: 99, mrp: 125, icon: "🍞", bg: "from-amber-50 to-orange-100", tag: "Bakery pick" },
+            ].map((item) => (
+              <article key={item.name} className="group overflow-hidden rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(15,23,42,.10)]">
+                <div className={`relative flex h-36 items-center justify-center bg-gradient-to-br ${item.bg} sm:h-40`}>
+                  <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/80 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-emerald-800">{item.tag}</span>
+                  <span className="text-6xl drop-shadow-sm transition duration-300 group-hover:scale-110" role="img" aria-label={item.name}>{item.icon}</span>
+                </div>
+                <div className="p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">{item.category}</p>
+                  <h3 className="mt-1 min-h-10 text-sm font-extrabold leading-5 text-slate-900">{item.name}</h3>
+                  <div className="mt-3 flex items-end justify-between gap-2"><div><p className="text-base font-black text-slate-950">₹{item.price}</p><p className="text-[11px] text-slate-400 line-through">₹{item.mrp}</p></div><span className="rounded-lg bg-slate-50 px-2.5 py-2 text-[10px] font-semibold text-slate-500">{item.unit}</span></div>
+                  <p className="mt-3 border-t border-slate-100 pt-2 text-[9px] font-semibold text-slate-400">DEMO PREVIEW · NOT FOR CHECKOUT</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section className="py-8 sm:py-10">
           <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Browse by department</p><h2 className="mt-1 text-2xl font-black tracking-tight">Shop by category</h2></div><button onClick={() => setActiveCategory("All")} className="text-xs font-bold text-green-800">View all</button></div>
           {categories.length ? <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
@@ -237,11 +266,6 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">{recommendedProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
         </section>}
 
-        <section className="grid gap-4 sm:grid-cols-2">
-          <div className="flex items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-r from-[#e2f2e4] to-[#f1f8ee] p-6 shadow-sm sm:p-7"><div><p className="text-xs font-bold uppercase tracking-wider text-green-800">Fresh every day</p><h3 className="mt-1 text-xl font-extrabold">Fruits & vegetables</h3><p className="mt-1 text-xs text-gray-600">Bring home the goodness</p></div><span className="text-6xl">🥑</span></div>
-          <div className="flex items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-r from-[#fff0d9] to-[#fff8e9] p-6 shadow-sm sm:p-7"><div><p className="text-xs font-bold uppercase tracking-wider text-orange-800">Snack smarter</p><h3 className="mt-1 text-xl font-extrabold">Treats for every mood</h3><p className="mt-1 text-xs text-gray-600">Discover your favourites</p></div><span className="text-6xl">🍪</span></div>
-        </section>
-
         <section id="products" className="py-8">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Handpicked for your home</p><h2 className="mt-1 text-2xl font-black tracking-tight">{activeCategory === "All" ? "Popular products" : categories.find((category) => category._id === activeCategory)?.name || "Products"}</h2></div>
             <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs outline-none"><option value="All">All categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
@@ -251,7 +275,7 @@ export default function Home() {
           : visibleProducts.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
           : <div className="rounded-2xl bg-white p-10 text-center"><p className="text-3xl">🛍️</p><h3 className="mt-2 font-bold">{search ? "No products found" : "Your store is getting ready"}</h3><p className="mt-1 text-sm text-gray-500">{search ? "Try another product or category." : "Products added by your store admin will appear here."}</p></div>}
         </section>
-        <section className="mb-8 rounded-2xl bg-white p-5 text-center shadow-sm sm:p-8"><p className="text-xs font-bold uppercase tracking-widest text-green-700">Shopping made simple</p><h2 className="mt-2 text-xl font-extrabold">A better way to stock up</h2><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">Browse essentials, add what you need and review your basket before checkout.</p><Link to="/search" className="mt-4 inline-flex rounded-xl bg-green-700 px-5 py-3 text-sm font-bold text-white hover:bg-green-800">Explore products</Link></section>
+
       </div>
 
       {cartCount > 0 && <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur"><div className="mx-auto flex max-w-7xl items-center justify-between gap-3"><div><p className="text-sm font-bold">{cartCount} {cartCount === 1 ? "item" : "items"} in your cart</p><p className="text-xs text-gray-500">Subtotal · ₹{cartTotal}</p></div><button onClick={() => navigate("/cart")} className="rounded-xl bg-green-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-green-800">View cart <span className="ml-2">→</span></button></div></div>}
