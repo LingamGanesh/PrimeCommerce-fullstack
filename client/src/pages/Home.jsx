@@ -24,6 +24,23 @@ const visualFor = (value = "") => {
 };
 
 
+function ProductCarousel({ id, products, cart, onAdd, onChange, emptyTitle, emptyText }) {
+  const scroll = (direction) => document.getElementById(id)?.scrollBy({ left: direction * 520, behavior: "smooth" });
+  return (
+    <div className="relative">
+      {products.length ? <>
+        <div className="mb-3 flex justify-end gap-2">
+          <button type="button" onClick={() => scroll(-1)} aria-label="Scroll products left" className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700">←</button>
+          <button type="button" onClick={() => scroll(1)} aria-label="Scroll products right" className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700">→</button>
+        </div>
+        <div id={id} className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {products.map((product) => <div key={product.id} className="w-[220px] min-w-[220px] snap-start sm:w-[245px] sm:min-w-[245px]"><ProductCard product={product} quantity={cart[product.id]?.quantity || 0} onAdd={onAdd} onChange={onChange} /></div>)}
+        </div>
+      </> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-5 py-8 text-center"><span className="text-3xl">🌱</span><h3 className="mt-2 text-sm font-extrabold text-slate-800">{emptyTitle}</h3><p className="mt-1 text-xs text-slate-500">{emptyText}</p></div>}
+    </div>
+  );
+}
+
 function readCart() { return {}; }
 
 function ProductCard({ product, quantity, onAdd, onChange }) {
@@ -77,6 +94,8 @@ export default function Home() {
           ...product,
           id: product.id || product._id,
           categoryName: Array.isArray(product.categoryId) ? product.categoryId.map((category) => category?.name).filter(Boolean).join(", ") : "",
+          discountPercent: Number(product.discountPercent ?? product.discount ?? 0),
+          images: product.images || product.image || [],
         })));
         setCategories(categoryResponse.data?.data || []);
         setLoadError(false);
@@ -104,10 +123,18 @@ export default function Home() {
     return matchesCategory;
   }), [products, activeCategory]);
 
-  const offerProducts = useMemo(() => products
-    .filter((product) => Number(product.discountPercent) > 0 && product.publish !== false && Number(product.stock ?? 1) > 0)
-    .sort((a, b) => Number(b.discountPercent) - Number(a.discountPercent))
-    .slice(0, 8), [products]);
+  const availableProducts = useMemo(() => products.filter((product) => product.publish !== false && Number(product.stock ?? 0) > 0), [products]);
+  const freshArrivals = useMemo(() => [...availableProducts].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 10), [availableProducts]);
+  const offerProducts = useMemo(() => {
+    const now = Date.now();
+    return availableProducts.filter((product) => Number(product.discountPercent) > 0 && (!product.offerStartsAt || new Date(product.offerStartsAt).getTime() <= now) && (!product.offerEndsAt || new Date(product.offerEndsAt).getTime() > now))
+      .sort((a, b) => Number(b.discountPercent) - Number(a.discountPercent)).slice(0, 10);
+  }, [availableProducts]);
+  const upcomingOffers = useMemo(() => {
+    const now = Date.now();
+    return availableProducts.filter((product) => Number(product.discountPercent) > 0 && product.offerStartsAt && new Date(product.offerStartsAt).getTime() > now && (!product.offerEndsAt || new Date(product.offerEndsAt).getTime() > new Date(product.offerStartsAt).getTime()))
+      .sort((a, b) => new Date(a.offerStartsAt) - new Date(b.offerStartsAt)).slice(0, 10);
+  }, [availableProducts]);
 
   const recommendedProducts = useMemo(() => {
     const cartProductIds = new Set(Object.entries(cart).filter(([, item]) => item.quantity > 0).map(([id]) => id));
@@ -175,21 +202,23 @@ export default function Home() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         <section className="py-8 sm:py-10">
-          <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-emerald-700">From your store catalogue</p><h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Shop live categories</h2></div><button onClick={() => setActiveCategory("All")} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-extrabold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-800">View all</button></div>
-          {categories.length ? <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {categories.map((category) => { const visual = visualFor(category.name); return <button key={category._id} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group flex flex-col items-center gap-2 rounded-2xl border border-transparent p-3 text-center transition hover:border-gray-100 hover:bg-white hover:shadow-md"><span className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl text-3xl transition group-hover:scale-105 ${visual.color}`}>{category.image ? <img src={category.image} alt="" className="h-full w-full object-cover" /> : visual.emoji}</span><span className="text-[11px] font-semibold leading-4 text-gray-700">{category.name}</span></button>; })}
-          </div> : <p className="rounded-xl bg-white p-5 text-sm text-gray-500">Categories will appear here when the store catalogue is configured.</p>}
+          <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Just landed in store</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Fresh arrivals <span>🌿</span></h2><p className="mt-1 text-sm text-slate-500">The latest products added by our store team.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-800">NEW IN</span></div>
+          {loading ? <div className="h-64 animate-pulse rounded-2xl bg-slate-100" /> : <ProductCarousel id="fresh-arrivals-carousel" products={freshArrivals} cart={cart} onAdd={addProduct} onChange={updateCart} emptyTitle="Fresh picks are on the way" emptyText="New products added by the admin will appear here." />}
         </section>
 
-        <section className="relative isolate mb-5 overflow-hidden rounded-[30px] bg-[#102b20] px-4 py-7 text-white shadow-[0_22px_55px_rgba(16,43,32,.16)] sm:px-7 sm:py-9">
+        <section className="relative isolate mb-7 overflow-hidden rounded-[30px] bg-[#102b20] px-4 py-7 text-white shadow-[0_22px_55px_rgba(16,43,32,.16)] sm:px-7 sm:py-9">
           <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-lime-300/15 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-emerald-400/15 blur-3xl" />
-          <div className="relative mb-6 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-lime-300">A little more for less</p><h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Offers you’ll love <span className="text-xl">✦</span></h2><p className="mt-1 max-w-xl text-sm text-emerald-50/70">Handpicked deals and real savings from the live Prime Commerce catalogue.</p></div>
-            <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-extrabold text-white backdrop-blur transition hover:bg-white hover:text-emerald-900">Shop all deals →</button>
-          </div>
-          {offerProducts.length ? <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">{offerProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div> : <div className="relative rounded-2xl border border-white/10 bg-white/[.07] px-5 py-7 text-center backdrop-blur"><span className="text-3xl">🏷️</span><h3 className="mt-2 text-base font-extrabold text-white">Fresh deals are on their way</h3><p className="mt-1 text-xs text-emerald-50/65">Offers published by the store team will appear here automatically.</p></div>}
+          <div className="relative mb-2 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-lime-300">Lovely deals, live right now</p><h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Offers you’ll love <span>💚</span></h2><p className="mt-1 text-sm text-emerald-50/70">Current discounts published by your store team.</p></div><span className="rounded-full border border-lime-200/20 bg-lime-300/10 px-3 py-1.5 text-[10px] font-bold text-lime-200">LIVE OFFERS</span></div>
+          <ProductCarousel id="live-offers-carousel" products={offerProducts} cart={cart} onAdd={addProduct} onChange={updateCart} emptyTitle="Fresh deals are on their way" emptyText="Admin-published discounts will appear here while they are active." />
         </section>
+
+        {upcomingOffers.length > 0 && <section className="mb-8 overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-br from-[#f8f5ff] via-white to-[#fff7f1] p-4 sm:p-6">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-violet-600">A little something to look forward to</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Coming soon <span>✨</span></h2><p className="mt-1 text-sm text-slate-500">Sneak peek at offers scheduled by our admin team.</p></div><span className="rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-extrabold text-violet-700">UPCOMING</span></div>
+          <div className="mb-3 flex justify-end gap-2"><button type="button" onClick={() => document.getElementById("upcoming-offers-carousel")?.scrollBy({left:-520,behavior:"smooth"})} aria-label="Scroll upcoming offers left" className="grid h-9 w-9 place-items-center rounded-full border border-violet-100 bg-white text-violet-700">←</button><button type="button" onClick={() => document.getElementById("upcoming-offers-carousel")?.scrollBy({left:520,behavior:"smooth"})} aria-label="Scroll upcoming offers right" className="grid h-9 w-9 place-items-center rounded-full border border-violet-100 bg-white text-violet-700">→</button></div>
+          <div id="upcoming-offers-carousel" className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {upcomingOffers.map((product) => <article key={product.id} className="flex w-[245px] min-w-[245px] snap-start items-center gap-3 rounded-2xl border border-violet-100 bg-white/90 p-3 shadow-sm sm:w-[285px] sm:min-w-[285px]"><div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-violet-50 text-3xl">{(product.images?.[0] || product.image?.[0]) ? <img src={product.images?.[0] || product.image?.[0]} alt={product.name} className="h-full w-full object-contain p-2" /> : visualFor(product.name).emoji}</div><div className="min-w-0"><span className="rounded-full bg-violet-100 px-2 py-1 text-[9px] font-extrabold text-violet-700">{product.discountPercent}% OFF SOON</span><h3 className="mt-2 line-clamp-2 text-sm font-extrabold text-slate-900">{product.name}</h3><p className="mt-1 text-[10px] font-semibold text-slate-500">Starts {new Date(product.offerStartsAt).toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</p></div></article>)}
+          </div>
+        </section>}
 
         {recommendedProducts.length > 0 && <section className="pb-8 pt-2">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
