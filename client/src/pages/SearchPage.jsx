@@ -21,6 +21,7 @@ function SearchProductCard({ product, quantity, onAdd, onQuantity }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-gray-100 bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="relative flex h-36 items-center justify-center bg-[#f7f8f2] sm:h-44">
+        {Number(product.discountPercent) > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-green-700 px-2 py-1 text-[10px] font-bold text-white">{product.discountPercent}% OFF</span>}
         {image ? <img src={image} alt={product.name} loading="lazy" className="h-full w-full object-contain p-3" /> : <span className="text-5xl">{categoryIcon(product.categoryName)}</span>}
       </div>
       <div className="p-3">
@@ -28,7 +29,7 @@ function SearchProductCard({ product, quantity, onAdd, onQuantity }) {
         <h2 className="mt-1 min-h-10 text-sm font-bold leading-5 text-gray-900">{product.name}</h2>
         <p className="mt-1 text-xs text-gray-500">{product.unit || "Pack"}</p>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <div><p className="text-sm font-extrabold text-gray-900">₹{product.price}</p></div>
+          <div><p className="text-sm font-extrabold text-gray-900">₹{product.price}</p>{Number(product.mrp) > Number(product.price) && <p className="text-[11px] text-gray-400 line-through">₹{product.mrp}</p>}</div>
           {quantity > 0 ? <div className="flex items-center gap-3 rounded-lg bg-green-700 px-2.5 py-1.5 font-bold text-white"><button aria-label="Remove one" onClick={() => onQuantity(product.id, -1)}>−</button><span className="text-sm">{quantity}</span><button aria-label="Add one" onClick={() => onQuantity(product.id, 1)}>+</button></div> : <button onClick={() => onAdd(product)} className="rounded-lg border border-green-700 bg-green-50 px-4 py-2 text-xs font-extrabold text-green-800 hover:bg-green-700 hover:text-white">ADD</button>}
         </div>
       </div>
