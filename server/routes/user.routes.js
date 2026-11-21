@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { logoutController,loginController,registerUserController ,verifyEmailController,uploadAvatar, updateUserDetails, forgotPasswordController, verifyForgotPasswordOtp, resetpassword, refreshToken, userDetails } from '../controllers/user.controller.js';
+import { logoutController,loginController,registerUserController ,verifyEmailController,resendVerificationEmailController,uploadAvatar, updateUserDetails, forgotPasswordController, verifyForgotPasswordOtp, resetpassword, refreshToken, userDetails } from '../controllers/user.controller.js';
 import auth from '../middleware/auth.js';
 import upload from '../middleware/multer.js';
 
