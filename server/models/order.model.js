@@ -7,7 +7,7 @@ const orderSchema = new mongoose.Schema(
     product_details: { type: String, required: [true, "Product details are required"] },
     payment_id: { type: String, default: "" },
     payment_status: { type: String, default: "pending" },
-    paymentMethod: { type: String, enum: ["COD", "RAZORPAY"], default: "COD" },
+    paymentMethod: { type: String, enum: ["COD", "RAZORPAY", "UPI"], default: "COD" },
     razorpayOrderId: { type: String, default: null, index: true },
     paymentReservationExpiresAt: { type: Date, default: null, index: true },
     refund_id: { type: String, default: "" },

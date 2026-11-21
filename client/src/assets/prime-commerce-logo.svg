@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 124" role="img" aria-labelledby="title desc">
+  <title id="title">Prime Commerce</title><desc id="desc">Prime Commerce shopping brand logo</desc>
+  <defs><linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a8d943"/><stop offset="1" stop-color="#176b3a"/></linearGradient></defs>
+  <rect x="4" y="8" width="108" height="108" rx="30" fill="#153b29"/>
+  <path d="M28 48h59l-6 43H35z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M43 48c0-13 6-21 15-21s15 8 15 21" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M57 61c-1-14 8-24 25-26 0 17-8 27-25 26z" fill="url(#leaf)"/><path d="M57 61c-6-10-15-13-24-10 4 13 13 18 24 10z" fill="#a8d943"/>
+  <text x="132" y="62" font-family="Arial, Helvetica, sans-serif" font-size="43" font-weight="800" letter-spacing="-1.8" fill="#153b29">PRIME</text>
+  <text x="132" y="99" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="5.5" fill="#39734b">COMMERCE</text>
+  <path d="M420 26h112" stroke="#a8d943" stroke-width="5" stroke-linecap="round"/><path d="M420 109h78" stroke="#a8d943" stroke-width="5" stroke-linecap="round"/>
+</svg>
