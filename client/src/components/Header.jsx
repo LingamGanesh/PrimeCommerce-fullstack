@@ -11,15 +11,14 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
-  const [openMenu, setOpenMenu] = useState(false);
+  const [menuState, setMenuState] = useState({ path: location.pathname, open: false });
   const [cartCount, setCartCount] = useState(0);
+  const openMenu = menuState.path === location.pathname && menuState.open;
+  const visibleCartCount = user?._id ? cartCount : 0;
 
   useEffect(() => {
+    if (!user?._id) return undefined;
     let active = true;
-    if (!user?._id) {
-      setCartCount(0);
-      return () => { active = false; };
-    }
     Axios.get("/api/v1/cart")
       .then((response) => {
         if (active) setCartCount(response.data?.data?.itemCount || 0);
@@ -29,10 +28,6 @@ const Header = () => {
       });
     return () => { active = false; };
   }, [user?._id, location.pathname]);
-
-  useEffect(() => {
-    setOpenMenu(false);
-  }, [location.pathname]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#eee9df] bg-white">
@@ -50,15 +45,13 @@ const Header = () => {
           </button>
         </div>
 
-        <div className="hidden min-w-0 flex-1 md:block">
-          <Search />
-        </div>
+        <div className="hidden min-w-0 flex-1 md:block"><Search /></div>
 
         <div className="ml-auto flex shrink-0 items-center gap-3 sm:gap-5">
           <div className="relative">
             <button
               type="button"
-              onClick={() => setOpenMenu((value) => !value)}
+              onClick={() => setMenuState({ path: location.pathname, open: !openMenu })}
               aria-expanded={openMenu}
               aria-label={user?._id ? "Open account menu" : "Login"}
               className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-gray-700 transition hover:bg-[#f7f7f2]"
@@ -69,9 +62,7 @@ const Header = () => {
             </button>
             {openMenu && (
               <div className="absolute right-0 top-[calc(100%+12px)] z-[60] min-w-[210px]">
-                {user?._id ? (
-                  <Usermenu />
-                ) : (
+                {user?._id ? <Usermenu /> : (
                   <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-xl">
                     <p className="mb-3 text-sm font-semibold text-gray-800">Welcome to PrimeCommerce</p>
                     <Link to="/login" className="block rounded-xl bg-[#176b36] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-[#10572b]">Login / Sign up</Link>
@@ -84,12 +75,12 @@ const Header = () => {
           <button
             type="button"
             onClick={() => navigate("/cart")}
-            aria-label={`Open cart, ${cartCount} items`}
+            aria-label={`Open cart, ${visibleCartCount} items`}
             className="relative flex items-center gap-2 rounded-xl bg-[#176b36] px-3 py-2.5 text-white shadow-sm transition hover:bg-[#10572b] sm:px-4"
           >
             <FaShoppingBasket className="text-lg" />
             <span className="hidden text-sm font-bold sm:inline">Cart</span>
-            {cartCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#f6c945] px-1 text-[10px] font-extrabold text-gray-900">{cartCount}</span>}
+            {visibleCartCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#f6c945] px-1 text-[10px] font-extrabold text-gray-900">{visibleCartCount}</span>}
           </button>
         </div>
       </div>
