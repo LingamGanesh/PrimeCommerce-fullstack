@@ -12,7 +12,7 @@ const ResetPassword = () => {
   const navigate = useNavigate()
 
   const [data, setData] = useState({
-    email: "",
+    email: location?.state?.email || "",
     newPassword: "",
     confirmPassword: ""
   })
@@ -29,12 +29,6 @@ const ResetPassword = () => {
       return
     }
 
-    if (location?.state?.email) {
-      setData(prev => ({
-        ...prev,
-        email: location.state.email
-      }))
-    }
   }, [location, navigate])
 
   const handleChange = (e) => {
