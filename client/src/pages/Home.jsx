@@ -122,6 +122,23 @@ export default function Home() {
     .sort((a, b) => Number(b.discountPercent) - Number(a.discountPercent))
     .slice(0, 8), [products]);
 
+  const recommendedProducts = useMemo(() => {
+    const cartProductIds = new Set(Object.entries(cart).filter(([, item]) => item.quantity > 0).map(([id]) => id));
+    const preferredCategories = new Set(
+      products
+        .filter((product) => cartProductIds.has(String(product.id)))
+        .flatMap((product) => (product.categoryId || []).map((category) => String(typeof category === "object" ? category?._id : category)))
+        .filter(Boolean)
+    );
+    const inStock = products.filter((product) => product.publish !== false && Number(product.stock ?? 1) > 0 && !cartProductIds.has(String(product.id)));
+    const personalized = preferredCategories.size
+      ? inStock.filter((product) => (product.categoryId || []).some((category) => preferredCategories.has(String(typeof category === "object" ? category?._id : category))))
+      : [];
+    return (personalized.length ? personalized : inStock).slice(0, 6);
+  }, [products, cart]);
+
+  const hasPersonalizedRecommendations = Object.values(cart).some((item) => item.quantity > 0);
+
   const updateCart = async (id, delta) => {
     if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
     const entry = cart[id];
@@ -154,7 +171,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -bottom-36 left-1/3 h-72 w-72 rounded-full bg-lime-300/10 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-9 sm:px-6 sm:py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:gap-12 lg:px-8 lg:py-16">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold tracking-[.2em] text-lime-200"><span className="h-1.5 w-1.5 rounded-full bg-lime-300" /> PRIME COMMERCE · EVERYDAY MADE BETTER</span>
+            <div className="flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold tracking-[.2em] text-lime-200"><span className="h-1.5 w-1.5 rounded-full bg-lime-300" /> PRIME COMMERCE · EVERYDAY MADE BETTER</span>{user?.name && <span className="text-xs font-semibold text-emerald-50/75">Welcome back, {user.name.split(" ")[0]}</span>}</div>
             <h1 className="mt-5 text-4xl font-black leading-[1.04] tracking-tight sm:text-5xl lg:text-6xl">Good food.<br /><span className="text-lime-300">Great days.</span></h1>
             <p className="mt-4 max-w-lg text-sm leading-7 text-emerald-50/75 sm:text-base">Your everyday groceries and home essentials, brought together in one thoughtful shopping experience.</p>
             <div className="mt-7 overflow-hidden rounded-[26px] border border-white/10 bg-white/[.07] p-5 shadow-2xl backdrop-blur-xl sm:p-6" aria-live="polite">
@@ -206,6 +223,18 @@ export default function Home() {
             <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-50">Shop all deals →</button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">{offerProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
+        </section>}
+
+        {recommendedProducts.length > 0 && <section className="pb-8 pt-2">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">{hasPersonalizedRecommendations ? "Inspired by your basket" : "Popular in our store"}</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{hasPersonalizedRecommendations ? "Picked for you" : "Popular picks to get started"} <span className="text-xl">💚</span></h2>
+              <p className="mt-1 text-sm text-slate-500">{hasPersonalizedRecommendations ? "More essentials from categories you already shop." : "Explore customer favourites from our current catalogue."}</p>
+            </div>
+            <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-800">Explore catalogue →</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">{recommendedProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
         </section>}
 
         <section className="grid gap-4 sm:grid-cols-2">
