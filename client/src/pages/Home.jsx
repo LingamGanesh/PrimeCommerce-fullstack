@@ -23,6 +23,13 @@ const visualFor = (value = "") => {
   return match ? { emoji: match[1], color: match[2] } : { emoji: "🛍️", color: "bg-stone-50" };
 };
 
+
+const benefitSlides = [
+  { eyebrow: "THE PRIME PROMISE", title: "Fresh picks. Happier days.", description: "Everyday essentials selected for your home, with a smooth and simple shopping experience.", icon: "🥬", points: ["Everyday essentials", "Easy secure checkout"] },
+  { eyebrow: "MEMBER-ONLY SAVINGS", title: "Little prices. Big smiles.", description: "Discover the latest discounts added by our store team and save on the things you love.", icon: "🏷️", points: ["Live product offers", "Clear savings on every deal"] },
+  { eyebrow: "SHOP WITHOUT THE STRESS", title: "Your basket, your way.", description: "Find favourites fast, manage your basket easily and keep your orders close at hand.", icon: "🛵", points: ["Quick, simple ordering", "Order updates in one place"] },
+];
+
 function readCart() { return {}; }
 
 function ProductCard({ product, quantity, onAdd, onChange }) {
@@ -65,6 +72,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [cartBusy, setCartBusy] = useState(false);
+  const [activeBenefit, setActiveBenefit] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setActiveBenefit((current) => (current + 1) % benefitSlides.length), 5200);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -104,6 +117,11 @@ export default function Home() {
     return matchesCategory && (!query || product.name.toLowerCase().includes(query) || (product.categoryName || "").toLowerCase().includes(query));
   }), [products, activeCategory, search]);
 
+  const offerProducts = useMemo(() => products
+    .filter((product) => Number(product.discountPercent) > 0 && product.publish !== false && Number(product.stock ?? 1) > 0)
+    .sort((a, b) => Number(b.discountPercent) - Number(a.discountPercent))
+    .slice(0, 8), [products]);
+
   const updateCart = async (id, delta) => {
     if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
     const entry = cart[id];
@@ -131,24 +149,48 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#fafaf7] pb-28 text-gray-900">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#f7c943] via-[#ffe17a] to-[#fff3c4]">
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:py-12">
-          <div className="max-w-xl">
-            <span className="inline-flex rounded-full border border-white/80 bg-white/65 px-3 py-1.5 text-[11px] font-extrabold tracking-[0.14em] text-green-900 shadow-sm">YOUR EVERYDAY STORE</span>
-            <h1 className="mt-4 max-w-xl text-4xl font-black leading-[1.06] tracking-tight text-[#172d1e] sm:text-5xl lg:text-[3.6rem]">Good things for<br className="hidden sm:block" /> every day.</h1>
-            <p className="mt-4 max-w-md text-base leading-7 text-[#435345]">Fresh groceries, pantry staples and home essentials — discover your favourites and add them to your basket.</p>
-            <div className="mt-6 flex flex-wrap gap-2.5 text-xs font-bold text-gray-800"><span className="rounded-full bg-white/70 px-3 py-2">✓ Fresh picks</span><span className="rounded-full bg-white/70 px-3 py-2">✓ Easy ordering</span><span className="rounded-full bg-white/70 px-3 py-2">✓ Secure checkout</span></div>
-          </div>
-          <div className="w-full max-w-lg rounded-3xl border border-white/80 bg-white/95 p-3 shadow-[0_20px_55px_rgba(83,66,15,0.16)] backdrop-blur">
-            <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
-              <span className="text-xl">⌕</span>
-              <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && navigate(`/search?q=${encodeURIComponent(search)}`)} placeholder="Search for atta, milk, fruits..." className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400" aria-label="Search products" />
-              {search && <button onClick={() => setSearch("")} className="text-xs text-gray-500">Clear</button>}
+      <section className="relative isolate overflow-hidden bg-[#102b20] text-white">
+        <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-36 left-1/3 h-72 w-72 rounded-full bg-lime-300/10 blur-3xl" />
+        <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-9 sm:px-6 sm:py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:gap-12 lg:px-8 lg:py-16">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold tracking-[.2em] text-lime-200"><span className="h-1.5 w-1.5 rounded-full bg-lime-300" /> PRIME COMMERCE · EVERYDAY MADE BETTER</span>
+            <h1 className="mt-5 text-4xl font-black leading-[1.04] tracking-tight sm:text-5xl lg:text-6xl">Good food.<br /><span className="text-lime-300">Great days.</span></h1>
+            <p className="mt-4 max-w-lg text-sm leading-7 text-emerald-50/75 sm:text-base">Your everyday groceries and home essentials, brought together in one thoughtful shopping experience.</p>
+            <div className="mt-7 overflow-hidden rounded-[26px] border border-white/10 bg-white/[.07] p-5 shadow-2xl backdrop-blur-xl sm:p-6" aria-live="polite">
+              <div className="flex items-start gap-4">
+                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-lime-300 text-3xl shadow-lg shadow-lime-950/20">{benefitSlides[activeBenefit].icon}</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold tracking-[.2em] text-lime-300">{benefitSlides[activeBenefit].eyebrow}</p>
+                  <h2 className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{benefitSlides[activeBenefit].title}</h2>
+                  <p className="mt-2 text-xs leading-6 text-emerald-50/70 sm:text-sm">{benefitSlides[activeBenefit].description}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">{benefitSlides[activeBenefit].points.map((point) => <span key={point} className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[10px] font-semibold text-white/85">✓ {point}</span>)}</div>
+                </div>
+              </div>
+              <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
+                <div className="flex items-center gap-2">{benefitSlides.map((slide, index) => <button key={slide.eyebrow} type="button" onClick={() => setActiveBenefit(index)} aria-label={`Show benefit ${index+1}`} aria-pressed={activeBenefit===index} className={`h-1.5 rounded-full transition-all ${activeBenefit===index?"w-8 bg-lime-300":"w-3 bg-white/30 hover:bg-white/60"}`} />)}</div>
+                <div className="flex gap-2"><button type="button" onClick={() => setActiveBenefit((activeBenefit + benefitSlides.length - 1) % benefitSlides.length)} aria-label="Previous benefit" className="grid h-8 w-8 place-items-center rounded-full border border-white/15 text-sm hover:bg-white/10">←</button><button type="button" onClick={() => setActiveBenefit((activeBenefit + 1) % benefitSlides.length)} aria-label="Next benefit" className="grid h-8 w-8 place-items-center rounded-full border border-white/15 text-sm hover:bg-white/10">→</button></div>
+              </div>
             </div>
-            <p className="px-2 pt-3 text-xs text-gray-500">Search your store's live product catalogue</p>
+          </div>
+          <div className="rounded-[30px] border border-white/15 bg-white p-3 text-slate-900 shadow-[0_28px_80px_rgba(0,0,0,.25)] sm:p-4">
+            <div className="rounded-[22px] bg-[#f5f7f1] p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-emerald-700">Find your favourites</p><h2 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">What’s on your list?</h2></div><span className="grid h-11 w-11 place-items-center rounded-2xl bg-lime-200 text-2xl">⌕</span></div>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                <span className="text-xl text-emerald-700">⌕</span>
+                <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && navigate(`/search?q=${encodeURIComponent(search)}`)} placeholder="Search milk, fruits, snacks..." className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" aria-label="Search products" />
+                {search && <button onClick={() => setSearch("")} className="text-xs font-bold text-emerald-700">Clear</button>}
+              </div>
+              <p className="mt-3 text-xs text-slate-500">Search across your store’s live catalogue.</p>
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-white p-3"><span className="text-xl">🥦</span><p className="mt-1 text-[10px] font-bold text-slate-600">Fresh picks</p></div>
+                <div className="rounded-xl bg-white p-3"><span className="text-xl">🏷️</span><p className="mt-1 text-[10px] font-bold text-slate-600">Live offers</p></div>
+                <div className="rounded-xl bg-white p-3"><span className="text-xl">🛒</span><p className="mt-1 text-[10px] font-bold text-slate-600">Easy checkout</p></div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <section className="py-8 sm:py-10">
@@ -157,6 +199,14 @@ export default function Home() {
             {categories.map((category) => { const visual = visualFor(category.name); return <button key={category._id} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group flex flex-col items-center gap-2 rounded-2xl border border-transparent p-3 text-center transition hover:border-gray-100 hover:bg-white hover:shadow-md"><span className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl text-3xl transition group-hover:scale-105 ${visual.color}`}>{category.image ? <img src={category.image} alt="" className="h-full w-full object-cover" /> : visual.emoji}</span><span className="text-[11px] font-semibold leading-4 text-gray-700">{category.name}</span></button>; })}
           </div> : <p className="rounded-xl bg-white p-5 text-sm text-gray-500">Categories will appear here when the store catalogue is configured.</p>}
         </section>
+
+        {offerProducts.length > 0 && <section className="pb-7 pt-2">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Picked by our store team</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Today’s best offers <span className="text-xl">✨</span></h2><p className="mt-1 text-sm text-slate-500">Fresh discounts added by our store team, updated from the live catalogue.</p></div>
+            <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-50">Shop all deals →</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">{offerProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
+        </section>}
 
         <section className="grid gap-4 sm:grid-cols-2">
           <div className="flex items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-r from-[#e2f2e4] to-[#f1f8ee] p-6 shadow-sm sm:p-7"><div><p className="text-xs font-bold uppercase tracking-wider text-green-800">Fresh every day</p><h3 className="mt-1 text-xl font-extrabold">Fruits & vegetables</h3><p className="mt-1 text-xs text-gray-600">Bring home the goodness</p></div><span className="text-6xl">🥑</span></div>
