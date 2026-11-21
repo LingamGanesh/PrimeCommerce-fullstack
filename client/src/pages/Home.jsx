@@ -279,43 +279,48 @@ export default function Home() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        <section id="categories" className="scroll-mt-36 py-10 sm:py-14">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[.24em] text-emerald-700">Find your favourites</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Shop by category <span className="text-emerald-600">✳</span></h2>
-              <p className="mt-1 text-sm text-slate-500">A little inspiration for every aisle of your day.</p>
+        <section id="categories" className="scroll-mt-32 py-12 sm:py-16">
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-[.2em] text-emerald-800 shadow-sm"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Curated for your everyday</div>
+              <h2 className="text-3xl font-black tracking-[-.04em] text-slate-950 sm:text-4xl">Every aisle, <span className="text-emerald-700">beautifully simple.</span></h2>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-slate-500">Explore the essentials you love, thoughtfully organised into collections.</p>
             </div>
-            <span className="rounded-full border border-emerald-100 bg-white px-4 py-2 text-[10px] font-extrabold text-emerald-800 shadow-sm">{categories.length} curated collections</span>
+            <div className="flex items-center gap-3">
+              <span className="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold text-slate-600 sm:inline-flex">{categories.length} collections</span>
+              <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full bg-[#123b29] px-4 py-2.5 text-[10px] font-extrabold text-white shadow-lg shadow-emerald-950/10 transition hover:-translate-y-0.5 hover:bg-emerald-800">View all products ↗</button>
+            </div>
           </div>
-          {categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} aria-pressed={activeCategory === "All"} className={`group relative overflow-hidden rounded-[24px] border p-3 text-left transition-all duration-300 hover:-translate-y-1 sm:rounded-[28px] sm:p-4 ${activeCategory === "All" ? "border-emerald-500 bg-emerald-50 shadow-[0_14px_32px_rgba(22,107,59,.14)] ring-2 ring-emerald-100" : "border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,.05)] hover:border-emerald-200 hover:shadow-[0_18px_36px_rgba(15,23,42,.10)]"}`}>
-              <div className="relative mb-3 grid aspect-[1.35/1] place-items-center overflow-hidden rounded-[19px] bg-gradient-to-br from-emerald-100 via-lime-50 to-white">
-                <span className="absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/70 blur-xl" />
-                <span className="relative text-5xl transition-transform duration-500 group-hover:scale-110">🛍️</span>
-                <span className="absolute bottom-2 left-2 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-extrabold text-emerald-800 backdrop-blur">ALL AISLES</span>
+          {categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} aria-pressed={activeCategory === "All"} className={`group relative min-h-[190px] overflow-hidden rounded-[26px] border text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] ${activeCategory === "All" ? "border-emerald-400 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.16)]" : "border-emerald-950/5 shadow-[0_12px_30px_rgba(15,23,42,.07)] hover:shadow-[0_22px_44px_rgba(15,23,42,.13)]"} bg-gradient-to-br from-[#173f2c] via-[#205a3b] to-[#8aaa56]"}>
+              <span className="absolute -right-10 -top-10 h-40 w-40 rounded-full border border-white/15 bg-white/5" /><span className="absolute -bottom-16 -left-8 h-48 w-48 rounded-full border border-white/10" />
+              <span className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-sm text-white backdrop-blur">✳</span>
+              <div className="relative flex h-full min-h-[190px] flex-col justify-between p-4 text-white sm:min-h-[220px] sm:p-5">
+                <span className="grid h-16 w-16 place-items-center rounded-[22px] border border-white/15 bg-white/10 text-4xl shadow-inner backdrop-blur transition-transform duration-500 group-hover:scale-110">🛍️</span>
+                <span><span className="mb-1 block text-[9px] font-bold uppercase tracking-[.2em] text-lime-200">The complete store</span><span className="block text-lg font-black tracking-tight">All products</span><span className="mt-1 block text-[10px] font-medium text-white/75">{availableProducts.length} everyday essentials <span className="ml-1">↗</span></span></span>
               </div>
-              <div className="flex items-center justify-between gap-2"><span className="text-xs font-black text-slate-900">All products</span><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-700 text-xs font-black text-white">↗</span></div>
-              <p className="mt-1 text-[10px] font-medium text-slate-500">{availableProducts.length} items to explore</p>
             </button>
             {categories.map((category, index) => {
               const visual = visualFor(category.name);
-              const tones = ["from-[#edf7eb] to-[#f8fbf4]", "from-[#eff5fb] to-[#f8fbff]", "from-[#fff3e8] to-[#fffaf4]", "from-[#f1f0fb] to-[#faf9ff]", "from-[#fff5e8] to-[#fffdf7]", "from-[#fceef1] to-[#fff9fa]"];
               const selected = activeCategory === category._id;
               const count = products.filter((product) => (product.categoryId || []).some((entry) => String(typeof entry === "object" ? entry?._id : entry) === String(category._id))).length;
               const categoryImage = categoryImageFor(category);
-              return <button key={category._id} type="button" aria-pressed={selected} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className={`group relative overflow-hidden rounded-[24px] border p-3 text-left transition-all duration-300 hover:-translate-y-1 sm:rounded-[28px] sm:p-4 ${selected ? "border-emerald-500 bg-emerald-50 shadow-[0_14px_32px_rgba(22,107,59,.14)] ring-2 ring-emerald-100" : "border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,.05)] hover:border-emerald-200 hover:shadow-[0_18px_36px_rgba(15,23,42,.10)]"}`}>
-                <div className={`relative mb-3 grid aspect-[1.35/1] place-items-center overflow-hidden rounded-[19px] bg-gradient-to-br ${tones[index % tones.length]}`}>
-                  <span className="absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/60 blur-xl" />
-                  {categoryImage ? <img src={categoryImage} alt={category.name} loading="lazy" className="relative h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <span className="relative text-5xl transition duration-500 group-hover:scale-110" aria-hidden="true">{visual.emoji}</span>}
-                  <span className="absolute bottom-2 left-2 rounded-full border border-white/80 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold text-slate-700 backdrop-blur">{count} ITEMS</span>
-                  {selected && <span className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-emerald-700 text-xs font-black text-white shadow-lg">✓</span>}
+              const gradients = ["from-emerald-100 to-lime-50", "from-sky-100 to-indigo-50", "from-orange-100 to-amber-50", "from-violet-100 to-fuchsia-50", "from-rose-100 to-pink-50", "from-yellow-100 to-lime-50"];
+              return <button key={category._id} type="button" aria-pressed={selected} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className={`group relative min-h-[190px] overflow-hidden rounded-[26px] border bg-white text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] ${selected ? "border-emerald-500 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.15)]" : "border-slate-100 shadow-[0_12px_30px_rgba(15,23,42,.06)] hover:border-emerald-200 hover:shadow-[0_22px_44px_rgba(15,23,42,.12)]"}`}>
+                <div className={`absolute inset-0 bg-gradient-to-br ${gradients[index % gradients.length]}`}>
+                  {categoryImage ? <img src={categoryImage} alt={category.name} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-110" /> : <div className="grid h-full w-full place-items-center"><span className="text-7xl opacity-80 transition duration-500 group-hover:scale-110">{visual.emoji}</span></div>}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#10251b]/90 via-[#10251b]/10 to-black/5" />
                 </div>
-                <div className="flex items-center justify-between gap-2"><span className="line-clamp-1 text-xs font-black text-slate-900">{category.name}</span><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black transition ${selected ? "bg-emerald-700 text-white" : "bg-emerald-50 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white"}`}>↗</span></div>
-                <p className="mt-1 text-[10px] font-medium text-slate-500">{selected ? "Currently selected" : "Explore collection"}</p>
+                <span className="absolute left-3 top-3 rounded-full border border-white/40 bg-white/85 px-2.5 py-1 text-[9px] font-black tracking-wide text-slate-800 shadow-sm backdrop-blur">{String(index + 1).padStart(2, "0")} / COLLECTION</span>
+                {selected && <span className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-sm font-black text-white shadow-lg">✓</span>}
+                <span className="absolute bottom-0 left-0 right-0 p-4 text-white sm:p-5">
+                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-[.16em] text-lime-200">{count} {count === 1 ? "product" : "products"}</span>
+                  <span className="flex items-end justify-between gap-2"><span className="line-clamp-2 text-base font-black leading-tight tracking-tight sm:text-lg">{category.name}</span><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/35 text-sm transition group-hover:translate-x-1 ${selected ? "bg-emerald-500 text-white" : "bg-white/15 text-white backdrop-blur"}`}>↗</span></span>
+                  <span className="mt-1 block text-[9px] font-semibold text-white/75">{selected ? "Collection selected" : "Explore collection"}</span>
+                </span>
               </button>;
             })}
-          </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-7 text-center text-sm text-slate-500">Categories added by your store admin will appear here.</div>}
+          </div> : <div className="rounded-[26px] border border-dashed border-slate-200 bg-white px-5 py-10 text-center"><span className="text-3xl">🧺</span><p className="mt-2 text-sm font-bold text-slate-800">Your collections are being prepared</p><p className="mt-1 text-xs text-slate-500">Categories added by your store admin will appear here.</p></div>}
         </section>
 
         <section id="fresh-arrivals" className="scroll-mt-36 py-8 sm:py-10">
