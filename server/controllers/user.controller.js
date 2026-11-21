@@ -359,7 +359,10 @@ export async function updateUserDetails(request,response){
 //forgot password not login
 export async function forgotPasswordController(request,response) {
     try {
-        const { email } = request.body 
+        const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : ''
+        if (!email) {
+            return response.status(400).json({ message: 'Email is required', error: true, success: false })
+        }
 
         const user = await UserModel.findOne({ email })
 
@@ -382,7 +385,7 @@ export async function forgotPasswordController(request,response) {
 
         await sendEmail({
             sendTo : email,
-            subject : "Forgot password from Binkeyit",
+            subject : "Reset your PrimeCommerce password",
             html : forgotPasswordTemplate({
                 name : user.name,
                 otp : otp
