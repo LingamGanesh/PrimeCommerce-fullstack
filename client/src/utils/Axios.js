@@ -49,7 +49,11 @@ const refreshAccessToken = async (refreshToken) => {
 
 // ================= RESPONSE INTERCEPTOR =================
 Axios.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const successMessage = response.config?.toastSuccess;
+        if (successMessage) toast.success(successMessage);
+        return response;
+    },
     async (error) => {
         const originalRequest = error.config || {};
 
