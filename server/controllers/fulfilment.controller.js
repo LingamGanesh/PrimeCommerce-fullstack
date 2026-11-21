@@ -80,34 +80,79 @@ export async function updateRiderLocation(req, res) {
 export async function verifyDeliveryOtp(req, res) {
   try {
     const { otp } = req.body || {};
-    if (!mongoose.isValidObjectId(req.params.id) || !/^\d{6}$/.test(String(otp || ""))) {
+    if (!mongoose.isValidObjectId(req.params.id) || !/^\\d{6}$/.test(String(otp || ""))) {
       return res.status(400).json({ success: false, message: "Enter the customer's 6-digit delivery OTP" });
     }
-    const order = await OrderModel.findOne({
-      _id: req.params.id, riderId: req.userId, delivery_status: "out_for_delivery"
-    }).select("+deliveryOtpHash +deliveryOtpExpiresAt +deliveryOtpAttempts");
-    if (!order) return res.status(404).json({ success: false, message: "Active delivery assigned to you was not found" });
-    if (!order.deliveryOtpHash || !order.deliveryOtpExpiresAt || order.deliveryOtpExpiresAt <= new Date()) {
-      return res.status(409).json({ success: false, message: "Customer OTP is missing or expired. Ask the customer to generate a new code." });
+
+    const now = new Date();
+    const submittedHash = createHash("sha256").update(String(otp)).digest("hex");
+    const activeDelivery = {
+      _id: req.params.id,
+      riderId: req.userId,
+      delivery_status: "out_for_delivery",
+      deliveryOtpHash: { $exists: true, $nin: [null, ""] },
+      deliveryOtpExpiresAt: { $gt: now },
+      deliveryOtpAttempts: { $lt: 5 }
+    };
+
+    // Complete delivery and consume the OTP in one atomic write. Concurrent
+    // requests cannot both complete the same order.
+    const delivered = await OrderModel.findOneAndUpdate(
+      { ...activeDelivery, deliveryOtpHash: submittedHash },
+      {
+        $set: {
+          delivery_status: "delivered",
+          deliveredAt: now,
+          riderLocation: { lat: null, lng: null, updatedAt: null },
+          deliveryOtpHash: null,
+          deliveryOtpExpiresAt: null,
+          deliveryOtpAttempts: 0
+        }
+      },
+      { new: true }
+    );
+
+    if (delivered) {
+      return res.json({
+        success: true,
+        message: "Delivery verified and marked delivered",
+        data: { orderId: delivered.orderId, deliveryStatus: delivered.delivery_status, deliveredAt: delivered.deliveredAt }
+      });
     }
-    if (order.deliveryOtpAttempts >= 5) {
+
+    // Count an incorrect code atomically, only while the same delivery and
+    // unexpired OTP are still active. This prevents parallel requests from
+    // bypassing the five-attempt limit.
+    const failedAttempt = await OrderModel.findOneAndUpdate(
+      { ...activeDelivery, deliveryOtpHash: { $ne: submittedHash } },
+      { $inc: { deliveryOtpAttempts: 1 } },
+      { new: true, projection: { deliveryOtpAttempts: 1 } }
+    );
+
+    if (failedAttempt) {
+      const remaining = Math.max(0, 5 - failedAttempt.deliveryOtpAttempts);
+      return res.status(400).json({
+        success: false,
+        message: remaining
+          ? `Incorrect OTP. ${remaining} attempts remaining.`
+          : "Too many incorrect attempts. Ask the customer to generate a new OTP."
+      });
+    }
+
+    const currentOrder = await OrderModel.findOne({
+      _id: req.params.id,
+      riderId: req.userId,
+      delivery_status: "out_for_delivery"
+    }).select("+deliveryOtpHash +deliveryOtpExpiresAt +deliveryOtpAttempts").lean();
+
+    if (!currentOrder) {
+      return res.status(409).json({ success: false, message: "Active delivery assigned to you was not found or has already been completed" });
+    }
+    if (currentOrder.deliveryOtpAttempts >= 5) {
       return res.status(429).json({ success: false, message: "Too many incorrect attempts. Ask the customer to generate a new OTP." });
     }
-    const submittedHash = createHash("sha256").update(String(otp)).digest();
-    const savedHash = Buffer.from(order.deliveryOtpHash, "hex");
-    const matches = savedHash.length === submittedHash.length && timingSafeEqual(savedHash, submittedHash);
-    if (!matches) {
-      order.deliveryOtpAttempts += 1;
-      await order.save();
-      return res.status(400).json({ success: false, message: `Incorrect OTP. ${5 - order.deliveryOtpAttempts} attempts remaining.` });
-    }
-    order.delivery_status = "delivered";
-    order.deliveredAt = new Date();
-    order.riderLocation = { lat: null, lng: null, updatedAt: null };
-    order.deliveryOtpHash = null;
-    order.deliveryOtpExpiresAt = null;
-    order.deliveryOtpAttempts = 0;
-    await order.save();
-    return res.json({ success: true, message: "Delivery verified and marked delivered", data: { orderId: order.orderId, deliveryStatus: order.delivery_status, deliveredAt: order.deliveredAt } });
-  } catch { return res.status(500).json({ success: false, message: "Unable to verify delivery OTP" }); }
+    return res.status(409).json({ success: false, message: "Customer OTP is missing or expired. Ask the customer to generate a new code." });
+  } catch {
+    return res.status(500).json({ success: false, message: "Unable to verify delivery OTP" });
+  }
 }
