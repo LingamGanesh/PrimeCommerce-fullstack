@@ -33,7 +33,10 @@ const productSchema = new mongoose.Schema(
     stock: {
       type: Number,
       default: 0,
+      min: 0,
     },
+    // Temporary idempotency keys used while an order stock release is in progress.
+    inventoryReleaseKeys: { type: [String], default: [], select: false },
     price: {
       type: Number,
       required: [true, "Price is required"],
