@@ -7,12 +7,13 @@ const publicCartItem = (row) => {
   if (!product) return null;
   const discount = Math.max(0, Math.min(100, Number(product.discount) || 0));
   const price = Math.max(0, Number(product.price) || 0);
-  const unitPrice = Math.round(price * 100) / 100;
+  const baseUnitPrice = Math.round(price * 100) / 100;
+  const unitPrice = Number.isFinite(row.unitPrice) ? row.unitPrice : baseUnitPrice;
   return {
     cartItemId: row._id.toString(),
     product: {
       id: product._id.toString(), name: product.name, image: product.image || [],
-      unit: row.variantLabel || product.unit, variantLabel: row.variantLabel || product.unit, price: Number.isFinite(row.unitPrice) ? row.unitPrice : unitPrice, mrp: price, discountPercent: discount,
+      unit: row.variantLabel || product.unit, variantLabel: row.variantLabel || product.unit, price: unitPrice, mrp: price, discountPercent: discount,
       stock: Number(product.stock) || 0, publish: product.publish
     },
     quantity: row.quantity,
