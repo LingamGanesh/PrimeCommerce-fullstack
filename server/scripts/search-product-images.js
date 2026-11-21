@@ -69,9 +69,13 @@ async function main() {
       try {
         const result = await searchProductImage(product.name);
         if (!result) {
+          await ProductModel.updateOne(
+            { _id: product._id },
+            { $pull: { image: /^https:\/\/picsum\.photos\//i } }
+          );
           unmatched += 1;
-          report.push({ product: product.name, status: "NO_CONFIDENT_PRODUCT_TITLE_MATCH", imagePreserved: true });
-          console.log(`No confident product photo: ${product.name} (kept current image)`);
+          report.push({ product: product.name, status: "NO_CONFIDENT_PRODUCT_TITLE_MATCH", randomPlaceholderRemoved: true });
+          console.log("No confident product photo: " + product.name + " (removed random Picsum placeholder; no unrelated image assigned)");
         } else {
           const info = result.info;
           const metadata = info.extmetadata || {};
