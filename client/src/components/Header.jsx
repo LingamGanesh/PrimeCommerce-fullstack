@@ -23,7 +23,7 @@ const Header = () => {
 
   useEffect(() => {
     let active = true;
-    if (!user?._id) { setCartCount(0); return () => { active = false; }; }
+    if (!user?._id) return () => { active = false; };
     Axios.get("/api/v1/cart")
       .then((response) => { if (active) setCartCount(response.data?.data?.itemCount || 0); })
       .catch(() => { if (active) setCartCount(0); });
