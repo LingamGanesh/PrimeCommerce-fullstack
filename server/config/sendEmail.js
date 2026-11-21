@@ -1,26 +1,43 @@
 import { Resend } from 'resend';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
-if (!process.env.RESEND_API) {
-  console.error("Please provide RESEND_API in your .env file");
-  process.exit(1);
+let resendClient;
+
+function getResendClient() {
+  if (!process.env.RESEND_API) {
+    throw new Error('Email service is not configured. Please set RESEND_API in the server .env file.');
+  }
+
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API);
+  }
+
+  return resendClient;
 }
 
-const resend = new Resend(process.env.RESEND_API);
-
 const sendEmail = async ({ sendTo, subject, html }) => {
+  if (!sendTo || !subject || !html) {
+    throw new Error('sendEmail requires sendTo, subject, and html.');
+  }
+
   try {
+    const resend = getResendClient();
     const data = await resend.emails.send({
-      from: 'Binkeyit <onboarding@resend.dev>',
+      from: process.env.EMAIL_FROM || 'PrimeCommerce <onboarding@resend.dev>',
       to: sendTo,
       subject,
       html,
     });
-    console.log('Email sent successfully:', data);
+
+    if (data?.error) {
+      throw new Error(data.error.message || 'Email provider rejected the message.');
+    }
+
     return data;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error sending email:', error.message || error);
     throw error;
   }
 };
