@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import OrderModel from "../models/order.model.js";
 
 function serialize(order) {
