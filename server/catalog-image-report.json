@@ -1,0 +1,552 @@
+[
+  {
+    "type": "product",
+    "name": "Royal Gala Apples",
+    "status": "ERROR - existing image preserved: Openverse search failed (401) for \"Royal Gala Apples\""
+  },
+  {
+    "type": "product",
+    "name": "Alphonso Mango",
+    "status": "ERROR - existing image preserved: Openverse search failed (401) for \"Alphonso Mango\""
+  },
+  {
+    "type": "product",
+    "name": "Robusta Bananas",
+    "status": "ERROR - existing image preserved: Openverse search failed (401) for \"Robusta Bananas\""
+  },
+  {
+    "type": "product",
+    "name": "Ruby Pomegranate",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Ruby Pomegranate\""
+  },
+  {
+    "type": "product",
+    "name": "Green Seedless Grapes",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Green Seedless Grapes\""
+  },
+  {
+    "type": "product",
+    "name": "Nagpur Oranges",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Nagpur Oranges\""
+  },
+  {
+    "type": "product",
+    "name": "Thai Guava",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Thai Guava\""
+  },
+  {
+    "type": "product",
+    "name": "Premium Papaya",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Premium Papaya\""
+  },
+  {
+    "type": "product",
+    "name": "Fresh Strawberries",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fresh Strawberries\""
+  },
+  {
+    "type": "product",
+    "name": "Tender Coconut",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Tender Coconut\""
+  },
+  {
+    "type": "product",
+    "name": "Hybrid Tomatoes",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Hybrid Tomatoes\""
+  },
+  {
+    "type": "product",
+    "name": "Red Onions",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Red Onions\""
+  },
+  {
+    "type": "product",
+    "name": "Baby Potatoes",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Baby Potatoes\""
+  },
+  {
+    "type": "product",
+    "name": "Green Capsicum",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Green Capsicum\""
+  },
+  {
+    "type": "product",
+    "name": "English Cucumber",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"English Cucumber\""
+  },
+  {
+    "type": "product",
+    "name": "Ooty Carrots",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Ooty Carrots\""
+  },
+  {
+    "type": "product",
+    "name": "Baby Spinach",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Baby Spinach\""
+  },
+  {
+    "type": "product",
+    "name": "Cauliflower",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cauliflower\""
+  },
+  {
+    "type": "product",
+    "name": "Green Chillies",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Green Chillies\""
+  },
+  {
+    "type": "product",
+    "name": "Fresh Coriander",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fresh Coriander\""
+  },
+  {
+    "type": "product",
+    "name": "Farm Toned Milk",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Farm Toned Milk\""
+  },
+  {
+    "type": "product",
+    "name": "A2 Cow Milk",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"A2 Cow Milk\""
+  },
+  {
+    "type": "product",
+    "name": "Greek Yogurt",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Greek Yogurt\""
+  },
+  {
+    "type": "product",
+    "name": "Malai Paneer",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Malai Paneer\""
+  },
+  {
+    "type": "product",
+    "name": "Salted Butter",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Salted Butter\""
+  },
+  {
+    "type": "product",
+    "name": "Cheddar Cheese Slices",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cheddar Cheese Slices\""
+  },
+  {
+    "type": "product",
+    "name": "Country Eggs",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Country Eggs\""
+  },
+  {
+    "type": "product",
+    "name": "Fresh Cream",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fresh Cream\""
+  },
+  {
+    "type": "product",
+    "name": "Probiotic Curd",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Probiotic Curd\""
+  },
+  {
+    "type": "product",
+    "name": "Mozzarella Cheese",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Mozzarella Cheese\""
+  },
+  {
+    "type": "product",
+    "name": "Whole Wheat Bread",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Whole Wheat Bread\""
+  },
+  {
+    "type": "product",
+    "name": "Multigrain Loaf",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Multigrain Loaf\""
+  },
+  {
+    "type": "product",
+    "name": "Milk Pav",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Milk Pav\""
+  },
+  {
+    "type": "product",
+    "name": "Brioche Burger Buns",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Brioche Burger Buns\""
+  },
+  {
+    "type": "product",
+    "name": "Butter Croissant",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Butter Croissant\""
+  },
+  {
+    "type": "product",
+    "name": "Chocolate Muffin",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Chocolate Muffin\""
+  },
+  {
+    "type": "product",
+    "name": "Jeera Rusk",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Jeera Rusk\""
+  },
+  {
+    "type": "product",
+    "name": "Garlic Breadsticks",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Garlic Breadsticks\""
+  },
+  {
+    "type": "product",
+    "name": "Cinnamon Roll",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cinnamon Roll\""
+  },
+  {
+    "type": "product",
+    "name": "Fruit Cake",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fruit Cake\""
+  },
+  {
+    "type": "product",
+    "name": "Classic Basmati Rice",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Classic Basmati Rice\""
+  },
+  {
+    "type": "product",
+    "name": "Sona Masoori Rice",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Sona Masoori Rice\""
+  },
+  {
+    "type": "product",
+    "name": "Organic Brown Rice",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Organic Brown Rice\""
+  },
+  {
+    "type": "product",
+    "name": "Stoneground Wheat Atta",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Stoneground Wheat Atta\""
+  },
+  {
+    "type": "product",
+    "name": "Multigrain Atta",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Multigrain Atta\""
+  },
+  {
+    "type": "product",
+    "name": "Premium Toor Dal",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Premium Toor Dal\""
+  },
+  {
+    "type": "product",
+    "name": "Split Moong Dal",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Split Moong Dal\""
+  },
+  {
+    "type": "product",
+    "name": "Kabuli Chana",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Kabuli Chana\""
+  },
+  {
+    "type": "product",
+    "name": "Masoor Dal",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Masoor Dal\""
+  },
+  {
+    "type": "product",
+    "name": "Cold Pressed Groundnut Oil",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cold Pressed Groundnut Oil\""
+  },
+  {
+    "type": "product",
+    "name": "Classic Salted Chips",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Classic Salted Chips\""
+  },
+  {
+    "type": "product",
+    "name": "Peri Peri Potato Wafers",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Peri Peri Potato Wafers\""
+  },
+  {
+    "type": "product",
+    "name": "Masala Banana Chips",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Masala Banana Chips\""
+  },
+  {
+    "type": "product",
+    "name": "Roasted Makhana",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Roasted Makhana\""
+  },
+  {
+    "type": "product",
+    "name": "Baked Millet Puffs",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Baked Millet Puffs\""
+  },
+  {
+    "type": "product",
+    "name": "Kara Boondi",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Kara Boondi\""
+  },
+  {
+    "type": "product",
+    "name": "Peanut Chikki",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Peanut Chikki\""
+  },
+  {
+    "type": "product",
+    "name": "Cheese Nachos",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cheese Nachos\""
+  },
+  {
+    "type": "product",
+    "name": "Masala Peanuts",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Masala Peanuts\""
+  },
+  {
+    "type": "product",
+    "name": "Wholegrain Crackers",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Wholegrain Crackers\""
+  },
+  {
+    "type": "product",
+    "name": "Fresh Orange Juice",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fresh Orange Juice\""
+  },
+  {
+    "type": "product",
+    "name": "Tender Coconut Water",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Tender Coconut Water\""
+  },
+  {
+    "type": "product",
+    "name": "Mango Nectar",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Mango Nectar\""
+  },
+  {
+    "type": "product",
+    "name": "Sparkling Lime Water",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Sparkling Lime Water\""
+  },
+  {
+    "type": "product",
+    "name": "Cold Coffee",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cold Coffee\""
+  },
+  {
+    "type": "product",
+    "name": "Masala Buttermilk",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Masala Buttermilk\""
+  },
+  {
+    "type": "product",
+    "name": "Pomegranate Juice",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Pomegranate Juice\""
+  },
+  {
+    "type": "product",
+    "name": "Green Tea",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Green Tea\""
+  },
+  {
+    "type": "product",
+    "name": "Filter Coffee Decoction",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Filter Coffee Decoction\""
+  },
+  {
+    "type": "product",
+    "name": "Almond Drink",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Almond Drink\""
+  },
+  {
+    "type": "product",
+    "name": "Aloe Vera Body Wash",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Aloe Vera Body Wash\""
+  },
+  {
+    "type": "product",
+    "name": "Nourishing Shampoo",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Nourishing Shampoo\""
+  },
+  {
+    "type": "product",
+    "name": "Herbal Conditioner",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Herbal Conditioner\""
+  },
+  {
+    "type": "product",
+    "name": "Neem Face Wash",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Neem Face Wash\""
+  },
+  {
+    "type": "product",
+    "name": "Vitamin C Face Serum",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Vitamin C Face Serum\""
+  },
+  {
+    "type": "product",
+    "name": "Daily Moisturizer",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Daily Moisturizer\""
+  },
+  {
+    "type": "product",
+    "name": "Cocoa Body Lotion",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cocoa Body Lotion\""
+  },
+  {
+    "type": "product",
+    "name": "Mint Toothpaste",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Mint Toothpaste\""
+  },
+  {
+    "type": "product",
+    "name": "Soft Bristle Toothbrush",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Soft Bristle Toothbrush\""
+  },
+  {
+    "type": "product",
+    "name": "Rose Hand Cream",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Rose Hand Cream\""
+  },
+  {
+    "type": "product",
+    "name": "Lemon Dishwash Gel",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Lemon Dishwash Gel\""
+  },
+  {
+    "type": "product",
+    "name": "Liquid Laundry Detergent",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Liquid Laundry Detergent\""
+  },
+  {
+    "type": "product",
+    "name": "Floor Cleaner",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Floor Cleaner\""
+  },
+  {
+    "type": "product",
+    "name": "Bathroom Cleaning Spray",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Bathroom Cleaning Spray\""
+  },
+  {
+    "type": "product",
+    "name": "Microfiber Cleaning Cloth",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Microfiber Cleaning Cloth\""
+  },
+  {
+    "type": "product",
+    "name": "Kitchen Paper Towels",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Kitchen Paper Towels\""
+  },
+  {
+    "type": "product",
+    "name": "Garbage Bags",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Garbage Bags\""
+  },
+  {
+    "type": "product",
+    "name": "Fabric Conditioner",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fabric Conditioner\""
+  },
+  {
+    "type": "product",
+    "name": "Steel Scrub Pads",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Steel Scrub Pads\""
+  },
+  {
+    "type": "product",
+    "name": "Handwash Refill",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Handwash Refill\""
+  },
+  {
+    "type": "product",
+    "name": "Frozen Green Peas",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Frozen Green Peas\""
+  },
+  {
+    "type": "product",
+    "name": "Sweet Corn Kernels",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Sweet Corn Kernels\""
+  },
+  {
+    "type": "product",
+    "name": "Veggie Burger Patties",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Veggie Burger Patties\""
+  },
+  {
+    "type": "product",
+    "name": "Paneer Tikka Bites",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Paneer Tikka Bites\""
+  },
+  {
+    "type": "product",
+    "name": "Classic French Fries",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Classic French Fries\""
+  },
+  {
+    "type": "product",
+    "name": "Mixed Vegetable Nuggets",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Mixed Vegetable Nuggets\""
+  },
+  {
+    "type": "product",
+    "name": "Whole Wheat Paratha",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Whole Wheat Paratha\""
+  },
+  {
+    "type": "product",
+    "name": "Mini Samosas",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Mini Samosas\""
+  },
+  {
+    "type": "product",
+    "name": "Hara Bhara Kebab",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Hara Bhara Kebab\""
+  },
+  {
+    "type": "product",
+    "name": "Cheese Garlic Bread",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Cheese Garlic Bread\""
+  },
+  {
+    "type": "category",
+    "name": "Fresh Fruits",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Fresh Fruits\""
+  },
+  {
+    "type": "category",
+    "name": "Farm Vegetables",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Farm Vegetables\""
+  },
+  {
+    "type": "category",
+    "name": "Dairy & Eggs",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Dairy & Eggs\""
+  },
+  {
+    "type": "category",
+    "name": "Bakery & Breads",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Bakery & Breads\""
+  },
+  {
+    "type": "category",
+    "name": "Rice, Atta & Pulses",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Rice, Atta & Pulses\""
+  },
+  {
+    "type": "category",
+    "name": "Snacks & Munchies",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Snacks & Munchies\""
+  },
+  {
+    "type": "category",
+    "name": "Beverages & Juices",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Beverages & Juices\""
+  },
+  {
+    "type": "category",
+    "name": "Personal Care",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Personal Care\""
+  },
+  {
+    "type": "category",
+    "name": "Home & Cleaning",
+    "status": "ERROR - existing image preserved: Openverse search failed (429) for \"Home & Cleaning\""
+  },
+  {
+    "type": "category",
+    "name": "Frozen & Ready to Cook",
+    "status": "ERROR - existing image preserved: No searchable product keywords found for \"Frozen & Ready to Cook\""
+  }
+]
