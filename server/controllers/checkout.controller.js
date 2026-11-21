@@ -51,6 +51,7 @@ export async function createCashOnDeliveryOrder(req, res) {
       product_details: JSON.stringify(orderItems),
       payment_id: "",
       payment_status: "pending",
+      paymentMethod: "COD",
       delivery_address: {
         address_line: address.address_line, city: address.city, state: address.state,
         pincode: address.pincode, country: address.country, mobile: address.mobile
