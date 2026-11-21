@@ -7,6 +7,8 @@ const cartProductSchema = new mongoose.Schema(
       ref: "Product", // Reference to Product collection
       required: true,
     },
+    variantLabel: { type: String, trim: true, default: "" },
+    unitPrice: { type: Number, min: 0, default: null },
     quantity: {
       type: Number,
       required: [true, "Quantity is required"],
