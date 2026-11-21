@@ -14,7 +14,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "node --test",
-    "seed:catalog": "node scripts/seed-catalog.js"
+    "seed:catalog": "node scripts/seed-catalog.js",
+    "catalog:replace": "node scripts/replace-catalog.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
