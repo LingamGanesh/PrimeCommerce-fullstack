@@ -112,6 +112,7 @@ export async function verifyRazorpayPayment(req, res) {
     }
     if (payment.order_id !== gatewayOrderId || payment.status !== "captured" || Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100) || payment.currency !== "INR") return res.status(409).json({ success: false, message: "Payment is not captured yet. Please wait and retry verification." });
     if (payment.status === "captured") {
+      order.paymentMethod = payment.method === "upi" ? "UPI" : "RAZORPAY";
       if (order.payment_status === "expired" || order.inventoryReleased) { order.payment_status = "paid_review_required"; order.payment_id = paymentId; await order.save(); return res.status(200).json({ success: true, reviewRequired: true, message: "Payment received after stock reservation expired. Support will review this order." }); }
       order.payment_status = "paid"; order.payment_id = paymentId; await order.save();
       await CartProductModel.deleteMany({ userId: req.userId });
@@ -152,7 +153,7 @@ export async function handleRazorpayWebhook(req, res) {
       const captured = event.event === "payment.captured" ? payment?.status === "captured" : gatewayOrder?.status === "paid" || payment?.status === "captured";
       if (!paidEntity || !amountIsValid || !captured) return res.status(400).json({ success: false, message: "Webhook payment amount, currency or capture state is invalid" });
       if (order.payment_status === "expired" || order.inventoryReleased) {
-        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id } });
+        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id, ...(payment?.method === "upi" ? { paymentMethod: "UPI" } : {}) } });
       } else {
         await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
         await CartProductModel.deleteMany({ userId: order.userId });
