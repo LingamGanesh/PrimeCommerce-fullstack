@@ -1,16 +1,16 @@
-# React + Vite
+# PrimeCommerce storefront
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite 7 customer storefront for the PrimeCommerce quick-commerce application.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Install dependencies: `npm ci`
+2. Start the Express API from the repository's `server/` directory on port `5000`.
+3. Start the storefront: `npm run dev` (Vite proxies `/api` requests to `http://localhost:5000`).
 
-## React Compiler
+For a deployed API, set `VITE_API_BASE_URL` to its HTTPS origin before building. Leave it empty for local development. Never put private API keys or secrets in a `VITE_*` variable.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quality checks
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `npm run lint`
+- `npm run build`

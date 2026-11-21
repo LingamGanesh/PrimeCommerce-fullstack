@@ -1,6 +1,6 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Axios from "../utils/Axios";
 import SummaryApi from "../common/SummaryApi";
 import {logout} from '../store/UserSlice'
@@ -10,22 +10,20 @@ import { FaExternalLinkAlt } from "react-icons/fa";
 export const Usermenu = () => {
   const user = useSelector((state) => state.user);
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
-  const handleLogout = async() =>{
-    try{
-        const response = await Axios({
-            ...SummaryApi.logout
-        })
-        if(response.data.success){
-            dispatch(logout())
-            localStorage.clear()
-            toast.success(response.data.message)
-        }
-    }catch(error){
-            AxiosToastError(error)
+  const handleLogout = async () => {
+    try {
+      const response = await Axios({ ...SummaryApi.logout });
+      toast.success(response.data?.message || "Logged out");
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      dispatch(logout());
+      localStorage.clear();
+      navigate("/login", { replace: true });
     }
-
-  }
+  };
 
   return (
     <div className="w-72 bg-white shadow-xl rounded-2xl p-4 border border-gray-100">

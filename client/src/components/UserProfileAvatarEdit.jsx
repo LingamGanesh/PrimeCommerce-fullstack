@@ -29,7 +29,6 @@ const UserProfileAvatarEdit = ({ close }) => {
         data: formData,
       });
 
-      console.log("UPLOAD RESPONSE:", response.data);
 
       const url =
         response?.data?.data?.avatar ||
@@ -71,6 +70,7 @@ const UserProfileAvatarEdit = ({ close }) => {
           {loading ? "Uploading..." : "Choose Image"}
           <input
             type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
             onChange={handleUploadAvatar}
           />

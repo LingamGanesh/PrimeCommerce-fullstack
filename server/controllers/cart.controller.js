@@ -12,7 +12,9 @@ const publicCartItem = (row) => {
     cartItemId: row._id.toString(),
     product: {
       id: product._id.toString(), name: product.name, image: product.image || [],
-      unit: product.unit, price: unitPrice, mrp: price, discountPercent: discount,
+      unit: product.unit, price: unitPrice,
+      mrp: discount > 0 && discount < 100 ? Math.round((price / (1 - discount / 100)) * 100) / 100 : price,
+      discountPercent: discount,
       stock: Number(product.stock) || 0, publish: product.publish
     },
     quantity: row.quantity,
@@ -40,14 +42,40 @@ export async function addCartItem(req, res) {
     if (!mongoose.isValidObjectId(productId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
       return res.status(400).json({ success: false, error: true, message: "Provide a valid product and quantity (1–50)" });
     }
+
     const product = await ProductModel.findOne({ _id: productId, publish: true }).select("stock");
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product is unavailable" });
-    const existing = await CartProductModel.findOne({ userId: req.userId, productId });
-    const nextQuantity = (existing?.quantity || 0) + quantity;
-    if (nextQuantity > product.stock) return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
-    const row = existing
-      ? await CartProductModel.findByIdAndUpdate(existing._id, { quantity: nextQuantity }, { new: true })
-      : await CartProductModel.create({ userId: req.userId, productId, quantity });
+    if (quantity > product.stock) {
+      return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
+    }
+
+    // First atomically increment an existing row without exceeding the cart cap.
+    const maxAdditionalQuantity = Math.min(50 - quantity, Number(product.stock) - quantity);
+    const filter = { userId: req.userId, productId, quantity: { $lte: maxAdditionalQuantity } };
+    let row = await CartProductModel.findOneAndUpdate(
+      filter,
+      { $inc: { quantity } },
+      { new: true, runValidators: true }
+    );
+
+    if (!row) {
+      // Create only when no row exists. The unique index resolves simultaneous
+      // first-add requests; the loser retries as an atomic increment.
+      try {
+        row = await CartProductModel.create({ userId: req.userId, productId, quantity });
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        row = await CartProductModel.findOneAndUpdate(
+          filter,
+          { $inc: { quantity } },
+          { new: true, runValidators: true }
+        );
+      }
+    }
+
+    if (!row) {
+      return res.status(409).json({ success: false, error: true, message: "Cart quantity cannot exceed available stock or 50 items" });
+    }
     await row.populate({ path: "productId", select: "name image unit price discount stock publish" });
     return res.status(200).json({ success: true, error: false, message: "Cart updated", data: publicCartItem(row) });
   } catch {

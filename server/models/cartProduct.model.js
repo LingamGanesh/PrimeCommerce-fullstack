@@ -15,14 +15,20 @@ const cartProductSchema = new mongoose.Schema(
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to User collection
+      ref: "User",
       required: true,
     },
+    variantId: { type: mongoose.Schema.Types.ObjectId, ref: "Variant", default: null },
+    storeId: { type: mongoose.Schema.Types.ObjectId, ref: "Store", default: null },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
   }
 );
+
+// A user can have only one cart row for a given product. This also makes
+// concurrent add-to-cart upserts safe across multiple application instances.
+cartProductSchema.index({ userId: 1, productId: 1, variantId: 1 }, { unique: true, name: "user_product_variant_unique" });
 
 const CartProductModel = mongoose.model("CartProduct", cartProductSchema);
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Axios from "../utils/Axios";
+import loadRazorpayCheckout from "../utils/loadRazorpayCheckout";
 
 const activeTrackingStatuses = ["rider_assigned", "picked_up", "out_for_delivery"];
 const deliverySteps = [{ id: "processing", label: "Confirmed" }, { id: "picking", label: "Picking" }, { id: "packed", label: "Packed" }, { id: "rider_assigned", label: "Rider assigned" }, { id: "picked_up", label: "Picked up" }, { id: "out_for_delivery", label: "On the way" }, { id: "delivered", label: "Delivered" }];
@@ -16,6 +17,7 @@ export default function Myorders() {
   const [deliveryOtp, setDeliveryOtp] = useState(null);
   const [otpLoading, setOtpLoading] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState("");
+  const [retryingOrder, setRetryingOrder] = useState("");
 
   useEffect(() => {
     Axios.get("/api/v1/orders/mine")
@@ -58,6 +60,45 @@ export default function Myorders() {
     } finally { setOtpLoading(false); }
   };
 
+  const retryPayment = async (order) => {
+    setRetryingOrder(order.id);
+    try {
+      const Razorpay = await loadRazorpayCheckout();
+      const response = await Axios.post(`/api/v1/payments/razorpay/${order.id}/retry`);
+      const paymentOrder = response.data?.data;
+      if (!paymentOrder?.keyId || !paymentOrder?.razorpayOrderId) throw new Error("Payment retry details are incomplete");
+      const checkout = new Razorpay({
+        key: paymentOrder.keyId,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency,
+        name: "PrimeCommerce",
+        description: `Payment for order ${paymentOrder.orderId}`,
+        order_id: paymentOrder.razorpayOrderId,
+        prefill: { contact: paymentOrder.contact || "" },
+        theme: { color: "#15803d" },
+        handler: async (gatewayResponse) => {
+          try {
+            const verified = await Axios.post("/api/v1/payments/razorpay/verify", gatewayResponse);
+            toast.success(verified.data?.message || "Payment response verified");
+            const refreshed = await Axios.get("/api/v1/orders/mine");
+            setOrders(refreshed.data?.data || []);
+          } catch (error) {
+            toast.error(error.response?.data?.message || "Payment verification failed. Contact support before retrying.");
+          } finally { setRetryingOrder(""); }
+        },
+        modal: { ondismiss: () => setRetryingOrder("") }
+      });
+      checkout.on("payment.failed", (event) => {
+        toast.error(event.error?.description || "Payment attempt failed. You can retry while the reservation is active.");
+        setRetryingOrder("");
+      });
+      checkout.open();
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Unable to retry payment");
+      setRetryingOrder("");
+    }
+  };
+
   const cancelOrder = async (order) => {
     if (!window.confirm(`Cancel order ${order.orderId}? ${order.paymentMethod === "RAZORPAY" ? "A full refund will be requested." : "Reserved stock will be released."}`)) return;
     setCancellingOrder(order.id);
@@ -86,13 +127,14 @@ export default function Myorders() {
           <article key={order.id} className="rounded-2xl bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-3">
               <div><p className="text-xs text-gray-500">Order ID</p><p className="font-bold">{order.orderId}</p><p className="mt-1 text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p></div>
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold capitalize text-amber-800">{String(order.deliveryStatus || "processing").replaceAll("_", " ")}</span>
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold capitalize text-amber-800">{order.paymentStatus === "paid_review_required" ? "payment review required" : String(order.deliveryStatus || "processing").replaceAll("_", " ")}</span>
             </div>
-            {order.deliveryStatus === "cancelled" ? <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-medium text-rose-700">This order was cancelled.</p> : <div className="mt-5 rounded-xl bg-slate-50 p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="text-sm font-bold text-slate-800">Delivery progress</p><p className="text-xs font-semibold capitalize text-green-700">{String(order.deliveryStatus || "processing").replaceAll("_", " ")}</p></div><div className="grid grid-cols-4 gap-2 sm:grid-cols-7">{deliverySteps.map((step, index) => { const currentIndex = deliverySteps.findIndex(item => item.id === (order.deliveryStatus || "processing")); const complete = currentIndex >= index; return <div key={step.id} className="min-w-0"><div className={complete ? "h-1.5 rounded-full bg-green-600" : "h-1.5 rounded-full bg-slate-200"} /><p className={complete ? "mt-2 text-[10px] leading-4 font-bold text-green-800 sm:text-xs" : "mt-2 text-[10px] leading-4 text-slate-400 sm:text-xs"}>{step.label}</p></div>; })}</div></div>}
+            {order.paymentStatus === "paid_review_required" ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-bold">Payment received — order confirmation required</p><p className="mt-1">Your Razorpay payment was captured after the stock reservation expired. This order is not confirmed for delivery. Please contact support with order ID {order.orderId}; do not make another payment for this order.</p></div> : order.deliveryStatus === "cancelled" ? <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-medium text-rose-700">This order was cancelled.</p> : <div className="mt-5 rounded-xl bg-slate-50 p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="text-sm font-bold text-slate-800">Delivery progress</p><p className="text-xs font-semibold capitalize text-green-700">{String(order.deliveryStatus || "processing").replaceAll("_", " ")}</p></div><div className="grid grid-cols-4 gap-2 sm:grid-cols-7">{deliverySteps.map((step, index) => { const currentIndex = deliverySteps.findIndex(item => item.id === (order.deliveryStatus || "processing")); const complete = currentIndex >= index; return <div key={step.id} className="min-w-0"><div className={complete ? "h-1.5 rounded-full bg-green-600" : "h-1.5 rounded-full bg-slate-200"} /><p className={complete ? "mt-2 text-[10px] leading-4 font-bold text-green-800 sm:text-xs" : "mt-2 text-[10px] leading-4 text-slate-400 sm:text-xs"}>{step.label}</p></div>; })}</div></div>}
             <div className="mt-4 space-y-2">{order.items.map((item,index) => <div key={String(item.productId) + index} className="flex justify-between gap-3 text-sm"><span className="text-gray-600">{item.name} × {item.quantity}</span><strong>₹{Number(item.lineTotal || 0).toFixed(2)}</strong></div>)}</div>
-            <div className="mt-4 flex flex-wrap justify-between gap-3 border-t pt-3 text-sm"><span className="text-gray-500">{order.paymentMethod === "RAZORPAY" ? "Razorpay" : "Cash on Delivery"} · Payment {order.paymentStatus}{order.refundStatus && order.refundStatus !== "not_required" ? ` · Refund ${order.refundStatus}` : ""}</span><strong>Total ₹{Number(order.total || 0).toFixed(2)}</strong></div>
+            <div className="mt-4 flex flex-wrap justify-between gap-3 border-t pt-3 text-sm"><span className="text-gray-500">{order.paymentMethod === "RAZORPAY" ? "Razorpay" : "Cash on Delivery"} · Payment {order.paymentStatus === "paid_review_required" ? "review required" : order.paymentStatus}{order.refundStatus && order.refundStatus !== "not_required" ? ` · Refund ${order.refundStatus}` : ""}</span><strong>Total ₹{Number(order.total || 0).toFixed(2)}</strong></div>
             <p className="mt-2 text-xs text-gray-500">Deliver to: {order.address?.address_line}, {order.address?.city}, {order.address?.state} - {order.address?.pincode}</p>
-            {order.deliveryStatus === "processing" && <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-gray-500">Cancellation is available before picker assignment.</span><button disabled={cancellingOrder === order.id} onClick={() => cancelOrder(order)} className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">{cancellingOrder === order.id ? "Cancelling…" : "Cancel order"}</button></div>}
+            {order.paymentMethod === "RAZORPAY" && ["pending", "authorized"].includes(order.paymentStatus) && order.deliveryStatus === "processing" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-xs text-amber-900">Your online payment is not confirmed yet. You can retry using the existing payment reservation while it remains active.</p><button disabled={retryingOrder === order.id} onClick={() => retryPayment(order)} className="mt-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{retryingOrder === order.id ? "Opening secure checkout…" : "Retry payment"}</button></div>}
+            {order.deliveryStatus === "processing" && <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-gray-500">{order.paymentMethod === "RAZORPAY" && !["paid", "completed"].includes(order.paymentStatus) ? "Online payment is pending; cancellation becomes available after payment is confirmed." : "Cancellation is available before picker assignment."}</span>{(order.paymentMethod !== "RAZORPAY" || ["paid", "completed"].includes(order.paymentStatus)) && <button disabled={cancellingOrder === order.id} onClick={() => cancelOrder(order)} className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">{cancellingOrder === order.id ? "Cancelling…" : "Cancel order"}</button>}</div>}
             {order.refundStatus && order.refundStatus !== "not_required" && <p className="mt-2 text-xs font-medium text-indigo-700">Refund status: {order.refundStatus}{order.refundAmount ? ` · ₹${Number(order.refundAmount).toFixed(2)}` : ""}</p>}
             {activeTrackingStatuses.includes(order.deliveryStatus) && <div className="mt-4"><button onClick={() => openTracking(order.id)} className="rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">{trackingOrderId === order.id ? "Hide live tracking" : "Track delivery"}</button>
               {trackingOrderId === order.id && <div className="mt-3 rounded-xl border border-green-100 bg-green-50 p-4">

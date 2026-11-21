@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Usermenu } from "../components/Usermenu";
 import { Outlet } from "react-router-dom";
 import { FaBars } from "react-icons/fa";
+import { useSelector } from "react-redux";
 
 const Dashboard = () => {
   const [open, setOpen] = useState(false);
+  const user = useSelector((state) => state.user);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -29,7 +31,7 @@ const Dashboard = () => {
 
         {/* Right */}
         <div className="text-sm text-gray-600">
-          Welcome, <span className="font-medium">Ganesh 👋</span>
+          Welcome, <span className="font-medium">{user?.name || "there"} 👋</span>
         </div>
       </header>
 

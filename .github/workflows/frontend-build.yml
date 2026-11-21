@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feat/blinkit-inspired-design
+      - fix/full-repository-audit
   pull_request:
     branches:
       - feat/quick-commerce-foundation
+      - feat/blinkit-inspired-design
       - main
 
 jobs:
@@ -28,6 +30,11 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Report dependency advisories
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e "const a=require('/tmp/npm-audit.json'); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(name, v.severity, 'direct='+v.isDirect, 'range='+v.range, 'fix='+JSON.stringify(v.fixAvailable), 'via='+v.via.map(x => typeof x === 'string' ? x : x.title).join('; '))"
 
       - name: Run ESLint
         run: npm run lint
@@ -53,6 +60,11 @@ jobs:
 
       - name: Install backend dependencies
         run: npm ci
+
+      - name: Report dependency advisories
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e "const a=require('/tmp/npm-audit.json'); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(name, v.severity, 'direct='+v.isDirect, 'range='+v.range, 'fix='+JSON.stringify(v.fixAvailable), 'via='+v.via.map(x => typeof x === 'string' ? x : x.title).join('; '))"
 
       - name: Run backend tests
         run: npm test

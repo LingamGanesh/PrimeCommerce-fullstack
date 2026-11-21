@@ -17,17 +17,22 @@ const Header = () => {
 
   useEffect(() => {
     let active = true;
-    if (!user?._id) {
-      return () => { active = false; };
-    }
-    Axios.get("/api/v1/cart")
-      .then((response) => {
-        if (active) setCartCount(response.data?.data?.itemCount || 0);
-      })
-      .catch(() => {
-        if (active) setCartCount(0);
-      });
-    return () => { active = false; };
+    if (!user?._id) return () => { active = false; };
+    const loadCartCount = () => {
+      Axios.get("/api/v1/cart")
+        .then((response) => {
+          if (active) setCartCount(response.data?.data?.itemCount || 0);
+        })
+        .catch(() => {
+          if (active) setCartCount(0);
+        });
+    };
+    loadCartCount();
+    window.addEventListener("cart:updated", loadCartCount);
+    return () => {
+      active = false;
+      window.removeEventListener("cart:updated", loadCartCount);
+    };
   }, [user?._id, location.pathname]);
 
   return (
@@ -80,12 +85,12 @@ const Header = () => {
           <button
             type="button"
             onClick={() => navigate("/cart")}
-            aria-label={`Open cart, ${cartCount} items`}
+            aria-label={`Open cart, ${user?._id ? cartCount : 0} items`}
             className="relative flex items-center gap-2 rounded-xl bg-[#176b36] px-3 py-2.5 text-white shadow-sm transition hover:bg-[#10572b] sm:px-4"
           >
             <FaShoppingBasket className="text-lg" />
             <span className="hidden text-sm font-bold sm:inline">Cart</span>
-            {cartCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#f6c945] px-1 text-[10px] font-extrabold text-gray-900">{cartCount}</span>}
+            {user?._id && cartCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#f6c945] px-1 text-[10px] font-extrabold text-gray-900">{cartCount}</span>}
           </button>
         </div>
       </div>

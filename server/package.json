@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "seed": "node scripts/seed.js",
+    "migrate:mobile-to-string": "node scripts/migrateMobileToString.js",
+    "migrate:address-indexes": "node scripts/migrateAddressIndexes.js",
+    "audit:fix": "npm audit fix"
   },
   "keywords": [],
   "author": "",

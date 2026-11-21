@@ -14,10 +14,13 @@ const subCategorySchema = new mongoose.Schema(
     categoryId: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Category", // reference to Category collection
+        ref: "Category",
         required: true,
       },
     ],
+    slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true, index: true },
+    sortOrder: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true, index: true },
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically

@@ -17,18 +17,31 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
+      select: false,
     },
     avatar: {
       type: String,
       default: "",
     },
     mobile: {
-      type: Number,
+      type: String,
       default: null,
+      trim: true,
     },
     refresh_token: {
       type: String,
       default: "",
+      select: false,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    staffAssignmentVersion: {
+      type: Number,
+      default: 0,
+      select: false,
     },
     verify_email: {
       type: Boolean,
@@ -64,10 +77,32 @@ const userSchema = new mongoose.Schema(
     forgot_password_otp: {
       type: String,
       default: "",
+      select: false,
+    },
+    forgot_password_otp_hash: {
+      type: String,
+      default: "",
+      select: false,
+    },
+    forgot_password_attempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    email_verification_token_hash: {
+      type: String,
+      default: "",
+      select: false,
+    },
+    email_verification_expires_at: {
+      type: Date,
+      default: null,
+      select: false,
     },
     forgot_password_expiry: {
       type: Date,
       default: null,
+      select: false,
     },
     password_reset_token_hash: {
       type: String,
@@ -80,10 +115,14 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     role: {
-      type: String, // e.g., 'user', 'admin'
-      enum: ["user", "admin", "picker", "rider"],
+      type: String,
+      enum: ["user", "admin", "store_manager", "support", "marketing", "picker", "rider"],
       default: "user",
+      index: true,
     },
+    permissions: { type: [String], default: [] },
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    walletBalance: { type: Number, default: 0, min: 0 },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt

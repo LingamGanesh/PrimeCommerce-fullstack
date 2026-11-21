@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Axios from "../utils/Axios";
+import loadRazorpayCheckout from "../utils/loadRazorpayCheckout";
 
 const emptyAddress = { address_line: "", city: "", state: "", pincode: "", country: "India", mobile: "" };
 
@@ -60,18 +61,11 @@ export default function Checkout() {
     if (!selected) { toast.error("Please select a delivery address"); return; }
     setSaving(true);
     try {
-      const scriptLoaded = await new Promise((resolve, reject) => {
-        if (window.Razorpay) return resolve(true);
-        const existing = document.querySelector('script[data-razorpay-checkout]');
-        if (existing) { existing.addEventListener("load", () => resolve(true), { once: true }); existing.addEventListener("error", () => reject(new Error("Unable to load payment checkout")), { once: true }); return; }
-        const script = document.createElement("script"); script.src = "https://checkout.razorpay.com/v1/checkout.js"; script.async = true; script.dataset.razorpayCheckout = "true";
-        script.onload = () => resolve(true); script.onerror = () => reject(new Error("Unable to load payment checkout")); document.body.appendChild(script);
-      });
-      if (!scriptLoaded || !window.Razorpay) throw new Error("Payment checkout is unavailable");
+      const Razorpay = await loadRazorpayCheckout();
       const response = await Axios.post("/api/v1/payments/razorpay/order", { addressId: selected });
       const paymentOrder = response.data?.data;
       if (!paymentOrder?.keyId || !paymentOrder?.razorpayOrderId) throw new Error("Payment gateway configuration is incomplete");
-      const checkout = new window.Razorpay({
+      const checkout = new Razorpay({
         key: paymentOrder.keyId, amount: paymentOrder.amount, currency: paymentOrder.currency, name: "PrimeCommerce",
         description: `Order ${paymentOrder.orderId}`, order_id: paymentOrder.razorpayOrderId,
         prefill: { contact: form.mobile || addresses.find(item => item._id === selected)?.mobile || "" },
@@ -116,8 +110,8 @@ export default function Checkout() {
                 <input required placeholder="House / street / area" value={form.address_line} onChange={e => setForm({...form,address_line:e.target.value})} className="rounded-lg border p-3 text-sm sm:col-span-2" />
                 <input required placeholder="City" value={form.city} onChange={e => setForm({...form,city:e.target.value})} className="rounded-lg border p-3 text-sm" />
                 <input required placeholder="State" value={form.state} onChange={e => setForm({...form,state:e.target.value})} className="rounded-lg border p-3 text-sm" />
-                <input required inputMode="numeric" pattern="[0-9]{6}" maxLength="6" placeholder="6-digit pincode" value={form.pincode} onChange={e => setForm({...form,pincode:e.target.value.replace(/\D/g, "").slice(0, 6)})} className="rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100" />
-                <input required inputMode="numeric" pattern="[0-9]{10}" placeholder="10-digit mobile number" maxLength="10" value={form.mobile} onChange={e => setForm({...form,mobile:e.target.value.replace(/\D/g, "").slice(0, 10)})} className="rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100" />
+                <input required inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength="6" placeholder="6-digit pincode" value={form.pincode} onChange={e => setForm({...form,pincode:e.target.value.replace(/\D/g, "").slice(0, 6)})} className="rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100" />
+                <input required inputMode="numeric" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" maxLength="10" value={form.mobile} onChange={e => setForm({...form,mobile:e.target.value.replace(/\D/g, "").slice(0, 10)})} className="rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100" />
                 <button disabled={saving} className="rounded-xl bg-green-800 p-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-green-900 disabled:opacity-60 sm:col-span-2">{saving ? "Saving…" : "Save address"}</button>
               </form>}
               <div className="mt-5 space-y-3">

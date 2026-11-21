@@ -6,7 +6,15 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, "Product name is required"],
       trim: true,
+      maxlength: 180,
     },
+    slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true, index: true },
+    brand: { type: String, trim: true, default: "" },
+    images: { type: [String], default: [] },
+    highlights: { type: [String], default: [] },
+    tags: { type: [String], default: [], index: true },
+    subCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategory", default: null, index: true },
+    isActive: { type: Boolean, default: true, index: true },
     image: {
       type: [String], // Array of image URLs
       default: [],

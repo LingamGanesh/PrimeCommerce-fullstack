@@ -6,7 +6,7 @@ Vercel Express reference: https://vercel.com/docs/frameworks/backend/express
 
 ## 1. MongoDB
 
-1. Create a MongoDB Atlas cluster.
+1. Create a MongoDB Atlas cluster (a replica set) or use a MongoDB sharded cluster. Multi-document transactions are required by checkout, payment reservation expiry and cancellation/refund inventory restoration.
 2. Create a database user with a strong password.
 3. Add the backend hosting provider's outbound IPs to the Atlas network allowlist (or use a carefully reviewed network policy).
 4. Copy the application connection string into the backend environment as `MONGODB_URI`. URL-encode special characters in the database password.
@@ -93,7 +93,8 @@ If using a different static host, configure SPA fallback so application routes s
 1. Set `FRONTEND_URL` in the backend Vercel project to the exact deployed frontend origin, including `https://` and excluding a trailing slash.
 2. Add any additional frontend/admin origins to `FRONTEND_URLS`, comma-separated.
 3. The production API rejects browser origins that are not in this allowlist.
-4. Keep frontend and API on HTTPS. Authentication cookies use `Secure` and `SameSite=None` in production.
+4. Keep frontend and API on HTTPS. Authentication cookies use `Secure` and `SameSite=None` in production. For reliable browser sessions, use custom domains on the same registrable domain (for example, `shop.example.com` and `api.example.com`). Separate default `*.vercel.app` project domains are cross-site; browsers that block third-party cookies may block login/session cookies even when CORS is configured. If you use separate Vercel domains, test login, refresh and logout in Safari and Chrome privacy settings before launch.
+5. Cookie-authenticated state-changing requests are protected by exact `Origin` validation against `FRONTEND_URL` / `FRONTEND_URLS`; keep those values synchronized with the deployed browser origins. Logout uses `POST` (not `GET`) so it receives the same CSRF check. Requests using bearer-token authentication are not subject to the cookie-origin check.
 5. If using custom domains, update the allowlist and redeploy the backend. Avoid broad wildcard CORS origins.
 
 ## 5. Razorpay webhook
@@ -127,7 +128,7 @@ Use the exact same webhook secret in the Razorpay dashboard and `RAZORPAY_WEBHOO
 
 ## Important limitations
 
-A green CI build is not proof of a successful live deployment. Browser-based customer-to-delivery testing, Razorpay sandbox end-to-end testing, webhook monitoring and operational refund/stock reconciliation are still required before production use. Inventory restoration currently uses multiple database updates rather than a multi-document transaction; monitor and reconcile exceptional failures.
+A green CI build is not proof of a successful live deployment. Browser-based customer-to-delivery testing, Razorpay sandbox end-to-end testing, webhook monitoring and operational refund/stock reconciliation are still required before production use. The current dependency lockfiles also have outstanding npm audit advisories (21 in the frontend tree and 15 in the backend tree at the latest audit); Dependabot is configured to open weekly npm update pull requests, but those advisories are not yet confirmed fixed. MongoDB multi-document transactions require a replica set or sharded cluster; a standalone MongoDB server is not supported for these checkout and inventory workflows.
 
 ## Vercel-specific notes
 

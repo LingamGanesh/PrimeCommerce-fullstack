@@ -11,7 +11,7 @@ const sendEmail = async ({ sendTo, subject, html }) => {
 
   try {
     const data = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Binkeyit <onboarding@resend.dev>',
+      from: process.env.EMAIL_FROM || 'PrimeCommerce <onboarding@resend.dev>',
       to: sendTo,
       subject,
       html,

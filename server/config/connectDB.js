@@ -1,19 +1,17 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 let connectionPromise;
 
 async function connectDB() {
   if (mongoose.connection.readyState === 1) return mongoose.connection;
   if (mongoose.connection.readyState !== 2) connectionPromise = null;
-  if (!process.env.MONGODB_URI) {
-    throw new Error("Please provide MONGODB_URI in the deployment environment");
+  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  if (!mongoUri) {
+    throw new Error("Please provide MONGODB_URI (or MONGO_URI) in the deployment environment");
   }
 
   if (!connectionPromise) {
-    connectionPromise = mongoose.connect(process.env.MONGODB_URI, {
+    connectionPromise = mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 10000
     }).then(() => {
       console.log("MongoDB connected");
