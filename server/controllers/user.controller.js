@@ -8,7 +8,7 @@ import generatedOtp from '../utils/generatedOtp.js';
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
-import { createHash, timingSafeEqual } from "node:crypto"
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
 import generateAccessToken from '../utils/generatedAccessToken.js';
 
 
@@ -20,10 +20,12 @@ export async function registerUserController(request, response) {
     const { name, password } = request.body;
     const normalizedEmail = String(request.body?.email || "").trim().toLowerCase();
 
-    // Check required fields
-    if (!name || !normalizedEmail || !password) {
+    // Validate registration input on the server, not only in the browser.
+    if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 80 ||
+        !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail) ||
+        typeof password !== "string" || password.length < 8 || password.length > 128) {
       return response.status(400).json({
-        message: "Provide name, email, and password",
+        message: "Provide a valid name and email, and a password between 8 and 128 characters",
         error: true,
         success: false
       });
@@ -42,18 +44,24 @@ export async function registerUserController(request, response) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Store only a hash of the one-time email verification token.
+    const verificationToken = randomBytes(32).toString("hex");
+    const verificationTokenHash = createHash("sha256").update(verificationToken).digest("hex");
+
     // Create user
     const newUser = new UserModel({
-      name,
+      name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
-      verify_email: false
+      verify_email: false,
+      emailVerificationTokenHash: verificationTokenHash,
+      emailVerificationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
     });
 
     const savedUser = await newUser.save();
 
     // Verification email link
-    const verifyEmailUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?code=${savedUser._id}`;
+    const verifyEmailUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?code=${verificationToken}`;
 
     try {
       await sendEmail({
@@ -71,6 +79,8 @@ export async function registerUserController(request, response) {
     delete safeUser.refresh_token;
     delete safeUser.forgot_password_otp;
     delete safeUser.forgot_password_expiry;
+    delete safeUser.emailVerificationTokenHash;
+    delete safeUser.emailVerificationTokenExpiresAt;
 
     return response.status(201).json({
       message: 'User registered successfully! Please check your email to verify.',
@@ -93,40 +103,44 @@ export async function registerUserController(request, response) {
 // ===============================================
 export async function verifyEmailController(request, response) {
   try {
-    const { code } = request.body || {};
-    if (!mongoose.isValidObjectId(code)) {
-      return response.status(400).json({ message: "Invalid verification link", error: true, success: false });
+    const code = String(request.body?.code || "");
+    if (!/^[a-f0-9]{64}$/i.test(code)) {
+      return response.status(400).json({ message: "Invalid or expired verification link", error: true, success: false });
     }
 
-    if (!code) {
-      return response.status(400).json({
-        message: "Verification code is required",
-        error: true,
-        success: false
-      });
-    }
-
-    const user = await UserModel.findById(code);
+    const tokenHash = createHash("sha256").update(code).digest("hex");
+    const user = await UserModel.findOneAndUpdate(
+      {
+        emailVerificationTokenHash: tokenHash,
+        emailVerificationTokenExpiresAt: { $gt: new Date() },
+        verify_email: false
+      },
+      {
+        $set: {
+          verify_email: true,
+          emailVerificationTokenHash: null,
+          emailVerificationTokenExpiresAt: null
+        }
+      },
+      { new: true }
+    );
 
     if (!user) {
       return response.status(400).json({
-        message: "Invalid verification link",
+        message: "This verification link is invalid, expired, or already used.",
         error: true,
         success: false
       });
     }
-
-    await UserModel.updateOne({ _id: code }, { verify_email: true });
 
     return response.json({
       message: "Email verified successfully!",
       success: true,
       error: false
     });
-
-  } catch (error) {
+  } catch {
     return response.status(500).json({
-      message: error.message || 'Server Error',
+      message: "Unable to verify email right now",
       error: true,
       success: false
     });
