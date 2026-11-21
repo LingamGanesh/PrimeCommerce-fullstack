@@ -22,7 +22,7 @@ export async function registerUserController(request, response) {
 
     // Validate registration input on the server, not only in the browser.
     if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 80 ||
-        !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail) ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
         typeof password !== "string" || password.length < 8 || password.length > 128) {
       return response.status(400).json({
         message: "Provide a valid name and email, and a password between 8 and 128 characters",
