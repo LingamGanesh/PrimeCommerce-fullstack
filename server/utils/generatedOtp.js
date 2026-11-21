@@ -1,4 +1,5 @@
-const generatedOtp = ()=>{
-    return Math.floor(Math.random() * 900000) + 100000  /// 100000 to 999999
-}
+import { randomInt } from "node:crypto"
+
+const generatedOtp = () => String(randomInt(100000, 1000000))
+
 export default generatedOtp
