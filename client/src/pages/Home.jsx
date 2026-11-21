@@ -242,7 +242,7 @@ export default function Home() {
 
         <section className="pb-8 pt-9 sm:pt-12">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Explore the good stuff</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Your daily essentials, sorted.</h2><p className="mt-1 text-sm text-slate-500">A quick look through the Prime Commerce collection.</p></div>
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Find your next favourite</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Shop by category ✦</h2><p className="mt-1 text-sm text-slate-500">Thoughtfully grouped essentials for every part of your day.</p></div>
             <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[.15em] text-slate-500">Category preview</span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -254,7 +254,7 @@ export default function Home() {
               { name: "Bakery favourites", note: "Oven fresh picks", icon: "🥐", style: "from-amber-50 via-yellow-50 to-orange-100", accent: "text-amber-900" },
               { name: "Home essentials", note: "For every corner", icon: "🧺", style: "from-violet-50 via-fuchsia-50 to-pink-100", accent: "text-violet-800" },
             ].map((category) => (
-              <article key={category.name} className={`group relative overflow-hidden rounded-[24px] border border-white bg-gradient-to-br ${category.style} p-4 shadow-[0_8px_24px_rgba(15,23,42,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(15,23,42,.10)] sm:p-5`}>
+              <article key={category.name} className={`group relative overflow-hidden min-h-[164px] rounded-[26px] border border-white/90 bg-gradient-to-br ${category.style} p-4 shadow-[0_10px_28px_rgba(15,23,42,.06)] ring-1 ring-slate-900/[.025] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(15,23,42,.10)] sm:p-5`}>
                 <div className="absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/35 blur-xl transition group-hover:scale-125" />
                 <div className="relative flex items-start justify-between gap-2"><span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-white/65 text-3xl shadow-sm">{category.icon}</span><span className="rounded-full bg-white/65 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-slate-500">Sample</span></div>
                 <h3 className={`relative mt-5 text-sm font-black leading-5 ${category.accent}`}>{category.name}</h3>
@@ -272,13 +272,15 @@ export default function Home() {
           </div> : <p className="rounded-xl bg-white p-5 text-sm text-gray-500">Categories will appear here when the store catalogue is configured.</p>}
         </section>
 
-        {offerProducts.length > 0 && <section className="pb-7 pt-2">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Picked by our store team</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Today’s best offers <span className="text-xl">✨</span></h2><p className="mt-1 text-sm text-slate-500">Fresh discounts added by our store team, updated from the live catalogue.</p></div>
-            <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-50">Shop all deals →</button>
+        <section className="relative isolate mb-5 overflow-hidden rounded-[30px] bg-[#102b20] px-4 py-7 text-white shadow-[0_22px_55px_rgba(16,43,32,.16)] sm:px-7 sm:py-9">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-lime-300/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-emerald-400/15 blur-3xl" />
+          <div className="relative mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-lime-300">A little more for less</p><h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Offers you’ll love <span className="text-xl">✦</span></h2><p className="mt-1 max-w-xl text-sm text-emerald-50/70">Handpicked deals and real savings from the live Prime Commerce catalogue.</p></div>
+            <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-extrabold text-white backdrop-blur transition hover:bg-white hover:text-emerald-900">Shop all deals →</button>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">{offerProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
-        </section>}
+          {offerProducts.length ? <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">{offerProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div> : <div className="relative rounded-2xl border border-white/10 bg-white/[.07] px-5 py-7 text-center backdrop-blur"><span className="text-3xl">🏷️</span><h3 className="mt-2 text-base font-extrabold text-white">Fresh deals are on their way</h3><p className="mt-1 text-xs text-emerald-50/65">Offers published by the store team will appear here automatically.</p></div>}
+        </section>
 
         {recommendedProducts.length > 0 && <section className="pb-8 pt-2">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
