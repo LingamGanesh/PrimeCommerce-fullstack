@@ -3,7 +3,13 @@ import Axios from "../utils/Axios";
 import toast from "react-hot-toast";
 
 const blankProduct = { name: "", unit: "1 pack", price: "", discount: "0", stock: "0", description: "", image: "", categoryId: "", sub_categoryId: "", offerStartsAt: "", offerEndsAt: "", publish: true };
-const toLocalDateTime = (value) => value ? new Date(value).toISOString().slice(0, 16) : "";
+const toLocalDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
 const idOf = (value) => typeof value === "object" && value ? value._id : value;
 const money = (value) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(value) || 0);
 
