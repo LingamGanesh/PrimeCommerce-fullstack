@@ -17,7 +17,7 @@ import generateAccessToken from '../utils/generatedAccessToken.js';
 // ===============================================
 export async function registerUserController(request, response) {
   try {
-    const { name, password } = request.body;
+    const { name, password } = request.body || {};
     const normalizedEmail = String(request.body?.email || "").trim().toLowerCase();
 
     // Validate registration input on the server, not only in the browser.
@@ -219,7 +219,7 @@ export async function resendVerificationEmailController(request, response) {
 
 export async function loginController(request, response) {
   try {
-    const { email, password } = request.body
+    const { email, password } = request.body || {}
 
     // 1️⃣ Validate input
     if (!email || !password) {
@@ -559,7 +559,7 @@ export async function verifyForgotPasswordOtp(request, response) {
 //reset the password
 export async function resetpassword(request,response){
     try {
-        const { email , newPassword, confirmPassword } = request.body 
+        const { email , newPassword, confirmPassword } = request.body || {} 
 
         if (!email || !newPassword || !confirmPassword) {
             return response.status(400).json({
