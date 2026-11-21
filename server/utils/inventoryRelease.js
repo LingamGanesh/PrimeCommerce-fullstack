@@ -29,6 +29,12 @@ export async function releaseOrderInventory(order) {
   }
 
   const releaseKey = String(order._id);
+  // Persist the release claim before touching product stock. Payment confirmation
+  // must treat this state as a reconciliation case, never as a normal paid order.
+  await OrderModel.updateOne(
+    { _id: order._id, inventoryReleased: { $ne: true } },
+    { $set: { inventoryReleaseInProgress: true } }
+  );
   for (const [productId, quantity] of quantities) {
     const result = await ProductModel.updateOne(
       { _id: productId, inventoryReleaseKeys: { $ne: releaseKey } },
@@ -41,7 +47,10 @@ export async function releaseOrderInventory(order) {
     }
   }
 
-  await OrderModel.updateOne({ _id: order._id, inventoryReleased: { $ne: true } }, { $set: { inventoryReleased: true } });
+  await OrderModel.updateOne(
+    { _id: order._id, inventoryReleased: { $ne: true } },
+    { $set: { inventoryReleased: true, inventoryReleaseInProgress: false } }
+  );
   // Keep the per-product marker: it makes later duplicate/recovery calls safe.
   return true;
 }
