@@ -78,7 +78,7 @@ export default function Myorders() {
   return (
     <section className="mx-auto max-w-4xl p-4 sm:p-6">
       <h1 className="text-2xl font-extrabold">My orders</h1>
-      {location.state?.placedOrder && <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"><strong>Order placed successfully!</strong><br />Order ID: {location.state.placedOrder.orderId}</div>}
+      {location.state?.placedOrder && <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-800"><strong>Order placed successfully!</strong><br />Order ID: {location.state.placedOrder.orderId}{location.state.confirmationMessage && <p className="mt-2">{location.state.confirmationMessage}</p>}</div>}
       {loading ? <p className="py-10 text-center text-gray-500">Loading orders…</p> : !orders.length ? (
         <div className="mt-6 rounded-2xl bg-white p-10 text-center shadow-sm"><div className="text-5xl">📦</div><h2 className="mt-3 font-bold">No orders yet</h2><p className="mt-1 text-sm text-gray-500">Your placed orders will appear here.</p><Link to="/" className="mt-5 inline-flex rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">Start shopping</Link></div>
       ) : (
