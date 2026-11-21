@@ -20,8 +20,12 @@ import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers
 dotenv.config();
 
 const app = express();
-const configuredOrigins = (process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:5174")
-  .split(",")
+const defaultDevelopmentOrigins = process.env.NODE_ENV === "production"
+  ? []
+  : ["http://localhost:5173", "http://localhost:5174"];
+const configuredOrigins = (process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",")
+  : defaultDevelopmentOrigins)
   .map((origin) => origin.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
@@ -33,7 +37,8 @@ const corsOptions = {
 
     const normalizedOrigin = origin.replace(/\/$/, "");
     const isConfiguredOrigin = configuredOrigins.includes(normalizedOrigin);
-    const isLocalDevelopmentOrigin = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(normalizedOrigin);
+    const isLocalDevelopmentOrigin = process.env.NODE_ENV !== "production"
+      && /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(normalizedOrigin);
 
     if (isConfiguredOrigin || isLocalDevelopmentOrigin) {
       return callback(null, true);
