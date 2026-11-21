@@ -51,7 +51,8 @@ const reserveStock = async (items) => {
     await Promise.all(reserved.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })));
     throw error;
   }
-};\n
+};
+
 export async function createRazorpayOrder(req, res) {
   let reserved = []; let savedOrder = null;
   try {
