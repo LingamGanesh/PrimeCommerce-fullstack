@@ -65,13 +65,14 @@ function searchPhrases(name, category) {
 
 async function findSuitableImage(name, category = "") {
   const searchTerms = tokens(name);
-  if (!searchTerms.length) return null;
+  if (!searchTerms.length) throw new Error(`No searchable product keywords found for "${name}"`);
 
   for (const query of searchPhrases(name, category)) {
     const url = new URL(API);
     url.searchParams.set("q", query);
     url.searchParams.set("page_size", "30");
     url.searchParams.set("license_type", "commercial");
+    url.searchParams.set("page", "1");
     url.searchParams.set("extension", "jpg,png");
     url.searchParams.set("filter_dead", "true");
 
@@ -88,7 +89,7 @@ async function findSuitableImage(name, category = "") {
     const candidates = (data.results || [])
       .filter((item) => item.url && /^https:\/\//i.test(item.url) && !item.mature)
       .map((item) => ({ item, ...candidateScore(item, searchTerms) }))
-      .filter((candidate) => candidate.matchedCount > 0 && candidate.score >= 2)
+      .filter((candidate) => candidate.matchedCount > 0 && candidate.score >= 1)
       .sort((a, b) => b.score - a.score || b.titleMatches - a.titleMatches);
 
     if (candidates.length) return candidates[0].item;
