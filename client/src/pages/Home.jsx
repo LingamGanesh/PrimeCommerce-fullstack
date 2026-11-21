@@ -310,6 +310,7 @@ export default function Home() {
                 ? "group relative min-h-[190px] overflow-hidden rounded-[26px] border bg-white text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] border-emerald-500 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.15)]"
                 : "group relative min-h-[190px] overflow-hidden rounded-[26px] border bg-white text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] border-slate-100 shadow-[0_12px_30px_rgba(15,23,42,.06)] hover:border-emerald-200 hover:shadow-[0_22px_44px_rgba(15,23,42,.12)]";
               const imageBackgroundClass = "absolute inset-0 bg-gradient-to-br " + gradients[index % gradients.length];
+              const arrowClass = selected ? "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/35 text-sm transition group-hover:translate-x-1 bg-emerald-500 text-white" : "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/35 text-sm transition group-hover:translate-x-1 bg-white/15 text-white backdrop-blur";
               return <button key={category._id} type="button" aria-pressed={selected} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className={cardClass}>
                 <div className={imageBackgroundClass}>
                   {categoryImage ? <img src={categoryImage} alt={category.name} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-110" /> : <div className="grid h-full w-full place-items-center"><span className="text-7xl opacity-80 transition duration-500 group-hover:scale-110">{visual.emoji}</span></div>}
@@ -319,7 +320,7 @@ export default function Home() {
                 {selected && <span className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-sm font-black text-white shadow-lg">✓</span>}
                 <span className="absolute bottom-0 left-0 right-0 p-4 text-white sm:p-5">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-[.16em] text-lime-200">{count} {count === 1 ? "product" : "products"}</span>
-                  <span className="flex items-end justify-between gap-2"><span className="line-clamp-2 text-base font-black leading-tight tracking-tight sm:text-lg">{category.name}</span><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/35 text-sm transition group-hover:translate-x-1 ${selected ? "bg-emerald-500 text-white" : "bg-white/15 text-white backdrop-blur"}`}>↗</span></span>
+                  <span className="flex items-end justify-between gap-2"><span className="line-clamp-2 text-base font-black leading-tight tracking-tight sm:text-lg">{category.name}</span><span className={arrowClass}>↗</span></span>
                   <span className="mt-1 block text-[9px] font-semibold text-white/75">{selected ? "Collection selected" : "Explore collection"}</span>
                 </span>
               </button>;
