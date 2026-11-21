@@ -24,12 +24,12 @@ export async function createCashOnDeliveryOrder(req, res) {
     for (const row of cartRows) {
       const product = row.productId;
       if (!product || !product.publish) throw new Error("A product in your cart is no longer available");
-      const unitPrice = discountedPrice(product);
+      const unitPrice = Number.isFinite(row.unitPrice) ? row.unitPrice : discountedPrice(product);
       const lineTotal = Math.round(unitPrice * row.quantity * 100) / 100;
       subtotal = Math.round((subtotal + lineTotal) * 100) / 100;
       orderItems.push({
         productId: product._id, name: product.name, image: product.image || [],
-        unit: product.unit, unitPrice, quantity: row.quantity, lineTotal
+        unit: row.variantLabel || product.unit, unitPrice, quantity: row.quantity, lineTotal
       });
     }
 
