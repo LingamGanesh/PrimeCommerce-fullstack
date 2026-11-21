@@ -73,11 +73,16 @@ export async function listSubCategories(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [] } = req.body;
+    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [], offerStartsAt = null, offerEndsAt = null } = req.body;
     if (!name?.trim() || !unit?.trim() || !Array.isArray(categoryId) || !categoryId.length || !Array.isArray(sub_categoryId) || !sub_categoryId.length || price === undefined) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
     }
     const values = [Number(price), Number(discount), Number(stock)];
+    const startsAt = offerStartsAt ? new Date(offerStartsAt) : null;
+    const endsAt = offerEndsAt ? new Date(offerEndsAt) : null;
+    if ((offerStartsAt && Number.isNaN(startsAt.getTime())) || (offerEndsAt && Number.isNaN(endsAt.getTime())) || (startsAt && endsAt && endsAt <= startsAt)) {
+      return res.status(400).json({ success: false, error: true, message: "Offer end must be later than its start" });
+    }
     if (!values.every(Number.isFinite) || values[0] < 0 || values[1] < 0 || values[1] > 100 || values[2] < 0) {
       return res.status(400).json({ success: false, error: true, message: "Price, discount or stock value is invalid" });
     }
@@ -94,7 +99,7 @@ export async function createProduct(req, res) {
     }
     const product = await ProductModel.create({
       name: name.trim(), categoryId, sub_categoryId, unit: unit.trim(), price: values[0],
-      discount: values[1], stock: values[2], description, image: Array.isArray(image) ? image : []
+      discount: values[1], stock: values[2], description, image: Array.isArray(image) ? image : [], offerStartsAt: startsAt, offerEndsAt: endsAt
     });
     return res.status(201).json({ success: true, error: false, message: "Product created", data: productPayload(product) });
   } catch (error) {
@@ -105,10 +110,15 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid product id" });
-    const allowed = ["name", "categoryId", "sub_categoryId", "unit", "price", "discount", "stock", "description", "image", "publish"];
+    const allowed = ["name", "categoryId", "sub_categoryId", "unit", "price", "discount", "stock", "description", "image", "publish", "offerStartsAt", "offerEndsAt"];
     const updates = {};
     for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
     for (const key of ["price", "discount", "stock"]) if (updates[key] !== undefined) updates[key] = Number(updates[key]);
+    for (const key of ["offerStartsAt", "offerEndsAt"]) if (updates[key] !== undefined) {
+      updates[key] = updates[key] ? new Date(updates[key]) : null;
+      if (updates[key] && Number.isNaN(updates[key].getTime())) return res.status(400).json({ success: false, error: true, message: "Invalid offer schedule date" });
+    }
+    if (updates.offerStartsAt && updates.offerEndsAt && updates.offerEndsAt <= updates.offerStartsAt) return res.status(400).json({ success: false, error: true, message: "Offer end must be later than its start" });
     for (const key of ["categoryId", "sub_categoryId"]) {
       if (updates[key] !== undefined && (!Array.isArray(updates[key]) || updates[key].length === 0 || updates[key].some(id => !mongoose.isValidObjectId(id)))) {
         return res.status(400).json({ success: false, error: true, message: `Invalid ${key} selection` });
