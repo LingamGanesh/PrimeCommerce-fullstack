@@ -45,6 +45,7 @@ function readCart() { return {}; }
 
 function ProductCard({ product, quantity, onAdd, onChange }) {
   const [quickView, setQuickView] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const options = Array.isArray(product.more_details?.packOptions) && product.more_details.packOptions.length
     ? product.more_details.packOptions
     : [{ label: product.unit || "1 pack", price: Number(product.price) || 0 }];
@@ -59,7 +60,7 @@ function ProductCard({ product, quantity, onAdd, onChange }) {
         <div className={`relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br ${visual.color} sm:h-48`}>
           <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/45 blur-2xl" />
           {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#176b3b] px-3 py-1.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">{discount}% OFF</span>}
-          {image ? <img src={image} alt={product.name} className="relative h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110" loading="lazy" /> : <span className="relative text-6xl">{visual.emoji}</span>}
+          {image && !imageFailed ? <img src={image} alt={product.name} onError={() => setImageFailed(true)} className="relative h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110" loading="lazy" /> : <span className="relative text-6xl">{visual.emoji}</span>}
           <span className="absolute bottom-3 right-3 rounded-full border border-white/70 bg-white/85 px-2.5 py-1 text-[9px] font-bold text-slate-600 backdrop-blur">{product.unit || "Everyday pick"}</span>
         </div>
         <div className="p-4">
@@ -74,7 +75,7 @@ function ProductCard({ product, quantity, onAdd, onChange }) {
       {quickView && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setQuickView(false)}>
         <section role="dialog" aria-modal="true" aria-label={product.name + " pack sizes"} onClick={event => event.stopPropagation()} className="w-full max-w-lg overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:rounded-[28px]">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-emerald-700">Choose your pack</p><h3 className="mt-1 text-lg font-black text-slate-900">{product.name}</h3></div><button onClick={() => setQuickView(false)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-xl text-slate-600" aria-label="Close">×</button></div>
-          <div className="grid grid-cols-[112px_1fr] gap-4 p-5"><div className="grid h-28 place-items-center rounded-2xl bg-[#f5f7f1]">{image && <img src={image} alt="" className="h-full w-full object-contain p-2" />}</div><div><p className="text-sm leading-6 text-slate-600">{product.description || "Freshly selected for your everyday needs."}</p><p className="mt-2 text-xs text-slate-500">Available stock: {product.stock ?? "Available"}</p></div></div>
+          <div className="grid grid-cols-[112px_1fr] gap-4 p-5"><div className="grid h-28 place-items-center rounded-2xl bg-[#f5f7f1]">{image && !imageFailed && <img src={image} alt="" onError={() => setImageFailed(true)} className="h-full w-full object-contain p-2" />}</div><div><p className="text-sm leading-6 text-slate-600">{product.description || "Freshly selected for your everyday needs."}</p><p className="mt-2 text-xs text-slate-500">Available stock: {product.stock ?? "Available"}</p></div></div>
           <div className="space-y-2 px-5 pb-4">{options.map(option => <button key={option.label} onClick={() => setSelectedPack(option)} className={"flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition " + (selectedPack.label === option.label ? "border-emerald-700 bg-emerald-50 ring-1 ring-emerald-700" : "border-slate-200 hover:border-emerald-300")}><span><span className="block text-sm font-bold text-slate-900">{option.label}</span><span className="text-[11px] text-slate-500">Pack size</span></span><span className="text-base font-black text-slate-950">₹{option.price}</span></button>)}</div>
           <div className="flex items-center justify-between gap-4 border-t border-slate-100 bg-slate-50 px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selected price</p><p className="text-2xl font-black text-slate-950">₹{selectedPack.price}</p></div><button onClick={() => { onAdd(product, selectedPack.label); setQuickView(false); }} className="rounded-2xl bg-[#176b3b] px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/15 hover:bg-[#0f4e2a]">Add to basket</button></div>
         </section>
