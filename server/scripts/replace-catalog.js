@@ -21,16 +21,16 @@ const catalog = [
 ];
 
 const categoryImages = [
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600",
-  "https://picsum.photos/seed/prime-category-image/900/600"
+  "https://picsum.photos/seed/prime-category-fruits/900/600",
+  "https://picsum.photos/seed/prime-category-vegetables/900/600",
+  "https://picsum.photos/seed/prime-category-dairy/900/600",
+  "https://picsum.photos/seed/prime-category-bakery/900/600",
+  "https://picsum.photos/seed/prime-category-staples/900/600",
+  "https://picsum.photos/seed/prime-category-snacks/900/600",
+  "https://picsum.photos/seed/prime-category-beverages/900/600",
+  "https://picsum.photos/seed/prime-category-personal-care/900/600",
+  "https://picsum.photos/seed/prime-category-home-cleaning/900/600",
+  "https://picsum.photos/seed/prime-category-frozen-food/900/600"
 ];
 
 const basePrices = [
