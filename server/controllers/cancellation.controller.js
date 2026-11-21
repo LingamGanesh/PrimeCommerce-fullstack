@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import OrderModel from "../models/order.model.js";
 import { releaseOrderInventory } from "../utils/inventoryRelease.js";
 import { canCustomerCancelOrder, canRequestFullRazorpayRefund } from "../utils/orderPolicy.js";
-\n
+
+
 export async function cancelMyOrder(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
@@ -42,7 +43,7 @@ export async function cancelMyOrder(req, res) {
         return res.status(502).json({ success: false, message: error.message || "Refund could not be initiated. Contact support before retrying." });
       }
     }
-    const cancelled = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", inventoryReleased: false }, { $set: { delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } }, { new: true });
+    const cancelled = await OrderModel.findOneAndUpdate({ _id: order._id, userId: req.userId, delivery_status: "processing", inventoryReleased: false }, { $set: { delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: false } }, { new: true });
     if (!cancelled) return res.status(409).json({ success: false, message: "Order cancellation is already being processed" });
     await releaseOrderInventory(cancelled);
     return res.json({ success: true, message: "Cash on Delivery order cancelled", data: { orderId: cancelled.orderId, refundStatus: "not_required" } });
