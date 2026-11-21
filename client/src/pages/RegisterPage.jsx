@@ -4,11 +4,11 @@ import toast from 'react-hot-toast';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import AxiosToastError from '../utils/AxiosToastError';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const RegisterPage = () => {
 
-  const navigate = useNavigate();
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const [data, setData] = useState({
     name: '',
@@ -23,6 +23,19 @@ const RegisterPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleResendVerification = async () => {
+    if (!registeredEmail) return;
+    try {
+      const response = await Axios({
+        ...SummaryApi.resendVerification,
+        data: { email: registeredEmail }
+      });
+      toast.success(response.data?.message || "If verification is required, a new link will be sent.");
+    } catch (error) {
+      AxiosToastError(error);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -48,8 +61,8 @@ const RegisterPage = () => {
       }
 
       if (response.data.success) {
+        setRegisteredEmail(data.email.trim().toLowerCase());
         toast.success(response.data.message);
-        navigate('/login');
       }
 
     } catch (error) {
@@ -151,6 +164,21 @@ const RegisterPage = () => {
             Register
           </button>
         </form>
+
+        {registeredEmail && (
+          <div className="mt-5 rounded-md border border-green-200 bg-green-50 p-4 text-center">
+            <p className="text-sm text-green-800">
+              Check <strong>{registeredEmail}</strong> for your verification link.
+            </p>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              className="mt-3 text-sm font-medium text-blue-700 underline hover:text-blue-800"
+            >
+              Resend verification email
+            </button>
+          </div>
+        )}
 
         <p className="text-sm text-center text-gray-600 mt-5">
           Already have an account?
