@@ -42,6 +42,8 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    offerStartsAt: { type: Date, default: null },
+    offerEndsAt: { type: Date, default: null },
     description: {
       type: String,
       trim: true,
