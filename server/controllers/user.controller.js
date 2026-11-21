@@ -157,7 +157,7 @@ export async function resendVerificationEmailController(request, response) {
 
   try {
     const email = String(request.body?.email || "").trim().toLowerCase();
-    if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return response.status(400).json({ message: "Enter a valid email address.", error: true, success: false });
     }
 
