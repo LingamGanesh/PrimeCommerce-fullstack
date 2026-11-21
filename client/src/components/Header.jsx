@@ -53,8 +53,23 @@ const Header = () => {
 
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
           <div className="relative">
-            <button type="button" onClick={() => setOpenMenu((value) => !value)} aria-expanded={openMenu} aria-label={user?._id ? "Open account menu" : "Login"} className="flex items-center gap-2 rounded-full px-2.5 py-2 text-sm font-bold text-[#334237] transition hover:bg-[#f1f4ed]">
-              <FaUserCircle className="text-xl text-[#315b3f] sm:text-2xl" /><span className="hidden sm:inline">{user?._id ? "Account" : "Login"}</span><FaChevronDown className="hidden text-[9px] text-gray-500 sm:inline" />
+            <button
+              type="button"
+              onClick={() => setOpenMenu((value) => !value)}
+              aria-expanded={openMenu}
+              aria-label={user?._id ? "Open account menu" : "Login"}
+              className="group flex items-center gap-2 rounded-2xl border border-[#e7e4d8] bg-gradient-to-br from-white to-[#f7f7ef] px-2 py-2 shadow-[0_3px_12px_rgba(28,55,35,.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#b9cbb8] hover:shadow-[0_7px_18px_rgba(28,75,43,.13)] sm:gap-2.5 sm:px-3 sm:py-2"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#287b48] to-[#124b2c] text-white shadow-[0_3px_8px_rgba(18,75,44,.25)] ring-1 ring-white/70 transition group-hover:from-[#328653] group-hover:to-[#17623a]">
+                <FaUserCircle className="text-[19px]" />
+              </span>
+              <span className="hidden text-left sm:block">
+                <span className="block text-[12px] font-extrabold leading-4 text-[#203629]">{user?._id ? "Account" : "Login"}</span>
+                <span className="mt-0.5 block text-[9px] font-semibold leading-3 tracking-wide text-[#879184]">{user?._id ? "Profile & orders" : "Welcome back"}</span>
+              </span>
+              <span className="hidden h-6 w-6 place-items-center rounded-full bg-[#edf2e9] text-[#477451] transition group-hover:bg-[#e0ecdf] sm:grid">
+                <FaChevronDown className="text-[9px]" />
+              </span>
             </button>
             {openMenu && <div className="absolute right-0 top-[calc(100%+12px)] z-[60] w-[min(360px,calc(100vw-2rem))]">{user?._id ? <Usermenu onNavigate={() => setOpenMenu(false)} onClose={() => setOpenMenu(false)} /> : <div className="relative rounded-2xl border border-gray-100 bg-white p-4 pr-12 shadow-xl"><button type="button" onClick={() => setOpenMenu(false)} aria-label="Close profile menu" className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-gray-100 text-lg text-gray-600 hover:bg-gray-200">×</button><p className="mb-3 text-sm font-semibold text-gray-800">Welcome to PrimeCommerce</p><Link to="/login" className="block rounded-xl bg-[#176b36] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-[#10572b]">Login / Sign up</Link></div>}</div>}
           </div>
