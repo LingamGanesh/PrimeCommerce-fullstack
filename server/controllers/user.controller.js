@@ -319,9 +319,12 @@ export async function uploadAvatar(request, response) {
       data: { _id: updatedUser._id, avatar: updatedUser.avatar },
     });
   } catch (error) {
-    console.error("PROFILE AVATAR UPLOAD ERROR:", error.message || error);
+    console.error("PROFILE AVATAR UPLOAD ERROR:", error);
+    const diagnosticMessage = process.env.NODE_ENV === "production"
+      ? "Profile photo upload failed. Please check the server Cloudinary configuration."
+      : (error?.message || "Unknown profile photo upload error.");
     return response.status(500).json({
-      message: "Profile photo upload failed. Check the Cloudinary server configuration and try again.",
+      message: diagnosticMessage,
       error: true,
       success: false,
     });
