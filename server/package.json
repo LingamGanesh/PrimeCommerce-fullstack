@@ -16,7 +16,9 @@
     "test": "node --test",
     "seed:catalog": "node scripts/seed-catalog.js",
     "catalog:replace": "node scripts/replace-catalog.js",
-    "catalog:refresh-images": "node scripts/refresh-catalog-images.js"
+    "catalog:refresh-images": "node scripts/refresh-catalog-images.js",
+    "catalog:search-product-images": "node scripts/search-product-images.js",
+    "catalog:normalize-single-items": "node scripts/normalize-single-items.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
