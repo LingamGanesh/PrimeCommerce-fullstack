@@ -117,7 +117,7 @@ async function main() {
   const fs = await import("node:fs/promises");
   await fs.writeFile("catalog-image-report.json", JSON.stringify(report, null, 2));
   console.log(`Image matching complete: ${updatedProducts}/${products.length} products and ${updatedCategories}/${categories.length} categories updated.`);
-  console.log("Unmatched items are left unchanged; review catalog-image-report.json for image titles, creators, sources and licenses.");
+  console.log("Items without a confident match have their old random URL cleared; review catalog-image-report.json for matches, creators, sources and licenses.");
   console.log("No products, prices, pack sizes, orders, or carts were deleted or modified.");
 }
 
