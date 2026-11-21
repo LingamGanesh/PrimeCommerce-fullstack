@@ -21,16 +21,16 @@ const catalog = [
 ];
 
 const categoryImages = [
-  "https://loremflickr.com/900/600/orange,apple,fruit?lock=category01",
-  "https://loremflickr.com/900/600/fresh,vegetables,produce?lock=category02",
-  "https://loremflickr.com/900/600/milk,dairy,eggs?lock=category03",
-  "https://loremflickr.com/900/600/bread,bakery?lock=category04",
-  "https://loremflickr.com/900/600/rice,grains,pulses?lock=category05",
-  "https://loremflickr.com/900/600/snacks,crisps?lock=category06",
-  "https://loremflickr.com/900/600/juice,beverage?lock=category07",
-  "https://loremflickr.com/900/600/skincare,personal,care?lock=category08",
-  "https://loremflickr.com/900/600/cleaning,supplies?lock=category09",
-  "https://loremflickr.com/900/600/frozen,food?lock=category10"
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600",
+  "https://picsum.photos/seed/prime-category-image/900/600"
 ];
 
 const basePrices = [
@@ -87,7 +87,7 @@ async function main() {
       const options = packOptions(price, unit);
       await ProductModel.create({
         name: names[p],
-        image: [`https://loremflickr.com/800/800/${encodeURIComponent(names[p].toLowerCase().replaceAll(" ", ","))},product?lock=prime${String(index).padStart(3,"0")}`],
+        image: [`https://picsum.photos/seed/prime-product-${index}/800/800`],
         categoryId: [category._id],
         sub_categoryId: [subcategory._id],
         unit: options[1].label,
