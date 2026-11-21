@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TypeAnimation } from "react-type-animation";
 import { IoSearch } from "react-icons/io5";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -9,10 +9,6 @@ export default function Search() {
   const [params] = useSearchParams();
   const [query, setQuery] = useState(params.get("q") || "");
   const isSearchPage = location.pathname === "/search";
-
-  useEffect(() => {
-    setQuery(params.get("q") || "");
-  }, [params]);
 
   const submitSearch = (event) => {
     event.preventDefault();
