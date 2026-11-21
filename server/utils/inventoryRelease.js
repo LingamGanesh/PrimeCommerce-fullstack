@@ -61,7 +61,8 @@ export async function recoverPendingInventoryReleases() {
     inventoryReleased: { $ne: true },
     $or: [
       { delivery_status: "cancelled" },
-      { payment_status: { $in: ["failed", "expired"] } }
+      { payment_status: { $in: ["failed", "expired"] } },
+      { payment_status: "paid_review_required", inventoryReleaseInProgress: true }
     ]
   }).limit(100).lean();
 
