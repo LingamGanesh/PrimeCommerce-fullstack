@@ -38,7 +38,17 @@ function App() {
         <Outlet />
       </main>
       {!isAdminRoute && <Footer />}
-      <Toaster />
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={10}
+        toastOptions={{
+          duration: 3600,
+          className: 'pc-toast',
+          success: { duration: 2800, className: 'pc-toast pc-toast-success' },
+          error: { duration: 4200, className: 'pc-toast pc-toast-error' },
+        }}
+      />
     </>
   )
 }
