@@ -38,7 +38,7 @@ export const Usermenu = () => {
         </h2>
         <Link
   to="/dashboard/profile"
-  className="font-bold hover:text-blue-500 transition-colors"
+  className="font-bold hover:text-lime-700 transition-colors"
 >
   <FaExternalLinkAlt />
 </Link>
@@ -51,7 +51,7 @@ export const Usermenu = () => {
       </div>
 
       {/* User Info */}
-      <div className="bg-green-50 p-3 rounded-xl mb-4">
+      <div className="bg-lime-50 p-3 rounded-xl mb-4">
         <p className="text-gray-700 font-medium">
           {user?.name || "Guest User"}
         </p>
@@ -66,28 +66,28 @@ export const Usermenu = () => {
 
         <Link
           to="/dashboard/myorders"
-          className="px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+          className="px-3 py-2 rounded-lg hover:bg-lime-50 transition"
         >
           🛒 My Orders
         </Link>
 
         <Link
           to="/dashboard/support"
-          className="px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+          className="px-3 py-2 rounded-lg hover:bg-lime-50 transition"
         >
           🎧 Customer Support
         </Link>
 
         <Link
           to="/dashboard/address"
-          className="px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+          className="px-3 py-2 rounded-lg hover:bg-lime-50 transition"
         >
           📍 Saved Address
         </Link>
 
         <button
         onClick={handleLogout}
-          className="mt-2 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg transition"
+          className="mt-2 bg-slate-900 hover:bg-slate-700 text-white py-2 rounded-lg transition"
         >
           🚪 Log Out
         </button>
