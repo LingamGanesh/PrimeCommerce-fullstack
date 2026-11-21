@@ -147,7 +147,7 @@ export default function SearchPage() {
             <h2 className="font-extrabold">Categories</h2>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
               <button onClick={() => setCategory("All")} className={"shrink-0 rounded-xl px-3 py-2.5 text-left text-sm font-semibold " + (category === "All" ? "bg-green-50 text-green-800" : "text-gray-600 hover:bg-gray-50")}>🛍️ <span className="ml-2">All products</span></button>
-              {categories.map((item) => <button key={item._id} onClick={() => setCategory(item._id)} className={"flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold " + (category === item._id ? "bg-green-50 text-green-800" : "text-gray-600 hover:bg-gray-50")}><span>{categoryIcon(item.name)}</span><span>{item.name}</span></button>)}
+              {categories.map((item) => <button key={item._id} onClick={() => setCategory(item._id)} className={"flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold " + (category === item._id ? "bg-green-50 text-green-800" : "text-gray-600 hover:bg-gray-50")}><span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-50">{item.image ? <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover" /> : categoryIcon(item.name)}</span><span>{item.name}</span></button>)}
             </div>
           </aside>
 
