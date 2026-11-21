@@ -12,7 +12,7 @@ export default function AdminGuard() {
 
   useEffect(() => {
     let active = true;
-    if (user?._id) { setChecking(false); setVerified(true); return () => { active = false; }; }
+    if (user?._id) return;
     fetchUserDetails().then((response) => {
       if (!active) return;
       if (response?.data) { dispatch(setUserDetails(response.data)); setVerified(true); }
@@ -21,7 +21,10 @@ export default function AdminGuard() {
     return () => { active = false; };
   }, [dispatch, user?._id]);
 
-  if (checking) return <div className="min-h-screen grid place-items-center text-gray-500">Verifying admin access…</div>;
-  if (!verified || user?.role !== "admin" || user?.status !== "active") return <Navigate to="/login" replace />;
+  const isChecking = !user?._id && checking;
+  const isVerified = Boolean(user?._id) || verified;
+
+  if (isChecking) return <div className="min-h-screen grid place-items-center text-gray-500">Verifying admin access…</div>;
+  if (!isVerified || user?.role !== "admin" || user?.status !== "active") return <Navigate to="/login" replace />;
   return <Outlet />;
 }
