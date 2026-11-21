@@ -35,7 +35,7 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // Temporary idempotency keys used while an order stock release is in progress.
+    // Idempotency keys retained to prevent duplicate stock restoration on retries.
     inventoryReleaseKeys: { type: [String], default: [], select: false },
     price: {
       type: Number,
