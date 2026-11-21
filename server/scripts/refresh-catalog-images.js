@@ -171,7 +171,7 @@ async function main() {
           const metadata = attribution(match, category.name);
           await CategoryModel.updateOne(
             { _id: category._id },
-            { $set: { image: match.url, "more_details.imageAttribution": metadata } }
+            { $set: { image: match.url } }
           );
           updatedCategories += 1;
           report.push({
