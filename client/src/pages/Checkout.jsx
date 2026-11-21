@@ -123,7 +123,7 @@ export default function Checkout() {
           try {
             const verified = await Axios.post("/api/v1/payments/razorpay/verify", gatewayResponse);
             toast.success(verified.data?.message || "Payment response verified");
-            navigate("/dashboard/myorders", { state: { placedOrder: { orderId: paymentOrder.orderId, paymentMethod: "RAZORPAY", paymentStatus: verified.data?.paymentStatus || "pending" } } });
+            navigate("/dashboard/myorders", { state: { placedOrder: { orderId: paymentOrder.orderId, paymentMethod: upiOnly ? "UPI" : "RAZORPAY", paymentStatus: verified.data?.paymentStatus || "pending" } } });
           } catch (error) { toast.error(error.response?.data?.message || "Payment verification failed. Contact support before retrying."); }
           finally { setSaving(false); }
         },
