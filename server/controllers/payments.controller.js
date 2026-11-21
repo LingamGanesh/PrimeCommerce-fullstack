@@ -95,8 +95,22 @@ export async function verifyRazorpayPayment(req, res) {
     const expected = crypto.createHmac("sha256", secret).update(`${gatewayOrderId}|${paymentId}`).digest("hex");
     const supplied = Buffer.from(signature, "hex"); const expectedBuffer = Buffer.from(expected, "hex");
     if (supplied.length !== expectedBuffer.length || !crypto.timingSafeEqual(supplied, expectedBuffer)) return res.status(400).json({ success: false, message: "Payment signature verification failed" });
-    const payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}`);
+    let payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}`);
     if (payment.order_id !== gatewayOrderId || !["authorized", "captured"].includes(payment.status) || Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100) || payment.currency !== "INR") return res.status(400).json({ success: false, message: "Payment amount, currency or status could not be verified" });
+    // Capture authorized payments during verification so successful checkout does not depend only on a later webhook.
+    if (payment.status === "authorized") {
+      try {
+        payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}/capture`, {
+          method: "POST",
+          body: JSON.stringify({ amount: payment.amount, currency: "INR" })
+        });
+      } catch (captureError) {
+        // Auto-capture can finish between the status lookup and this capture request.
+        payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}`);
+        if (payment.status !== "captured") throw new Error(captureError.message || "Payment is authorized but capture is still pending. Please retry shortly.");
+      }
+    }
+    if (payment.order_id !== gatewayOrderId || payment.status !== "captured" || Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100) || payment.currency !== "INR") return res.status(409).json({ success: false, message: "Payment is not captured yet. Please wait and retry verification." });
     if (payment.status === "captured") {
       if (order.payment_status === "expired" || order.inventoryReleased) { order.payment_status = "paid_review_required"; order.payment_id = paymentId; await order.save(); return res.status(200).json({ success: true, reviewRequired: true, message: "Payment received after stock reservation expired. Support will review this order." }); }
       order.payment_status = "paid"; order.payment_id = paymentId; await order.save();
