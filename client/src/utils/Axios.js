@@ -1,4 +1,5 @@
 import axios from "axios";
+import toast from "react-hot-toast";
 import SummaryApi, { baseUrl } from "../common/SummaryApi";
 
 const Axios = axios.create({
@@ -50,7 +51,7 @@ const refreshAccessToken = async (refreshToken) => {
 Axios.interceptors.response.use(
     (response) => response,
     async (error) => {
-        const originalRequest = error.config;
+        const originalRequest = error.config || {};
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
@@ -65,6 +66,22 @@ Axios.interceptors.response.use(
                     return Axios(originalRequest);
                 }
             }
+        }
+
+        if (error.code !== "ERR_CANCELED" && !error.config?.skipErrorToast) {
+            const status = error.response?.status;
+            const serverMessage = error.response?.data?.message;
+            const message = !error.response
+                ? "Unable to connect. Please check your internet connection."
+                : status === 401
+                    ? "Your session has expired. Please sign in again."
+                    : status === 403
+                        ? "You do not have permission to do that."
+                        : status >= 500
+                            ? "Something went wrong on our server. Please try again."
+                            : serverMessage || "Request failed. Please try again.";
+
+            toast.error(message, { id: "api-error-" + (status || "network") + "-" + (error.config?.url || "") });
         }
 
         return Promise.reject(error);
