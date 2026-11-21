@@ -172,6 +172,16 @@ export async function loginController(request, response) {
       })
     }
 
+    // New accounts must verify their email before signing in. Accounts created
+    // before email verification was introduced (field absent) remain compatible.
+    if (user.verify_email === false) {
+      return response.status(403).json({
+        message: 'Please verify your email before logging in.',
+        error: true,
+        success: false
+      })
+    }
+
     // 4️⃣ Verify password
     const isPasswordMatch = await bcrypt.compare(password, user.password)
 
