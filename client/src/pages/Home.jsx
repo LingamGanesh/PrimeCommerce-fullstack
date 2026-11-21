@@ -41,6 +41,8 @@ const visualFor = (value = "") => {
 
 function ProductCarousel({ id, products, cart, onAdd, onChange, emptyTitle, emptyText }) {
   const scroll = (direction) => document.getElementById(id)?.scrollBy({ left: direction * 520, behavior: "smooth" });
+  const allProductsCardClass = "group relative min-h-[190px] overflow-hidden rounded-[26px] border text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] " + (activeCategory === "All" ? "border-emerald-400 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.16)]" : "border-emerald-950/5 shadow-[0_12px_30px_rgba(15,23,42,.07)] hover:shadow-[0_22px_44px_rgba(15,23,42,.13)]") + " bg-gradient-to-br from-[#173f2c] via-[#205a3b] to-[#8aaa56]";
+
   return (
     <div className="relative">
       {products.length ? <>
@@ -292,7 +294,7 @@ export default function Home() {
             </div>
           </div>
           {categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
-            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} aria-pressed={activeCategory === "All"} className={`group relative min-h-[190px] overflow-hidden rounded-[26px] border text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] ${activeCategory === "All" ? "border-emerald-400 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.16)]" : "border-emerald-950/5 shadow-[0_12px_30px_rgba(15,23,42,.07)] hover:shadow-[0_22px_44px_rgba(15,23,42,.13)]"} bg-gradient-to-br from-[#173f2c] via-[#205a3b] to-[#8aaa56]"}>
+            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} aria-pressed={activeCategory === "All"} className={allProductsCardClass}}>
               <span className="absolute -right-10 -top-10 h-40 w-40 rounded-full border border-white/15 bg-white/5" /><span className="absolute -bottom-16 -left-8 h-48 w-48 rounded-full border border-white/10" />
               <span className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-sm text-white backdrop-blur">✳</span>
               <div className="relative flex h-full min-h-[190px] flex-col justify-between p-4 text-white sm:min-h-[220px] sm:p-5">
