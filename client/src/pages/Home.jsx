@@ -18,6 +18,21 @@ const categoryVisuals = [
   ["pet", "🐾", "bg-orange-50"],
 ];
 
+const categoryImageFor = (category) => {
+  if (category?.image) return category.image;
+  const name = String(category?.name || "").toLowerCase();
+  const matches = [
+    [/fruit|vegetable|produce/, "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=700&q=80"],
+    [/dairy|milk|egg|cheese/, "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=700&q=80"],
+    [/bakery|bread/, "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=700&q=80"],
+    [/snack|drink|beverage/, "https://images.unsplash.com/photo-1621939514649-280e2aa1f1ba?auto=format&fit=crop&w=700&q=80"],
+    [/atta|rice|staple|grain|dal/, "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=700&q=80"],
+    [/personal|beauty|care/, "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=700&q=80"],
+    [/home|clean|laundry/, "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=700&q=80"],
+  ];
+  return matches.find(([pattern]) => pattern.test(name))?.[1] || "";
+};
+
 const visualFor = (value = "") => {
   const match = categoryVisuals.find(([words]) => words.split("|").some((word) => value.toLowerCase().includes(word)));
   return match ? { emoji: match[1], color: match[2] } : { emoji: "🛍️", color: "bg-stone-50" };
@@ -34,7 +49,7 @@ function ProductCarousel({ id, products, cart, onAdd, onChange, emptyTitle, empt
           <button type="button" onClick={() => scroll(1)} aria-label="Scroll products right" className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700">→</button>
         </div>
         <div id={id} className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {products.map((product) => <div key={product.id} className="w-[220px] min-w-[220px] snap-start sm:w-[245px] sm:min-w-[245px]"><ProductCard product={product} quantity={cart[product.id]?.quantity || 0} onAdd={onAdd} onChange={onChange} /></div>)}
+          {products.map((product) => <div key={product.id} className="w-[220px] min-w-[220px] snap-start sm:w-[245px] sm:min-w-[245px]"><ProductCard product={product} cartEntry={cart[product.id]} onAdd={onAdd} onChange={onChange} /></div>)}
         </div>
       </> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-5 py-8 text-center"><span className="text-3xl">🌱</span><h3 className="mt-2 text-sm font-extrabold text-slate-800">{emptyTitle}</h3><p className="mt-1 text-xs text-slate-500">{emptyText}</p></div>}
     </div>
@@ -43,12 +58,37 @@ function ProductCarousel({ id, products, cart, onAdd, onChange, emptyTitle, empt
 
 function readCart() { return {}; }
 
-function ProductCard({ product, quantity, onAdd, onChange }) {
+function getProductVariants(product) {
+  const configured = product.more_details?.packOptions;
+  if (Array.isArray(configured) && configured.length) return configured.filter((v) => v?.label && Number.isFinite(Number(v.price))).map((v) => ({ label: v.label, price: Number(v.price) }));
+  const unit = String(product.unit || "").trim();
+  const match = unit.match(/^([\\d.]+)\\s*(kg|g|l|ml)$/i);
+  if (!match) return [{ label: unit || "1 item", price: Number(product.price || 0) }];
+  const amount = Number(match[1]);
+  const measure = match[2].toLowerCase();
+  const base = measure === "kg" ? amount * 1000 : measure === "l" ? amount * 1000 : amount;
+  const family = measure === "kg" || measure === "g" ? "g" : "ml";
+  const choices = family === "g" ? [250, 500, 1000] : [1, 10, 100, 250, 500, 1000];
+  const labels = family === "g" ? ["250 g", "500 g", "1 kg"] : ["1 ml", "10 ml", "100 ml", "250 ml", "500 ml", "1 L"];
+  const variants = choices.map((amountValue, index) => ({ label: labels[index], price: Math.max(1, Math.round((Number(product.price || 0) * amountValue / base) * 100) / 100) }));
+  if (!variants.some((v) => v.label.toLowerCase() === unit.toLowerCase())) variants.push({ label: unit, price: Number(product.price || 0) });
+  return variants.sort((a, b) => {
+    const parse = (label) => { const m = label.match(/^([\\d.]+)\\s*(kg|g|l|ml)$/i); return m ? Number(m[1]) * (/^(kg|l)$/i.test(m[2]) ? 1000 : 1) : 0; };
+    return parse(a.label) - parse(b.label);
+  });
+}
+
+function ProductCard({ product, cartEntry, onAdd, onChange }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const variants = useMemo(() => getProductVariants(product), [product]);
+  const [selectedLabel, setSelectedLabel] = useState(variants[0]?.label || product.unit || "1 item");
+  const selectedVariant = variants.find((v) => v.label === selectedLabel) || variants[0];
+  const selectedCart = cartEntry?.variants?.[selectedVariant?.label] || {};
+  const quantity = selectedCart.quantity || 0;
   const visual = visualFor(product.name + " " + (product.categoryName || ""));
   const image = product.images?.[0] || product.image?.[0];
   const discount = Number(product.discountPercent || 0);
-  const price = Number(product.price || 0);
+  const price = Number(selectedVariant?.price ?? product.price ?? 0);
   const originalPrice = discount > 0 ? Math.round(price / (1 - discount / 100)) : null;
 
   return (
@@ -58,22 +98,25 @@ function ProductCard({ product, quantity, onAdd, onChange }) {
         {image && !imageFailed
           ? <img src={image} alt={product.name} onError={() => setImageFailed(true)} className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105" loading="lazy" />
           : <span className="text-6xl" aria-label={product.name}>{visual.emoji}</span>}
-        <span className="absolute bottom-3 right-3 rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-bold text-slate-600">{product.unit || "1 item"}</span>
+        <span className="absolute bottom-3 right-3 rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-bold text-slate-600">{selectedVariant?.label || product.unit || "1 item"}</span>
       </div>
       <div className="p-4">
         <p className="mb-1.5 line-clamp-1 text-[9px] font-extrabold uppercase tracking-[.16em] text-emerald-700">{product.categoryName || "Daily essentials"}</p>
         <h3 className="min-h-10 text-[13px] font-extrabold leading-5 text-slate-900 sm:text-sm">{product.name}</h3>
         <p className="mt-1 min-h-9 line-clamp-2 text-[11px] leading-4 text-slate-500">{product.description || "A carefully selected everyday essential."}</p>
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          {variants.length > 1 && <label className="mb-3 block"><span className="mb-1 block text-[10px] font-bold text-slate-600">Choose size / weight</span><select value={selectedLabel} onChange={(event) => setSelectedLabel(event.target.value)} className="w-full rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900 outline-none focus:border-emerald-500">{variants.map((variant) => <option key={variant.label} value={variant.label}>{variant.label} · ₹{variant.price}</option>)}</select></label>}
+          <div className="flex items-center justify-between gap-2">
           <div>
             <div className="flex items-baseline gap-2"><p className="text-base font-black text-slate-950">₹{price}</p>{originalPrice && <p className="text-[10px] text-slate-400 line-through">₹{originalPrice}</p>}</div>
             <p className="text-[10px] text-slate-500">{quantity || 0} in basket</p>
           </div>
           {quantity > 0
-            ? <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-1"><button type="button" onClick={() => onChange(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-white font-bold text-emerald-800">−</button><span className="min-w-5 text-center text-sm font-black text-emerald-900">{quantity}</span><button type="button" onClick={() => onChange(product.id, 1)} aria-label={`Add one more ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-700 font-bold text-white">+</button></div>
-            : <button type="button" onClick={() => onAdd(product)} className="rounded-xl bg-[#176b3b] px-5 py-2.5 text-[11px] font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#0f4e2a]">ADD +</button>}
+            ? <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-1"><button type="button" onClick={() => onChange(product.id, selectedVariant.label, -1)} aria-label={`Remove one ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-white font-bold text-emerald-800">−</button><span className="min-w-5 text-center text-sm font-black text-emerald-900">{quantity}</span><button type="button" onClick={() => onChange(product.id, selectedVariant.label, 1)} aria-label={`Add one more ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-700 font-bold text-white">+</button></div>
+            : <button type="button" onClick={() => onAdd(product, selectedVariant.label)} className="rounded-xl bg-[#176b3b] px-5 py-2.5 text-[11px] font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#0f4e2a]">ADD +</button>}
         </div>
-      </div>
+          </div>
+        </div>
     </article>
   );
 }
@@ -133,13 +176,19 @@ export default function Home() {
     try {
       const response = await Axios.get("/api/v1/cart");
       const next = {};
-      for (const item of response.data?.data?.items || []) { const id = item.product.id; next[id] = { quantity: (next[id]?.quantity || 0) + item.quantity, cartItemId: item.cartItemId }; }
+      for (const item of response.data?.data?.items || []) {
+        const id = item.product.id;
+        const label = item.product.variantLabel || item.product.unit || "1 item";
+        if (!next[id]) next[id] = { quantity: 0, variants: {} };
+        next[id].quantity += item.quantity;
+        next[id].variants[label] = { quantity: item.quantity, cartItemId: item.cartItemId, unitPrice: item.product.price, lineTotal: item.lineTotal };
+      }
       setCart(next);
     } catch { setCart({}); }
   }, [user?._id]);
   useEffect(() => { refreshCart(); }, [refreshCart]);
   const cartCount = Object.values(cart).reduce((sum, entry) => sum + entry.quantity, 0);
-  const cartTotal = products.reduce((sum, product) => sum + product.price * (cart[product.id]?.quantity || 0), 0);
+  const cartTotal = Object.values(cart).reduce((sum, entry) => sum + Object.values(entry.variants || {}).reduce((part, variant) => part + Number(variant.lineTotal || 0), 0), 0);
   const visibleProducts = useMemo(() => products.filter((product) => {
     const categoryIds = (product.categoryId || []).map((category) => typeof category === "object" ? category?._id : category);
     const matchesCategory = activeCategory === "All" || categoryIds.includes(activeCategory);
@@ -176,9 +225,9 @@ export default function Home() {
 
   const hasPersonalizedRecommendations = Object.values(cart).some((item) => item.quantity > 0);
 
-  const updateCart = async (id, delta) => {
+  const updateCart = async (id, variantLabel, delta) => {
     if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
-    const entry = cart[id];
+    const entry = cart[id]?.variants?.[variantLabel];
     if (!entry) return;
     setCartBusy(true);
     try {
@@ -189,12 +238,12 @@ export default function Home() {
     } catch (error) { toast.error(error.response?.data?.message || "Unable to update cart"); }
     finally { setCartBusy(false); }
   };
-  const addProduct = async (product) => {
+  const addProduct = async (product, variantLabel) => {
     if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
     if (cartBusy) return;
     setCartBusy(true);
     try {
-      await Axios.post("/api/v1/cart/items", { productId: product.id, quantity: 1 });
+      await Axios.post("/api/v1/cart/items", { productId: product.id, quantity: 1, variantLabel });
       await refreshCart();
       toast.success(product.name + " added to cart");
     } catch (error) { toast.error(error.response?.data?.message || "Unable to add product"); }
@@ -242,7 +291,7 @@ export default function Home() {
               return <button key={category._id} type="button" onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group relative overflow-hidden rounded-[22px] border border-[#edf0e8] bg-white p-3 text-left shadow-[0_6px_22px_rgba(25,50,30,.045)] transition duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_16px_35px_rgba(25,70,40,.11)] sm:rounded-[26px] sm:p-4">
                 <div className={`relative mb-3 grid aspect-[1.25/1] place-items-center overflow-hidden rounded-[17px] bg-gradient-to-br ${tones[index % tones.length]}`}>
                   <span className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/60 blur-xl" />
-                  {category.image ? <img src={category.image} alt={category.name} loading="lazy" className="relative h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <span className="relative text-5xl transition duration-500 group-hover:scale-110" aria-hidden="true">{visual.emoji}</span>}
+                  {categoryImageFor(category) ? <img src={categoryImageFor(category)} alt={category.name} loading="lazy" className="relative h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <span className="relative text-5xl transition duration-500 group-hover:scale-110" aria-hidden="true">{visual.emoji}</span>}
                 </div>
                 <div className="flex items-center justify-between gap-1"><span className="line-clamp-1 text-[11px] font-extrabold text-slate-800 sm:text-xs">{category.name}</span><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#edf5ec] text-[11px] font-black text-[#28613d] transition group-hover:bg-[#176b3b] group-hover:text-white">↗</span></div>
               </button>;
@@ -278,7 +327,7 @@ export default function Home() {
             </div>
             <button onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-800">Explore catalogue →</button>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">{recommendedProducts.map((product) => <ProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={addProduct} onChange={updateCart} />)}</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">{recommendedProducts.map((product) => <ProductCard key={product.id} product={product} cartEntry={cart[product.id]} onAdd={addProduct} onChange={updateCart} />)}</div>
         </section>}
 
         <section id="products" className="py-8">
