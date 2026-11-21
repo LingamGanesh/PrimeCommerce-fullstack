@@ -167,7 +167,7 @@ export async function loginController(request, response) {
 
     // 2️⃣ Check user
     const normalizedEmail = String(email).trim().toLowerCase()
-    const user = await UserModel.findOne({ email: normalizedEmail }).select('+password')
+    const user = await UserModel.findOne({ email: normalizedEmail }).select('+password').lean()
 
     if (!user) {
       return response.status(404).json({
