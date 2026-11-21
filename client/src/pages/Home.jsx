@@ -44,43 +44,37 @@ function ProductCarousel({ id, products, cart, onAdd, onChange, emptyTitle, empt
 function readCart() { return {}; }
 
 function ProductCard({ product, quantity, onAdd, onChange }) {
-  const [quickView, setQuickView] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-  const options = Array.isArray(product.more_details?.packOptions) && product.more_details.packOptions.length
-    ? product.more_details.packOptions
-    : [{ label: product.unit || "1 pack", price: Number(product.price) || 0 }];
-  const [selectedPack, setSelectedPack] = useState(options[1] || options[0]);
   const visual = visualFor(product.name + " " + (product.categoryName || ""));
   const image = product.images?.[0] || product.image?.[0];
-  const discount = product.discountPercent || 0;
-  const open = () => { setSelectedPack(options[1] || options[0]); setQuickView(true); };
+  const discount = Number(product.discountPercent || 0);
+  const price = Number(product.price || 0);
+  const originalPrice = discount > 0 ? Math.round(price / (1 - discount / 100)) : null;
+
   return (
-    <>
-      <article onClick={open} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") open(); }} role="button" tabIndex={0} className="group relative min-w-0 cursor-pointer overflow-hidden rounded-[26px] border border-slate-100 bg-white shadow-[0_10px_34px_rgba(15,23,42,.06)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_24px_52px_rgba(15,23,42,.13)]">
-        <div className={`relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br ${visual.color} sm:h-48`}>
-          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/45 blur-2xl" />
-          {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#176b3b] px-3 py-1.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">{discount}% OFF</span>}
-          {image && !imageFailed ? <img src={image} alt={product.name} onError={() => setImageFailed(true)} className="relative h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110" loading="lazy" /> : <span className="relative text-6xl">{visual.emoji}</span>}
-          <span className="absolute bottom-3 right-3 rounded-full border border-white/70 bg-white/85 px-2.5 py-1 text-[9px] font-bold text-slate-600 backdrop-blur">{product.unit || "Everyday pick"}</span>
-        </div>
-        <div className="p-4">
-          <p className="mb-1.5 line-clamp-1 text-[9px] font-extrabold uppercase tracking-[.16em] text-emerald-700">{product.categoryName || "Daily essentials"}</p>
-          <h3 className="min-h-10 text-[13px] font-extrabold leading-5 text-slate-900 sm:text-sm">{product.name}</h3>
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-            <div><p className="text-base font-black text-slate-950">From ₹{Math.min(...options.map(option => Number(option.price) || 0))}</p><p className="text-[10px] text-slate-500">{options.length} pack sizes · {quantity || 0} in basket</p></div>
-            <button type="button" onClick={(event) => { event.stopPropagation(); open(); }} className="rounded-xl bg-[#176b3b] px-4 py-2.5 text-[10px] font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#0f4e2a]">VIEW OPTIONS</button>
+    <article className="group min-w-0 overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-[0_10px_34px_rgba(15,23,42,.06)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_24px_52px_rgba(15,23,42,.13)]">
+      <div className={`relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br ${visual.color} sm:h-48`}>
+        {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#176b3b] px-3 py-1.5 text-[9px] font-extrabold tracking-wide text-white">{discount}% OFF</span>}
+        {image && !imageFailed
+          ? <img src={image} alt={product.name} onError={() => setImageFailed(true)} className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+          : <span className="text-6xl" aria-label={product.name}>{visual.emoji}</span>}
+        <span className="absolute bottom-3 right-3 rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-bold text-slate-600">{product.unit || "1 item"}</span>
+      </div>
+      <div className="p-4">
+        <p className="mb-1.5 line-clamp-1 text-[9px] font-extrabold uppercase tracking-[.16em] text-emerald-700">{product.categoryName || "Daily essentials"}</p>
+        <h3 className="min-h-10 text-[13px] font-extrabold leading-5 text-slate-900 sm:text-sm">{product.name}</h3>
+        <p className="mt-1 min-h-9 line-clamp-2 text-[11px] leading-4 text-slate-500">{product.description || "A carefully selected everyday essential."}</p>
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+          <div>
+            <div className="flex items-baseline gap-2"><p className="text-base font-black text-slate-950">₹{price}</p>{originalPrice && <p className="text-[10px] text-slate-400 line-through">₹{originalPrice}</p>}</div>
+            <p className="text-[10px] text-slate-500">{quantity || 0} in basket</p>
           </div>
+          {quantity > 0
+            ? <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-1"><button type="button" onClick={() => onChange(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-white font-bold text-emerald-800">−</button><span className="min-w-5 text-center text-sm font-black text-emerald-900">{quantity}</span><button type="button" onClick={() => onAdd(product)} aria-label={`Add one more ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-700 font-bold text-white">+</button></div>
+            : <button type="button" onClick={() => onAdd(product)} className="rounded-xl bg-[#176b3b] px-5 py-2.5 text-[11px] font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#0f4e2a]">ADD +</button>}
         </div>
-      </article>
-      {quickView && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setQuickView(false)}>
-        <section role="dialog" aria-modal="true" aria-label={product.name + " pack sizes"} onClick={event => event.stopPropagation()} className="w-full max-w-lg overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:rounded-[28px]">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-emerald-700">Choose your pack</p><h3 className="mt-1 text-lg font-black text-slate-900">{product.name}</h3></div><button onClick={() => setQuickView(false)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-xl text-slate-600" aria-label="Close">×</button></div>
-          <div className="grid grid-cols-[112px_1fr] gap-4 p-5"><div className="grid h-28 place-items-center rounded-2xl bg-[#f5f7f1]">{image && !imageFailed && <img src={image} alt="" onError={() => setImageFailed(true)} className="h-full w-full object-contain p-2" />}</div><div><p className="text-sm leading-6 text-slate-600">{product.description || "Freshly selected for your everyday needs."}</p><p className="mt-2 text-xs text-slate-500">Available stock: {product.stock ?? "Available"}</p></div></div>
-          <div className="space-y-2 px-5 pb-4">{options.map(option => <button key={option.label} onClick={() => setSelectedPack(option)} className={"flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition " + (selectedPack.label === option.label ? "border-emerald-700 bg-emerald-50 ring-1 ring-emerald-700" : "border-slate-200 hover:border-emerald-300")}><span><span className="block text-sm font-bold text-slate-900">{option.label}</span><span className="text-[11px] text-slate-500">Pack size</span></span><span className="text-base font-black text-slate-950">₹{option.price}</span></button>)}</div>
-          <div className="flex items-center justify-between gap-4 border-t border-slate-100 bg-slate-50 px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selected price</p><p className="text-2xl font-black text-slate-950">₹{selectedPack.price}</p></div><button onClick={() => { onAdd(product, selectedPack.label); setQuickView(false); }} className="rounded-2xl bg-[#176b3b] px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/15 hover:bg-[#0f4e2a]">Add to basket</button></div>
-        </section>
-      </div>}
-    </>
+      </div>
+    </article>
   );
 }
 
@@ -195,12 +189,12 @@ export default function Home() {
     } catch (error) { toast.error(error.response?.data?.message || "Unable to update cart"); }
     finally { setCartBusy(false); }
   };
-  const addProduct = async (product, variantLabel) => {
+  const addProduct = async (product) => {
     if (!user?._id) { toast.error("Please login to add products"); navigate("/login"); return; }
     if (cartBusy) return;
     setCartBusy(true);
     try {
-      await Axios.post("/api/v1/cart/items", { productId: product.id, quantity: 1, variantLabel });
+      await Axios.post("/api/v1/cart/items", { productId: product.id, quantity: 1 });
       await refreshCart();
       toast.success(product.name + " added to cart");
     } catch (error) { toast.error(error.response?.data?.message || "Unable to add product"); }
