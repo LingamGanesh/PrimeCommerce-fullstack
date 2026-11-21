@@ -25,68 +25,59 @@ const authCookieOptions = () => {
 // ===============================================
 export async function registerUserController(request, response) {
   try {
-    const { name, email, password } = request.body;
+    const name = typeof request.body?.name === "string" ? request.body.name.trim() : "";
+    const email = typeof request.body?.email === "string" ? request.body.email.trim().toLowerCase() : "";
+    const password = request.body?.password;
 
-    // Check required fields
     if (!name || !email || !password) {
-      return response.status(400).json({
-        message: "Provide name, email, and password",
-        error: true,
-        success: false
-      });
+      return response.status(400).json({ message: "Provide name, email, and password", error: true, success: false });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return response.status(400).json({ message: "Please provide a valid email address", error: true, success: false });
+    }
+    if (typeof password !== "string" || password.length < 8 || password.length > 128) {
+      return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false });
     }
 
-    // Check if email already exists
-    const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
-      return response.status(400).json({
-        message: 'Email is already registered',
-        error: true,
-        success: false
-      });
+    let user = await UserModel.findOne({ email });
+    if (user) {
+      if (!user.verify_email) {
+        return response.status(409).json({
+          message: "This email is already registered but not verified. Request a new verification email.",
+          error: true, success: false, data: { verificationRequired: true }
+        });
+      }
+      return response.status(409).json({ message: "Email is already registered", error: true, success: false });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
+    user = await UserModel.create({ name, email, password: hashedPassword, verify_email: false });
 
-    // Create user
-    const newUser = new UserModel({
-      name,
-      email,
-      password: hashedPassword,
-      verify_email: false
-    });
+    const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+    const verifyEmailUrl = `${frontendUrl}/verify-email?code=${user._id}`;
 
-    const savedUser = await newUser.save();
-
-    // Verification email link
-    const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${savedUser._id}`;
-
-    await sendEmail({
-      sendTo: email,
-      subject: 'Verify your email - PrimeCommerce',
-      html: verifyEmailTemplate({ name, url: verifyEmailUrl })
-    });
-
-    const safeUser = savedUser.toObject();
-    delete safeUser.password;
-    delete safeUser.refresh_token;
-    delete safeUser.forgot_password_otp;
-    delete safeUser.forgot_password_expiry;
+    try {
+      await sendEmail({
+        sendTo: email,
+        subject: "Verify your email - PrimeCommerce",
+        html: verifyEmailTemplate({ name, url: verifyEmailUrl })
+      });
+    } catch (emailError) {
+      console.error("Registration verification email failed:", emailError.message || emailError);
+      return response.status(503).json({
+        message: "Your account was created, but the verification email could not be sent. Configure Resend and request another verification email.",
+        error: true, success: false, data: { accountCreated: true, verificationRequired: true }
+      });
+    }
 
     return response.status(201).json({
-      message: 'User registered successfully! Please check your email to verify.',
-      success: true,
-      error: false,
-      data: safeUser
+      message: "Account created. Please check your email and verify your address before logging in.",
+      success: true, error: false,
+      data: { userId: user._id, email: user.email, verify_email: user.verify_email }
     });
-
   } catch (error) {
-    return response.status(500).json({
-      message: error.message || 'Something went wrong',
-      error: true,
-      success: false
-    });
+    console.error("REGISTER ERROR:", error);
+    return response.status(500).json({ message: error.message || "Registration failed", error: true, success: false });
   }
 }
 
@@ -132,6 +123,33 @@ export async function verifyEmailController(request, response) {
   }
 }
 
+export async function resendVerificationEmailController(request, response) {
+  try {
+    const email = typeof request.body?.email === "string" ? request.body.email.trim().toLowerCase() : "";
+    if (!email) {
+      return response.status(400).json({ message: "Email is required", error: true, success: false });
+    }
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      return response.status(404).json({ message: "No account found for this email", error: true, success: false });
+    }
+    if (user.verify_email) {
+      return response.status(200).json({ message: "Email is already verified. You can log in.", error: false, success: true });
+    }
+    const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+    const verifyEmailUrl = `${frontendUrl}/verify-email?code=${user._id}`;
+    await sendEmail({
+      sendTo: user.email,
+      subject: "Verify your email - PrimeCommerce",
+      html: verifyEmailTemplate({ name: user.name, url: verifyEmailUrl })
+    });
+    return response.json({ message: "A new verification email has been sent.", error: false, success: true });
+  } catch (error) {
+    console.error("RESEND VERIFICATION EMAIL ERROR:", error.message || error);
+    return response.status(503).json({ message: "Unable to send verification email. Check the Resend configuration.", error: true, success: false });
+  }
+}
+
 // ===============================================
 // LOGIN USER
 // ===============================================
@@ -139,7 +157,8 @@ export async function verifyEmailController(request, response) {
 
 export async function loginController(request, response) {
   try {
-    const { email, password } = request.body
+    const password = request.body?.password
+    const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : ''
 
     // 1️⃣ Validate input
     if (!email || !password) {
@@ -159,6 +178,11 @@ export async function loginController(request, response) {
         error: true,
         success: false
       })
+    }
+
+    // Require verified email before issuing authentication tokens.
+    if (!user.verify_email) {
+      return response.status(403).json({ message: 'Please verify your email before logging in. You can request a new verification email.', error: true, success: false, data: { verificationRequired: true } });
     }
 
     // 3️⃣ Check account status
@@ -228,6 +252,9 @@ const refreshToken = await generatedRefreshToken(user._id)
 // ===============================================
 export async function logoutController(request, response) {
   try {
+    if (request.userId) {
+      await UserModel.updateOne({ _id: request.userId }, { $set: { refresh_token: '' } });
+    }
     // Clear both tokens
     const cookieOptions = authCookieOptions();
 
@@ -510,55 +537,34 @@ export async function resetpassword(request,response){
 }
 
 //refresh token controler
-export async function refreshToken(request,response){
-    try {
-        const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
-
-        if(!refreshToken){
-            return response.status(401).json({
-                message : "Invalid token",
-                error  : true,
-                success : false
-            })
-        }
-
-        const verifyToken = await jwt.verify(refreshToken,process.env.SECRET_KEY_REFRESH_TOKEN)
-
-        if(!verifyToken){
-            return response.status(401).json({
-                message : "token is expired",
-                error : true,
-                success : false
-            })
-        }
-
-        const userId = verifyToken?._id
-
-        const newAccessToken = await generatedAccessToken(userId)
-
-        const cookiesOption = authCookieOptions();
-
-        response.cookie('accessToken',newAccessToken,cookiesOption)
-
-        return response.json({
-            message : "New Access token generated",
-            error : false,
-            success : true,
-            data : {
-                accessToken : newAccessToken
-            }
-        })
-
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+export async function refreshToken(request, response) {
+  try {
+    const refreshToken = request.cookies?.refreshToken || request.headers?.authorization?.split(" ")[1];
+    if (!refreshToken) {
+      return response.status(401).json({ message: "Refresh token is required", error: true, success: false });
     }
-}
 
+    const decoded = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
+    const userId = decoded?.id;
+    if (!userId) {
+      return response.status(401).json({ message: "Invalid refresh token", error: true, success: false });
+    }
+
+    const user = await UserModel.findOne({ _id: userId, refresh_token: refreshToken }).select("+refresh_token");
+    if (!user || user.status !== "active" || !user.verify_email) {
+      return response.status(401).json({ message: "Refresh token is invalid or has been revoked", error: true, success: false });
+    }
+
+    const newAccessToken = await generateAccessToken(userId);
+    response.cookie("accessToken", newAccessToken, authCookieOptions());
+    return response.json({
+      message: "New access token generated", error: false, success: true,
+      data: { accessToken: newAccessToken }
+    });
+  } catch (error) {
+    return response.status(401).json({ message: "Refresh token is invalid or expired", error: true, success: false });
+  }
+}
 
 //get login user details
 export async function userDetails(req, res) {
