@@ -94,7 +94,7 @@ export default function Checkout() {
     finally { setSaving(false); }
   };
 
-  const payOnline = async () => {
+  const payOnline = async (upiOnly = false) => {
     if (!selected) { toast.error("Please select a delivery address"); return; }
     setSaving(true);
     try {
@@ -114,6 +114,11 @@ export default function Checkout() {
         description: `Order ${paymentOrder.orderId}`, order_id: paymentOrder.razorpayOrderId,
         prefill: { contact: form.mobile || addresses.find(item => item._id === selected)?.mobile || "" },
         theme: { color: "#9acb28" },
+        ...(upiOnly ? { config: { display: {
+          blocks: { upi: { name: "Pay using UPI", instruments: [{ method: "upi" }] } },
+          sequence: ["block.upi"],
+          preferences: { show_default_blocks: false }
+        } } } : {}),
         handler: async (gatewayResponse) => {
           try {
             const verified = await Axios.post("/api/v1/payments/razorpay/verify", gatewayResponse);
@@ -163,7 +168,7 @@ export default function Checkout() {
               <div className="my-4 border-t border-dashed" />
               <div className="flex justify-between font-extrabold"><span>Total</span><span>₹{cart.subtotal.toFixed(2)}</span></div>
               <div className="mt-4 space-y-3 rounded-xl bg-gray-50 p-3 text-sm"><label className="flex cursor-pointer items-center gap-2 font-semibold"><input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} /> Cash on Delivery</label>{paymentMethod === "COD" && <div className="rounded-lg border border-lime-200 bg-lime-50 p-3 text-xs leading-5 text-lime-950"><strong>Pay when your order arrives.</strong><p className="mt-1">We accept Cash on Delivery. We will use your selected delivery address and mobile number to bring your order to your doorstep. Please pay the order total in cash to the delivery partner at the time of delivery.</p></div>}<label className="flex cursor-pointer items-center gap-2"><input type="radio" name="paymentMethod" checked={paymentMethod === "RAZORPAY"} onChange={() => setPaymentMethod("RAZORPAY")} /> Pay online with Razorpay</label></div>
-              <button disabled={saving || !selected} onClick={paymentMethod === "COD" ? placeOrder : payOnline} className="mt-5 w-full rounded-xl bg-[#c9f24a] px-4 py-3 font-extrabold text-[#1c2715] disabled:opacity-50">{saving ? "Processing…" : paymentMethod === "COD" ? "Place COD order" : "Pay securely"}</button>
+              <button disabled={saving || !selected} onClick={paymentMethod === "COD" ? placeOrder : () => payOnline(paymentMethod === "UPI")} className="mt-5 w-full rounded-xl bg-[#c9f24a] px-4 py-3 font-extrabold text-[#1c2715] disabled:opacity-50">{saving ? "Processing…" : paymentMethod === "COD" ? "Place COD order" : paymentMethod === "UPI" ? "Pay with UPI" : "Pay securely"}</button>
             </aside>
           </div>
         )}
