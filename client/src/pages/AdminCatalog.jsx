@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import Axios from "../utils/Axios";
 import toast from "react-hot-toast";
 
-const blankProduct = { name: "", unit: "1 pack", price: "", discount: "0", stock: "0", description: "", image: "", categoryId: "", sub_categoryId: "", publish: true };
+const blankProduct = { name: "", unit: "1 pack", price: "", discount: "0", stock: "0", description: "", image: "", categoryId: "", sub_categoryId: "", offerStartsAt: "", offerEndsAt: "", publish: true };
+const toLocalDateTime = (value) => value ? new Date(value).toISOString().slice(0, 16) : "";
 const idOf = (value) => typeof value === "object" && value ? value._id : value;
 const money = (value) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(value) || 0);
 
@@ -32,8 +33,8 @@ export default function AdminCatalog({ products = [], onRefresh }) {
   const submitProduct = async (event) => {
     event.preventDefault();
     if (!productForm.categoryId || !productForm.sub_categoryId) return toast.error("Choose a category and subcategory");
-    const payload = { name: productForm.name.trim(), unit: productForm.unit.trim(), price: Number(productForm.price), discount: Number(productForm.discount), stock: Number(productForm.stock), description: productForm.description, image: productForm.image.trim() ? [productForm.image.trim()] : [], categoryId: [productForm.categoryId], sub_categoryId: [productForm.sub_categoryId], publish: productForm.publish };
-    if (!payload.name || !payload.unit || !Number.isFinite(payload.price) || payload.price < 0 || !Number.isFinite(payload.discount) || payload.discount < 0 || payload.discount > 100 || !Number.isInteger(payload.stock) || payload.stock < 0) return toast.error("Check product name, price, discount and stock values");
+    const payload = { name: productForm.name.trim(), unit: productForm.unit.trim(), price: Number(productForm.price), discount: Number(productForm.discount), stock: Number(productForm.stock), description: productForm.description, image: productForm.image.trim() ? [productForm.image.trim()] : [], categoryId: [productForm.categoryId], sub_categoryId: [productForm.sub_categoryId], offerStartsAt: productForm.offerStartsAt || null, offerEndsAt: productForm.offerEndsAt || null, publish: productForm.publish };
+    if (!payload.name || !payload.unit || !Number.isFinite(payload.price) || payload.price < 0 || !Number.isFinite(payload.discount) || payload.discount < 0 || payload.discount > 100 || !Number.isInteger(payload.stock) || payload.stock < 0 || (payload.offerStartsAt && payload.offerEndsAt && new Date(payload.offerEndsAt) <= new Date(payload.offerStartsAt))) return toast.error("Check product name, price, discount and stock values");
     setSaving(true);
     try {
       if (editingProduct) await Axios.patch(`/api/v1/admin/products/${editingProduct}`, payload);
@@ -46,7 +47,7 @@ export default function AdminCatalog({ products = [], onRefresh }) {
 
   const startEditProduct = (product) => {
     setEditingProduct(product._id);
-    setProductForm({ name: product.name || "", unit: product.unit || "", price: String(product.price ?? ""), discount: String(product.discount ?? 0), stock: String(product.stock ?? 0), description: product.description || "", image: product.image?.[0] || "", categoryId: idOf(product.categoryId?.[0]) || "", sub_categoryId: idOf(product.sub_categoryId?.[0]) || "", publish: product.publish !== false });
+    setProductForm({ name: product.name || "", unit: product.unit || "", price: String(product.price ?? ""), discount: String(product.discount ?? 0), stock: String(product.stock ?? 0), description: product.description || "", image: product.image?.[0] || "", categoryId: idOf(product.categoryId?.[0]) || "", sub_categoryId: idOf(product.sub_categoryId?.[0]) || "", offerStartsAt: toLocalDateTime(product.offerStartsAt), offerEndsAt: toLocalDateTime(product.offerEndsAt), publish: product.publish !== false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -83,6 +84,8 @@ export default function AdminCatalog({ products = [], onRefresh }) {
         <label className="text-sm font-semibold text-slate-600">Unit / pack size<input required value={productForm.unit} onChange={e => setProductForm({ ...productForm, unit: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-emerald-500" placeholder="e.g. 500 g" /></label>
         <label className="text-sm font-semibold text-slate-600">Selling price (₹)<input required type="number" min="0" step="0.01" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-emerald-500" /></label>
         <label className="text-sm font-semibold text-slate-600">Customer offer discount (%)<input type="number" min="0" max="100" value={productForm.discount} onChange={e => setProductForm({ ...productForm, discount: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-emerald-500" /><span className="mt-1 block text-[11px] font-normal leading-5 text-emerald-700">Set a discount to publish this product automatically in the customer homepage’s Live Offers section.</span></label>
+        <label className="text-sm font-semibold text-slate-600">Offer starts (optional)<input type="datetime-local" value={productForm.offerStartsAt} onChange={e => setProductForm({ ...productForm, offerStartsAt: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-emerald-500" /></label>
+        <label className="text-sm font-semibold text-slate-600">Offer ends (optional)<input type="datetime-local" min={productForm.offerStartsAt || undefined} value={productForm.offerEndsAt} onChange={e => setProductForm({ ...productForm, offerEndsAt: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-emerald-500" /></label>
         <label className="text-sm font-semibold text-slate-600">Available stock<input required type="number" min="0" step="1" value={productForm.stock} onChange={e => setProductForm({ ...productForm, stock: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-emerald-500" /></label>
         <label className="text-sm font-semibold text-slate-600">Category<select required value={productForm.categoryId} onChange={e => setProductForm({ ...productForm, categoryId: e.target.value, sub_categoryId: "" })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="">Choose category</option>{categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select></label>
         <label className="text-sm font-semibold text-slate-600">Subcategory<select required value={productForm.sub_categoryId} onChange={e => setProductForm({ ...productForm, sub_categoryId: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="">Choose subcategory</option>{subcategories.filter(s => (s.categoryId || []).some(id => String(idOf(id)) === productForm.categoryId)).map(s => <option key={s._id} value={s._id}>{s.name}</option>)}</select></label>
