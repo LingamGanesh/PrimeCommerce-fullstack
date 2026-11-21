@@ -73,9 +73,14 @@ export async function listSubCategories(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [] } = req.body;
+    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [], publish = true } = req.body;
     if (!name?.trim() || !unit?.trim() || !Array.isArray(categoryId) || !categoryId.length || !Array.isArray(sub_categoryId) || !sub_categoryId.length || price === undefined) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
+    }
+    if (typeof publish !== "boolean") return res.status(400).json({ success: false, error: true, message: "Publish must be true or false" });
+    const images = Array.isArray(image) ? image : typeof image === "string" && image.trim() ? [image.trim()] : [];
+    if (images.some((url) => typeof url !== "string" || !/^https?:\\/\\//i.test(url.trim()))) {
+      return res.status(400).json({ success: false, error: true, message: "Product images must be valid HTTP or HTTPS URLs" });
     }
     const values = [Number(price), Number(discount), Number(stock)];
     if (!values.every(Number.isFinite) || values[0] < 0 || values[1] < 0 || values[1] > 100 || values[2] < 0) {
@@ -94,7 +99,7 @@ export async function createProduct(req, res) {
     }
     const product = await ProductModel.create({
       name: name.trim(), categoryId, sub_categoryId, unit: unit.trim(), price: values[0],
-      discount: values[1], stock: values[2], description, image: Array.isArray(image) ? image : []
+      discount: values[1], stock: values[2], description, image: images.map((url) => url.trim()), publish
     });
     return res.status(201).json({ success: true, error: false, message: "Product created", data: productPayload(product) });
   } catch (error) {
