@@ -6,11 +6,11 @@ const forgotPasswordTemplate = ({ name, otp })=>{
     <div style="background:yellow; font-size:20px;padding:20px;text-align:center;font-weight : 800;">
         ${otp}
     </div>
-    <p>This OTP is valid for 10 minutes only. Enter this otp in the binkeyit website to proceed with resetting your password.</p>
+    <p>This OTP is valid for 10 minutes only. Enter this otp in the PrimeCommerce website to proceed with resetting your password.</p>
     <br/>
     </br>
     <p>Thanks</p>
-    <p>Binkeyit</p>
+    <p>PrimeCommerce</p>
 </div>
     `
 }
