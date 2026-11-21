@@ -98,7 +98,7 @@ export default function Home() {
     let active = true;
     const loadCatalogue = async () => {
       try {
-        const productResponse = await Axios.get("/api/v1/products?limit=60");
+        const productResponse = await Axios.get("/api/v1/products?limit=100");
         if (!active) return;
         const rows = productResponse.data?.data;
         if (!Array.isArray(rows)) throw new Error("Products response is not a valid list");
