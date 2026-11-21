@@ -79,7 +79,7 @@ export async function createProduct(req, res) {
     }
     if (typeof publish !== "boolean") return res.status(400).json({ success: false, error: true, message: "Publish must be true or false" });
     const images = Array.isArray(image) ? image : typeof image === "string" && image.trim() ? [image.trim()] : [];
-    if (images.some((url) => typeof url !== "string" || !/^https?:\\/\\//i.test(url.trim()))) {
+    if (images.some((url) => typeof url !== "string" || !(url.trim().toLowerCase().startsWith("http://") || url.trim().toLowerCase().startsWith("https://")))) {
       return res.status(400).json({ success: false, error: true, message: "Product images must be valid HTTP or HTTPS URLs" });
     }
     const values = [Number(price), Number(discount), Number(stock)];
