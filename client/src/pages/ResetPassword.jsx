@@ -20,7 +20,7 @@ const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const validValue = data.newPassword && data.confirmPassword
+  const validValue = data.newPassword.length >= 8 && data.newPassword.length <= 128 && data.confirmPassword && data.newPassword === data.confirmPassword
 
   // 🔐 Protect route + set email
   useEffect(() => {
@@ -44,6 +44,11 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (data.newPassword.length < 8 || data.newPassword.length > 128) {
+      toast.error('Password must be between 8 and 128 characters')
+      return
+    }
 
     if (data.newPassword !== data.confirmPassword) {
       toast.error("Passwords do not match")
@@ -92,6 +97,8 @@ const ResetPassword = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 name="newPassword"
+                minLength={8}
+                maxLength={128}
                 value={data.newPassword}
                 onChange={handleChange}
                 className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-gray-400"
@@ -116,6 +123,8 @@ const ResetPassword = () => {
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
+                minLength={8}
+                maxLength={128}
                 value={data.confirmPassword}
                 onChange={handleChange}
                 className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-gray-400"
@@ -132,6 +141,7 @@ const ResetPassword = () => {
 
           {/* Button */}
           <button
+            type="submit"
             disabled={!validValue}
             className="w-full bg-gray-800 text-white py-2 rounded-md hover:bg-gray-700 transition disabled:bg-gray-400"
           >
