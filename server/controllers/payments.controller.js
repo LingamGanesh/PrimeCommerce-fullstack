@@ -155,7 +155,7 @@ export async function handleRazorpayWebhook(req, res) {
       if (order.payment_status === "expired" || order.inventoryReleased) {
         await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id, ...(payment?.method === "upi" ? { paymentMethod: "UPI" } : {}) } });
       } else {
-        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
+        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id, ...(payment?.method === "upi" ? { paymentMethod: "UPI" } : {}) } });
         await CartProductModel.deleteMany({ userId: order.userId });
       }
     }
