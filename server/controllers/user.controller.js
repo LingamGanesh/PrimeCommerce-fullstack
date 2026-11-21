@@ -288,43 +288,44 @@ export async function logoutController(request, response) {
   }
 }
 
-// upload Avthar
-export async  function uploadAvatar(request,response){
-    try {
-        const userId = request.userId;
-        const image = request.file;
-        if (!image) {
-            return response.status(400).json({
-                message: "Please select an image to upload",
-                error: true,
-                success: false
-            });
-        }
+// Upload the authenticated customer's profile avatar.
+export async function uploadAvatar(request, response) {
+  try {
+    const userId = request.userId;
+    const image = request.file;
 
-        const upload = await uploadImageClodinary(image)
-        
-        const updateUser = await UserModel.findByIdAndUpdate(userId,{
-            avatar : upload.url
-        })
-
-        return response.json({
-            message : "upload profile",
-            success : true,
-            error : false,
-            data : {
-                _id : userId,
-                avatar : upload.url
-            }
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+    if (!userId) {
+      return response.status(401).json({ message: "Please sign in to update your profile photo.", error: true, success: false });
     }
-    
+    if (!image) {
+      return response.status(400).json({ message: "Please choose an image to upload.", error: true, success: false });
+    }
+
+    const uploadedImage = await uploadImageClodinary(image);
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { avatar: uploadedImage.secure_url } },
+      { new: true, runValidators: true }
+    ).select("-password -refresh_token");
+
+    if (!updatedUser) {
+      return response.status(404).json({ message: "Customer account was not found.", error: true, success: false });
+    }
+
+    return response.status(200).json({
+      message: "Profile photo updated successfully.",
+      success: true,
+      error: false,
+      data: { _id: updatedUser._id, avatar: updatedUser.avatar },
+    });
+  } catch (error) {
+    console.error("PROFILE AVATAR UPLOAD ERROR:", error.message || error);
+    return response.status(500).json({
+      message: "Profile photo upload failed. Check the Cloudinary server configuration and try again.",
+      error: true,
+      success: false,
+    });
+  }
 }
 
 //update user details
