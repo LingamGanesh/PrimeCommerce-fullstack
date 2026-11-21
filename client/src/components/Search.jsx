@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { TypeAnimation } from 'react-type-animation';
 import { IoSearch } from "react-icons/io5";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Search = () => {
-    const [isSearchPage , setIsSearch] = useState()
-
     const navigate = useNavigate()
 
     const location = useLocation()
