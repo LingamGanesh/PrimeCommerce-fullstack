@@ -69,7 +69,6 @@ export default function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [cartBusy, setCartBusy] = useState(false);
@@ -114,9 +113,8 @@ export default function Home() {
   const visibleProducts = useMemo(() => products.filter((product) => {
     const categoryIds = (product.categoryId || []).map((category) => typeof category === "object" ? category?._id : category);
     const matchesCategory = activeCategory === "All" || categoryIds.includes(activeCategory);
-    const query = search.toLowerCase().trim();
-    return matchesCategory && (!query || product.name.toLowerCase().includes(query) || (product.categoryName || "").toLowerCase().includes(query));
-  }), [products, activeCategory, search]);
+    return matchesCategory;
+  }), [products, activeCategory]);
 
   const offerProducts = useMemo(() => products
     .filter((product) => Number(product.discountPercent) > 0 && product.publish !== false && Number(product.stock ?? 1) > 0)
@@ -191,21 +189,22 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="rounded-[30px] border border-white/15 bg-white p-3 text-slate-900 shadow-[0_28px_80px_rgba(0,0,0,.25)] sm:p-4">
-            <div className="rounded-[22px] bg-[#f5f7f1] p-4 sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-emerald-700">Find your favourites</p><h2 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">What’s on your list?</h2></div><span className="grid h-11 w-11 place-items-center rounded-2xl bg-lime-200 text-2xl">⌕</span></div>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                <span className="text-xl text-emerald-700">⌕</span>
-                <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && navigate(`/search?q=${encodeURIComponent(search)}`)} placeholder="Search milk, fruits, snacks..." className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" aria-label="Search products" />
-                {search && <button onClick={() => setSearch("")} className="text-xs font-bold text-emerald-700">Clear</button>}
+          <div className="relative hidden min-h-[390px] items-center justify-center lg:flex">
+            <div className="absolute h-[340px] w-[340px] rounded-full border border-white/10 bg-gradient-to-br from-emerald-300/15 to-lime-200/5 shadow-[0_0_100px_rgba(163,230,53,.10)]" />
+            <div className="absolute h-[275px] w-[275px] rounded-full border border-dashed border-lime-200/20" />
+            <div className="relative z-10 w-full max-w-[390px] rotate-[-3deg] rounded-[32px] border border-white/15 bg-white/[.10] p-5 shadow-[0_30px_90px_rgba(0,0,0,.28)] backdrop-blur-xl">
+              <div className="flex items-center justify-between"><span className="rounded-full bg-lime-300 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.18em] text-[#102b20]">The everyday edit</span><span className="text-lg text-lime-200">✦</span></div>
+              <p className="mt-5 text-2xl font-black tracking-tight text-white">Good things,<br/><span className="text-lime-300">picked with care.</span></p>
+              <p className="mt-2 max-w-[250px] text-xs leading-6 text-emerald-50/70">Fresh favourites and home essentials for the little moments that make a day.</p>
+              <div className="mt-6 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center"><span className="text-3xl">🥑</span><p className="mt-2 text-[9px] font-bold text-white/80">Fresh</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center"><span className="text-3xl">🥛</span><p className="mt-2 text-[9px] font-bold text-white/80">Daily</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center"><span className="text-3xl">🍓</span><p className="mt-2 text-[9px] font-bold text-white/80">Lovely</p></div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">Search across your store’s live catalogue.</p>
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                <div className="rounded-xl bg-white p-3"><span className="text-xl">🥦</span><p className="mt-1 text-[10px] font-bold text-slate-600">Fresh picks</p></div>
-                <div className="rounded-xl bg-white p-3"><span className="text-xl">🏷️</span><p className="mt-1 text-[10px] font-bold text-slate-600">Live offers</p></div>
-                <div className="rounded-xl bg-white p-3"><span className="text-xl">🛒</span><p className="mt-1 text-[10px] font-bold text-slate-600">Easy checkout</p></div>
-              </div>
+              <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4"><span className="text-[10px] font-semibold text-emerald-50/65">PRIME COMMERCE COLLECTION</span><span className="text-sm font-black text-lime-300">✦ ✦ ✦</span></div>
             </div>
+            <div className="absolute right-0 top-12 z-20 rounded-2xl border border-white/15 bg-white p-3 text-[#102b20] shadow-xl"><span className="text-xl">🌿</span><p className="mt-1 text-[9px] font-black uppercase tracking-wider">Thoughtful picks</p></div>
+            <div className="absolute bottom-10 left-0 z-20 rounded-2xl border border-white/15 bg-lime-300 px-4 py-3 text-[#102b20] shadow-xl"><p className="text-[9px] font-black uppercase tracking-wider">Everyday made better</p><p className="mt-1 text-sm font-black">Shop the good stuff ✦</p></div>
           </div>
         </div>
       </section>
