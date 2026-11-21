@@ -20,7 +20,7 @@ export async function listProducts(req, res) {
   try {
     const { category, search, featured, page = 1, limit = 24 } = req.query;
     const currentPage = Math.max(1, Number.parseInt(page, 10) || 1);
-    const pageSize = Math.min(60, Math.max(1, Number.parseInt(limit, 10) || 24));
+    const pageSize = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 24));
     const filter = { publish: true };
     if (category && mongoose.isValidObjectId(category)) filter.categoryId = category;
     if (featured === "true") filter.discount = { $gt: 0 };
