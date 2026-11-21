@@ -42,8 +42,7 @@ export async function releaseOrderInventory(order) {
   }
 
   await OrderModel.updateOne({ _id: order._id, inventoryReleased: { $ne: true } }, { $set: { inventoryReleased: true } });
-  // Markers are safe to remove only after the order's completion flag is saved.
-  await ProductModel.updateMany({}, { $pull: { inventoryReleaseKeys: releaseKey } });
+  // Keep the per-product marker: it makes later duplicate/recovery calls safe.
   return true;
 }
 
