@@ -2,6 +2,23 @@ import mongoose from "mongoose";
 import CartProductModel from "../models/cartProduct.model.js";
 import ProductModel from "../models/product.model.js";
 
+function availablePackOptions(product) {
+  const configured = Array.isArray(product.more_details?.packOptions) ? product.more_details.packOptions : [];
+  if (configured.length) return configured.filter((option) => option?.label && Number.isFinite(Number(option.price))).map((option) => ({ label: option.label, price: Number(option.price) }));
+  const unit = String(product.unit || "").trim();
+  const match = unit.match(/^([\d.]+)\s*(kg|g|l|ml)$/i);
+  if (!match) return [{ label: unit || "1 item", price: Number(product.price) || 0 }];
+  const amount = Number(match[1]);
+  const measure = match[2].toLowerCase();
+  const baseAmount = measure === "kg" || measure === "l" ? amount * 1000 : amount;
+  const weight = measure === "kg" || measure === "g";
+  const amounts = weight ? [250, 500, 1000] : [1, 10, 100, 250, 500, 1000];
+  const labels = weight ? ["250 g", "500 g", "1 kg"] : ["1 ml", "10 ml", "100 ml", "250 ml", "500 ml", "1 L"];
+  const options = amounts.map((value, index) => ({ label: labels[index], price: Math.max(1, Math.round(((Number(product.price) || 0) * value / baseAmount) * 100) / 100) }));
+  if (!options.some((option) => option.label.toLowerCase() === unit.toLowerCase())) options.push({ label: unit, price: Number(product.price) || 0 });
+  return options;
+}
+
 const publicCartItem = (row) => {
   const product = row.productId;
   if (!product) return null;
@@ -44,11 +61,12 @@ export async function addCartItem(req, res) {
     }
     const product = await ProductModel.findOne({ _id: productId, publish: true }).select("stock price unit more_details");
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product is unavailable" });
-    const variants = Array.isArray(product.more_details?.packOptions) ? product.more_details.packOptions : [];
+    const variants = availablePackOptions(product);
     const selected = variants.find((option) => option.label === requestedVariant) || (!requestedVariant ? variants.find((option) => option.label === product.unit) : null);
-    if (variants.length && !selected) return res.status(400).json({ success: false, error: true, message: "Choose a valid pack size" });
-    const variantLabel = selected?.label || product.unit;
-    const unitPrice = Number(selected?.price ?? product.price);
+    if (requestedVariant && !selected) return res.status(400).json({ success: false, error: true, message: "Choose a valid pack size" });
+    const chosen = selected || variants.find((option) => option.label === product.unit) || { label: product.unit, price: product.price };
+    const variantLabel = chosen.label;
+    const unitPrice = Number(chosen.price);
     const existing = await CartProductModel.findOne({ userId: req.userId, productId, variantLabel });
     const nextQuantity = (existing?.quantity || 0) + quantity;
     if (nextQuantity > product.stock) return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
