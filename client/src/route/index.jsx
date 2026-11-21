@@ -18,6 +18,7 @@ import AdminDashboard from "../pages/AdminDashboard";
 import StaffGuard from "../components/StaffGuard";
 import FulfilmentDashboard from "../pages/FulfilmentDashboard";
 import Support from "../pages/Support";
+import VerifyEmailPage from "../pages/VerifyEmailPage";
 
 const router = createBrowserRouter([
   {
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPage /> },
       { path: "verification-page", element: <VerificationOtpPage /> },
+      { path: "verify-email", element: <VerifyEmailPage /> },
       { path: "reset-password", element: <ResetPassword /> },
       {
         path: "dashboard",
