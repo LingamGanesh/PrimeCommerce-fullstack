@@ -86,8 +86,10 @@ export default function Checkout() {
     setSaving(true);
     try {
       const response = await Axios.post("/api/v1/checkout/cod", { addressId: selected });
-      toast.success("Order placed successfully");
-      navigate("/dashboard/myorders", { state: { placedOrder: response.data?.data } });
+      const order = response.data?.data;
+      const deliveryMessage = "Your COD order is confirmed! We will deliver it to your selected address. Please pay ₹" + Number(order?.total ?? cart.subtotal).toFixed(2) + " in cash when our delivery partner arrives.";
+      toast.success(deliveryMessage, { duration: 7000 });
+      navigate("/dashboard/myorders", { state: { placedOrder: order, confirmationMessage: deliveryMessage } });
     } catch (error) { toast.error(error.response?.data?.message || "Unable to place order"); }
     finally { setSaving(false); }
   };
@@ -160,8 +162,8 @@ export default function Checkout() {
               <div className="mt-4 space-y-3">{cart.items.map(item => <div key={item.cartItemId} className="flex justify-between gap-3 text-sm"><span className="text-gray-600">{item.product.name} × {item.quantity}</span><strong>₹{item.lineTotal.toFixed(2)}</strong></div>)}</div>
               <div className="my-4 border-t border-dashed" />
               <div className="flex justify-between font-extrabold"><span>Total</span><span>₹{cart.subtotal.toFixed(2)}</span></div>
-              <div className="mt-4 space-y-2 rounded-xl bg-gray-50 p-3 text-sm"><label className="flex cursor-pointer items-center gap-2"><input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} /> Cash on Delivery</label><label className="flex cursor-pointer items-center gap-2"><input type="radio" name="paymentMethod" checked={paymentMethod === "RAZORPAY"} onChange={() => setPaymentMethod("RAZORPAY")} /> Pay online with Razorpay</label></div>
-              <button disabled={saving || !selected} onClick={paymentMethod === "COD" ? placeOrder : payOnline} className="mt-5 w-full rounded-xl bg-[#c9f24a] text-[#1c2715] px-4 py-3 font-bold text-white disabled:opacity-50">{saving ? "Processing…" : paymentMethod === "COD" ? "Place COD order" : "Pay securely"}</button>
+              <div className="mt-4 space-y-3 rounded-xl bg-gray-50 p-3 text-sm"><label className="flex cursor-pointer items-center gap-2 font-semibold"><input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} /> Cash on Delivery</label>{paymentMethod === "COD" && <div className="rounded-lg border border-lime-200 bg-lime-50 p-3 text-xs leading-5 text-lime-950"><strong>Pay when your order arrives.</strong><p className="mt-1">We accept Cash on Delivery. We will use your selected delivery address and mobile number to bring your order to your doorstep. Please pay the order total in cash to the delivery partner at the time of delivery.</p></div>}<label className="flex cursor-pointer items-center gap-2"><input type="radio" name="paymentMethod" checked={paymentMethod === "RAZORPAY"} onChange={() => setPaymentMethod("RAZORPAY")} /> Pay online with Razorpay</label></div>
+              <button disabled={saving || !selected} onClick={paymentMethod === "COD" ? placeOrder : payOnline} className="mt-5 w-full rounded-xl bg-[#c9f24a] px-4 py-3 font-extrabold text-[#1c2715] disabled:opacity-50">{saving ? "Processing…" : paymentMethod === "COD" ? "Place COD order" : "Pay securely"}</button>
             </aside>
           </div>
         )}
