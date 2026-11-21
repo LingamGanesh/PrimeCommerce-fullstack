@@ -7,10 +7,10 @@ const Dashboard = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-[#f6f7f2] flex flex-col">
 
       {/* 🔝 TOP NAVBAR */}
-      <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-40">
+      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40">
 
         {/* Left */}
         <div className="flex items-center gap-4">
@@ -22,14 +22,14 @@ const Dashboard = () => {
             <FaBars size={20} />
           </button>
 
-          <h1 className="text-xl font-semibold text-gray-800">
+          <h1 className="text-xl font-black text-slate-900">
             Dashboard
           </h1>
         </div>
 
         {/* Right */}
         <div className="text-sm text-gray-600">
-          Welcome, <span className="font-medium">Ganesh 👋</span>
+          Welcome back 👋
         </div>
       </header>
 
@@ -39,7 +39,7 @@ const Dashboard = () => {
         {/* 🧭 SIDEBAR */}
         <aside
           className={`
-            fixed lg:static top-16 left-0 h-[calc(100vh-64px)] w-64 bg-white border-r z-30
+            fixed lg:static top-16 left-0 h-[calc(100vh-64px)] w-64 bg-white border-r border-slate-200 z-30
             transform ${open ? "translate-x-0" : "-translate-x-full"} 
             lg:translate-x-0 transition-transform duration-300
           `}
@@ -64,7 +64,7 @@ const Dashboard = () => {
           <div className="max-w-7xl mx-auto">
 
             {/* Content Card */}
-            <div className="bg-white rounded-2xl shadow-sm border p-4 sm:p-6 lg:p-8 min-h-[70vh]">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 lg:p-8 min-h-[70vh]">
 
               <Outlet />
 
