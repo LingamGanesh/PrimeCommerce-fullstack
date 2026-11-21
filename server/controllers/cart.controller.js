@@ -12,7 +12,7 @@ const publicCartItem = (row) => {
     cartItemId: row._id.toString(),
     product: {
       id: product._id.toString(), name: product.name, image: product.image || [],
-      unit: product.unit, price: unitPrice, mrp: price, discountPercent: discount,
+      unit: row.variantLabel || product.unit, variantLabel: row.variantLabel || product.unit, price: Number.isFinite(row.unitPrice) ? row.unitPrice : unitPrice, mrp: price, discountPercent: discount,
       stock: Number(product.stock) || 0, publish: product.publish
     },
     quantity: row.quantity,
@@ -36,18 +36,24 @@ export async function getCart(req, res) {
 export async function addCartItem(req, res) {
   try {
     const { productId } = req.body;
+    const requestedVariant = String(req.body.variantLabel || "").trim();
     const quantity = Number(req.body.quantity ?? 1);
     if (!mongoose.isValidObjectId(productId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
       return res.status(400).json({ success: false, error: true, message: "Provide a valid product and quantity (1–50)" });
     }
-    const product = await ProductModel.findOne({ _id: productId, publish: true }).select("stock");
+    const product = await ProductModel.findOne({ _id: productId, publish: true }).select("stock price unit more_details");
     if (!product) return res.status(404).json({ success: false, error: true, message: "Product is unavailable" });
-    const existing = await CartProductModel.findOne({ userId: req.userId, productId });
+    const variants = Array.isArray(product.more_details?.packOptions) ? product.more_details.packOptions : [];
+    const selected = variants.find((option) => option.label === requestedVariant) || (!requestedVariant ? variants.find((option) => option.label === product.unit) : null);
+    if (variants.length && !selected) return res.status(400).json({ success: false, error: true, message: "Choose a valid pack size" });
+    const variantLabel = selected?.label || product.unit;
+    const unitPrice = Number(selected?.price ?? product.price);
+    const existing = await CartProductModel.findOne({ userId: req.userId, productId, variantLabel });
     const nextQuantity = (existing?.quantity || 0) + quantity;
     if (nextQuantity > product.stock) return res.status(409).json({ success: false, error: true, message: "Requested quantity is not available in stock" });
     const row = existing
       ? await CartProductModel.findByIdAndUpdate(existing._id, { quantity: nextQuantity }, { new: true })
-      : await CartProductModel.create({ userId: req.userId, productId, quantity });
+      : await CartProductModel.create({ userId: req.userId, productId, quantity, variantLabel, unitPrice });
     await row.populate({ path: "productId", select: "name image unit price discount stock publish" });
     return res.status(200).json({ success: true, error: false, message: "Cart updated", data: publicCartItem(row) });
   } catch {
