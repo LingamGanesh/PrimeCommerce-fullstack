@@ -147,6 +147,71 @@ export async function verifyEmailController(request, response) {
   }
 }
 
+// Resend a short-lived verification link without revealing whether an email is registered.
+export async function resendVerificationEmailController(request, response) {
+  const genericResponse = {
+    message: "If the account needs verification, a new link will be sent.",
+    error: false,
+    success: true
+  };
+
+  try {
+    const email = String(request.body?.email || "").trim().toLowerCase();
+    if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      return response.status(400).json({ message: "Enter a valid email address.", error: true, success: false });
+    }
+
+    const now = new Date();
+    const verificationToken = randomBytes(32).toString("hex");
+    const verificationTokenHash = createHash("sha256").update(verificationToken).digest("hex");
+    const user = await UserModel.findOneAndUpdate(
+      {
+        email,
+        verify_email: false,
+        $or: [
+          { emailVerificationLastSentAt: null },
+          { emailVerificationLastSentAt: { $exists: false } },
+          { emailVerificationLastSentAt: { $lte: new Date(now.getTime() - 60 * 1000) } }
+        ]
+      },
+      {
+        $set: {
+          emailVerificationTokenHash: verificationTokenHash,
+          emailVerificationTokenExpiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+          emailVerificationLastSentAt: now
+        }
+      },
+      { new: true }
+    ).select("name email");
+
+    if (!user) return response.json(genericResponse);
+
+    try {
+      const verifyEmailUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?code=${verificationToken}`;
+      await sendEmail({
+        sendTo: user.email,
+        subject: "Verify your email - PrimeCommerce",
+        html: verifyEmailTemplate({ name: user.name, url: verifyEmailUrl })
+      });
+    } catch (emailError) {
+      await UserModel.updateOne(
+        { _id: user._id, emailVerificationTokenHash: verificationTokenHash },
+        { $set: { emailVerificationTokenHash: null, emailVerificationTokenExpiresAt: null } }
+      );
+      throw emailError;
+    }
+
+    return response.json(genericResponse);
+  } catch (error) {
+    console.error("Verification email resend failed:", error.message);
+    return response.status(503).json({
+      message: "Unable to send a verification email right now. Please try again later.",
+      error: true,
+      success: false
+    });
+  }
+}
+
 // ===============================================
 // LOGIN USER
 // ===============================================
