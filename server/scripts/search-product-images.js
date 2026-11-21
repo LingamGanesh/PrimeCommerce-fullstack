@@ -7,6 +7,8 @@ dotenv.config();
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 const STOP = new Set(["fresh", "premium", "classic", "daily", "selected", "farm", "everyday", "whole", "organic", "natural", "product", "food", "the", "and", "with", "for", "from", "a", "an", "of", "best", "new", "pack", "pcs"]);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const REQUEST_DELAY_MS = 5000;
+const MAX_RETRIES = 5;
 
 function words(value = "") {
   return String(value).toLowerCase().normalize("NFKD")
@@ -36,10 +38,30 @@ async function searchProductImage(productName) {
   url.searchParams.set("iiprop", "url|extmetadata|mime");
   url.searchParams.set("iiurlwidth", "900");
 
-  const response = await fetch(url, {
-    headers: { "User-Agent": "PrimeCommerceCatalog/1.0 (catalog image matching; contact: project maintainer)" },
-    signal: AbortSignal.timeout(25000)
-  });
+  let response;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    response = await fetch(url, {
+      headers: {
+        "User-Agent": "PrimeCommerceCatalog/1.1 (product image catalog matcher; https://github.com/LingamGanesh/PrimeCommerce-fullstack)"
+      },
+      signal: AbortSignal.timeout(30000)
+    });
+
+    if (response.status !== 429 && response.status < 500) break;
+    if (attempt === MAX_RETRIES) {
+      const error = new Error(`Wikimedia Commons rate limit/server error: HTTP ${response.status}. Stop and retry later; no products were unpublished because of this error.`);
+      error.rateLimited = response.status === 429;
+      throw error;
+    }
+
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter * 1000, 120000)
+      : Math.min(REQUEST_DELAY_MS * (2 ** attempt), 120000);
+    console.warn(`Wikimedia HTTP ${response.status}; retry ${attempt + 1}/${MAX_RETRIES} after ${Math.ceil(waitMs / 1000)}s`);
+    await sleep(waitMs);
+  }
+
   if (!response.ok) throw new Error(`Wikimedia Commons search failed: HTTP ${response.status}`);
   const data = await response.json();
   const pages = data.query?.pages || [];
@@ -63,6 +85,7 @@ async function main() {
   const report = [];
   let updated = 0;
   let unmatched = 0;
+  let stoppedByRateLimit = false;
 
   try {
     for (const product of products) {
@@ -96,11 +119,17 @@ async function main() {
           console.log(`Matched ${product.name} -> ${result.page.title}`);
         }
       } catch (error) {
+        if (error.rateLimited) {
+          stoppedByRateLimit = true;
+          report.push({ product: product.name, status: "STOPPED_RATE_LIMIT", error: error.message, productVisibilityUnchanged: true });
+          console.error(error.message);
+          break;
+        }
         unmatched += 1;
         report.push({ product: product.name, status: "SEARCH_ERROR", error: error.message, productVisibilityUnchanged: true });
         console.error(`Image search failed for ${product.name}: ${error.message}`);
       }
-      await sleep(250);
+      await sleep(REQUEST_DELAY_MS);
     }
   } finally {
     await mongoose.disconnect();
@@ -108,7 +137,8 @@ async function main() {
 
   const fs = await import("node:fs/promises");
   await fs.writeFile("catalog-product-image-report.json", JSON.stringify(report, null, 2));
-  console.log(`Finished product image search: ${updated}/${products.length} matched; ${unmatched} unmatched/failed.`);
+  console.log(`Finished product image search: ${updated} matched; ${unmatched} unmatched/failed; ${products.length - report.length} not searched.`);
+  if (stoppedByRateLimit) console.log("Search stopped safely after repeated rate limiting. Run the command again later to process remaining products.");
   console.log("Matched products are published with the selected image. Products with no confident title match are unpublished and have their image cleared. Search errors leave product visibility unchanged.");
   console.log("Review catalog-product-image-report.json and visually verify image relevance and license.");
 }
