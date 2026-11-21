@@ -307,41 +307,69 @@ export async  function uploadAvatar(request,response){
     
 }
 
-//update user details
-export async function updateUserDetails(request,response){
-    try {
-        const userId = request.userId //auth middleware
-        const { name, email, mobile, password } = request.body 
-
-        let hashPassword = ""
-
-        if(password){
-            const salt = await bcrypt.genSalt(10)
-            hashPassword = await bcrypt.hash(password,salt)
-        }
-
-        const updateUser = await UserModel.updateOne({ _id : userId},{
-            ...(name && { name : name }),
-            ...(email && { email : email }),
-            ...(mobile && { mobile : mobile }),
-            ...(password && { password : hashPassword })
-        })
-
-        return response.json({
-            message : "Updated successfully",
-            error : false,
-            success : true,
-            data : updateUser
-        })
-
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+// Update profile fields with validation; email changes require a separate verified flow.
+export async function updateUserDetails(request, response) {
+  try {
+    const userId = request.userId;
+    const { name, email, mobile, password } = request.body || {};
+    const currentUser = await UserModel.findById(userId).select("email");
+    if (!currentUser) {
+      return response.status(404).json({ message: "User not found", error: true, success: false });
     }
+
+    const updates = {};
+    if (name !== undefined) {
+      if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 80) {
+        return response.status(400).json({ message: "Name must be between 2 and 80 characters", error: true, success: false });
+      }
+      updates.name = name.trim();
+    }
+
+    if (email !== undefined) {
+      const nextEmail = String(email).trim().toLowerCase();
+      if (nextEmail !== currentUser.email) {
+        return response.status(400).json({ message: "Email changes require a separate verification process", error: true, success: false });
+      }
+    }
+
+    if (mobile !== undefined) {
+      const normalizedMobile = String(mobile).trim();
+      if (normalizedMobile && !/^\\d{10,15}$/.test(normalizedMobile)) {
+        return response.status(400).json({ message: "Enter a valid mobile number", error: true, success: false });
+      }
+      updates.mobile = normalizedMobile ? Number(normalizedMobile) : null;
+    }
+
+    if (password !== undefined && password !== "") {
+      if (typeof password !== "string" || password.length < 8 || password.length > 128) {
+        return response.status(400).json({ message: "Password must be between 8 and 128 characters", error: true, success: false });
+      }
+      updates.password = await bcrypt.hash(password, 12);
+      updates.refresh_token = "";
+    }
+
+    if (!Object.keys(updates).length) {
+      return response.status(400).json({ message: "No valid profile changes were provided", error: true, success: false });
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(userId, { $set: updates }, {
+      new: true,
+      runValidators: true
+    }).select("name email mobile avatar role verify_email status").lean();
+
+    return response.json({
+      message: "Profile updated successfully",
+      error: false,
+      success: true,
+      data: updatedUser
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || "Unable to update profile",
+      error: true,
+      success: false
+    });
+  }
 }
 
 //forgot password not login
@@ -494,7 +522,7 @@ export async function resetpassword(request,response){
         const hashPassword = await bcrypt.hash(newPassword, 12);
         const update = await UserModel.findOneAndUpdate(
             { _id: user._id, passwordResetVerifiedUntil: { $gt: new Date() } },
-            { $set: { password: hashPassword, passwordResetVerifiedUntil: null } },
+            { $set: { password: hashPassword, passwordResetVerifiedUntil: null, refresh_token: "" } },
             { new: true }
         );
 
