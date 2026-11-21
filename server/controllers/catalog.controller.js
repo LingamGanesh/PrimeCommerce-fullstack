@@ -73,7 +73,7 @@ export async function listSubCategories(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [], offerStartsAt = null, offerEndsAt = null } = req.body;
+    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [], offerStartsAt = null, offerEndsAt = null, more_details = {} } = req.body;
     if (!name?.trim() || !unit?.trim() || !Array.isArray(categoryId) || !categoryId.length || !Array.isArray(sub_categoryId) || !sub_categoryId.length || price === undefined) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
     }
@@ -99,7 +99,7 @@ export async function createProduct(req, res) {
     }
     const product = await ProductModel.create({
       name: name.trim(), categoryId, sub_categoryId, unit: unit.trim(), price: values[0],
-      discount: values[1], stock: values[2], description, image: Array.isArray(image) ? image : [], offerStartsAt: startsAt, offerEndsAt: endsAt
+      discount: values[1], stock: values[2], description, image: Array.isArray(image) ? image : [], more_details: more_details && typeof more_details === "object" ? more_details : {}, offerStartsAt: startsAt, offerEndsAt: endsAt
     });
     return res.status(201).json({ success: true, error: false, message: "Product created", data: productPayload(product) });
   } catch (error) {
@@ -110,7 +110,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, error: true, message: "Invalid product id" });
-    const allowed = ["name", "categoryId", "sub_categoryId", "unit", "price", "discount", "stock", "description", "image", "publish", "offerStartsAt", "offerEndsAt"];
+    const allowed = ["name", "categoryId", "sub_categoryId", "unit", "price", "discount", "stock", "description", "image", "publish", "offerStartsAt", "offerEndsAt", "more_details"];
     const updates = {};
     for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
     for (const key of ["price", "discount", "stock"]) if (updates[key] !== undefined) updates[key] = Number(updates[key]);
