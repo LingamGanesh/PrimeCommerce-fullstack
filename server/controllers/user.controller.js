@@ -9,6 +9,16 @@ import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js';
 import jwt from "jsonwebtoken"
 import generateAccessToken from '../utils/generatedAccessToken.js';
 
+const authCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+  };
+};
+
 
 // ===============================================
 // REGISTER USER
@@ -182,11 +192,7 @@ const refreshToken = await generatedRefreshToken(user._id)
 
 
     // 6️⃣ Cookie options (ENV-safe)
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None'
-    }
+    const cookieOptions = authCookieOptions()
 
     // 7️⃣ Set cookies
     response.cookie('accessToken', accessToken, cookieOptions)
@@ -223,11 +229,7 @@ const refreshToken = await generatedRefreshToken(user._id)
 export async function logoutController(request, response) {
   try {
     // Clear both tokens
-    const cookieOptions = {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-    };
+    const cookieOptions = authCookieOptions();
 
     response.clearCookie("accessToken", cookieOptions);
     response.clearCookie("refreshToken", cookieOptions);
@@ -534,11 +536,7 @@ export async function refreshToken(request,response){
 
         const newAccessToken = await generatedAccessToken(userId)
 
-        const cookiesOption = {
-            httpOnly : true,
-            secure : true,
-            sameSite : "None"
-        }
+        const cookiesOption = authCookieOptions();
 
         response.cookie('accessToken',newAccessToken,cookiesOption)
 
