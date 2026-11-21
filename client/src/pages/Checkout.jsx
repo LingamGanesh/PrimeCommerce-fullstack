@@ -14,6 +14,7 @@ export default function Checkout() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
 
   const load = async () => {
@@ -29,6 +30,41 @@ export default function Checkout() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Location is not supported by this browser");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        const query = new URLSearchParams({ format: "jsonv2", lat: String(coords.latitude), lon: String(coords.longitude) });
+        const response = await fetch("https://nominatim.openstreetmap.org/reverse?" + query.toString());
+        if (!response.ok) throw new Error("Unable to look up this location");
+        const result = await response.json();
+        const address = result.address || {};
+        const line = [result.name, address.road, address.suburb, address.neighbourhood].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(", ");
+        setForm((current) => ({
+          ...current,
+          address_line: line || result.display_name || current.address_line,
+          city: address.city || address.town || address.village || address.county || current.city,
+          state: address.state || current.state,
+          pincode: address.postcode || current.pincode,
+          country: address.country || current.country
+        }));
+        setShowForm(true);
+        toast.success("Location detected. Please confirm your address and mobile number.");
+      } catch (error) {
+        toast.error(error.message || "Could not read this location. Enter your address manually.");
+      } finally {
+        setLocating(false);
+      }
+    }, (error) => {
+      setLocating(false);
+      toast.error(error.code === 1 ? "Please allow location access or enter your address manually." : "Could not detect your location. Try again or enter it manually.");
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  };
 
   const saveAddress = async (event) => {
     event.preventDefault();
@@ -75,7 +111,7 @@ export default function Checkout() {
         key: paymentOrder.keyId, amount: paymentOrder.amount, currency: paymentOrder.currency, name: "PrimeCommerce",
         description: `Order ${paymentOrder.orderId}`, order_id: paymentOrder.razorpayOrderId,
         prefill: { contact: form.mobile || addresses.find(item => item._id === selected)?.mobile || "" },
-        theme: { color: "#15803d" },
+        theme: { color: "#9acb28" },
         handler: async (gatewayResponse) => {
           try {
             const verified = await Axios.post("/api/v1/payments/razorpay/verify", gatewayResponse);
@@ -94,25 +130,26 @@ export default function Checkout() {
   if (loading) return <div className="p-10 text-center text-gray-500">Preparing checkout…</div>;
 
   return (
-    <main className="min-h-[65vh] bg-[#fafaf7] px-4 py-8">
+    <main className="min-h-[65vh] bg-[#f7f9f2] px-4 py-8">
       <div className="mx-auto max-w-5xl">
-        <Link to="/cart" className="text-sm font-semibold text-green-700">← Back to basket</Link>
+        <Link to="/cart" className="text-sm font-semibold text-[#5d8414]">← Back to basket</Link>
         <h1 className="mt-3 text-2xl font-extrabold">Checkout</h1>
-        {!cart.items.length ? <div className="mt-6 rounded-2xl bg-white p-8 text-center">Your basket is empty. <Link className="font-bold text-green-700" to="/">Shop now</Link></div> : (
+        {!cart.items.length ? <div className="mt-6 rounded-2xl bg-white p-8 text-center">Your basket is empty. <Link className="font-bold text-[#5d8414]" to="/">Shop now</Link></div> : (
           <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]">
             <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between"><h2 className="text-lg font-extrabold">Delivery address</h2><button onClick={() => setShowForm(!showForm)} className="text-sm font-bold text-green-700">{showForm ? "Cancel" : "+ Add new"}</button></div>
+              <div className="flex items-center justify-between"><h2 className="text-lg font-extrabold">Delivery address</h2><button onClick={() => setShowForm(!showForm)} className="text-sm font-bold text-[#5d8414]">{showForm ? "Cancel" : "+ Add new"}</button></div>
               {showForm && <form onSubmit={saveAddress} className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={useCurrentLocation} disabled={locating} className="flex items-center justify-center gap-2 rounded-xl border border-lime-300 bg-lime-50 p-3 text-sm font-bold text-lime-900 transition hover:bg-lime-100 disabled:opacity-60 sm:col-span-2">{locating ? "Detecting your location…" : "◎ Use my current location"}</button>
                 <input required placeholder="House / street / area" value={form.address_line} onChange={e => setForm({...form,address_line:e.target.value})} className="rounded-lg border p-3 text-sm sm:col-span-2" />
                 <input required placeholder="City" value={form.city} onChange={e => setForm({...form,city:e.target.value})} className="rounded-lg border p-3 text-sm" />
                 <input required placeholder="State" value={form.state} onChange={e => setForm({...form,state:e.target.value})} className="rounded-lg border p-3 text-sm" />
                 <input required maxLength="6" placeholder="6-digit pincode" value={form.pincode} onChange={e => setForm({...form,pincode:e.target.value})} className="rounded-lg border p-3 text-sm" />
                 <input required placeholder="Mobile number" maxLength="10" value={form.mobile} onChange={e => setForm({...form,mobile:e.target.value})} className="rounded-lg border p-3 text-sm" />
-                <button disabled={saving} className="rounded-lg bg-green-700 p-3 text-sm font-bold text-white disabled:opacity-60 sm:col-span-2">{saving ? "Saving…" : "Save address"}</button>
+                <button disabled={saving} className="rounded-lg bg-[#c9f24a] text-[#1c2715] p-3 text-sm font-bold text-white disabled:opacity-60 sm:col-span-2">{saving ? "Saving…" : "Save address"}</button>
               </form>}
               <div className="mt-4 space-y-3">
-                {addresses.map(address => <label key={address._id} className={"flex cursor-pointer gap-3 rounded-xl border p-4 " + (selected === address._id ? "border-green-700 bg-green-50" : "border-gray-200")}>
-                  <input type="radio" name="address" checked={selected === address._id} onChange={() => setSelected(address._id)} className="mt-1 accent-green-700" />
+                {addresses.map(address => <label key={address._id} className={"flex cursor-pointer gap-3 rounded-xl border p-4 " + (selected === address._id ? "border-[#9acb28] bg-[#f4fbe5]" : "border-gray-200")}>
+                  <input type="radio" name="address" checked={selected === address._id} onChange={() => setSelected(address._id)} className="mt-1 accent-[#7aa91c]" />
                   <span className="text-sm"><strong>{address.address_line}</strong><br />{address.city}, {address.state} - {address.pincode}<br />{address.country} · {address.mobile}</span>
                 </label>)}
                 {!addresses.length && !showForm && <p className="rounded-xl bg-gray-50 p-5 text-sm text-gray-500">Add a delivery address to continue.</p>}
@@ -124,7 +161,7 @@ export default function Checkout() {
               <div className="my-4 border-t border-dashed" />
               <div className="flex justify-between font-extrabold"><span>Total</span><span>₹{cart.subtotal.toFixed(2)}</span></div>
               <div className="mt-4 space-y-2 rounded-xl bg-gray-50 p-3 text-sm"><label className="flex cursor-pointer items-center gap-2"><input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} /> Cash on Delivery</label><label className="flex cursor-pointer items-center gap-2"><input type="radio" name="paymentMethod" checked={paymentMethod === "RAZORPAY"} onChange={() => setPaymentMethod("RAZORPAY")} /> Pay online with Razorpay</label></div>
-              <button disabled={saving || !selected} onClick={paymentMethod === "COD" ? placeOrder : payOnline} className="mt-5 w-full rounded-xl bg-green-700 px-4 py-3 font-bold text-white disabled:opacity-50">{saving ? "Processing…" : paymentMethod === "COD" ? "Place COD order" : "Pay securely"}</button>
+              <button disabled={saving || !selected} onClick={paymentMethod === "COD" ? placeOrder : payOnline} className="mt-5 w-full rounded-xl bg-[#c9f24a] text-[#1c2715] px-4 py-3 font-bold text-white disabled:opacity-50">{saving ? "Processing…" : paymentMethod === "COD" ? "Place COD order" : "Pay securely"}</button>
             </aside>
           </div>
         )}
