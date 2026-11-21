@@ -16,7 +16,7 @@ const categoryIcon = (name = "") => {
   return "🛍️";
 };
 
-function SearchProductCard({ product, quantity, onAdd, onQuantity }) {
+function SearchProductCard({ product, quantity, onAdd }) {
   const [quickView, setQuickView] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const options = Array.isArray(product.more_details?.packOptions) && product.more_details.packOptions.length
@@ -108,19 +108,6 @@ export default function SearchPage() {
     finally { setBusy(false); }
   };
 
-  const changeQuantity = async (id, delta) => {
-    const item = cart[id];
-    if (!item || busy) return;
-    setBusy(true);
-    try {
-      const quantity = item.quantity + delta;
-      if (quantity <= 0) await Axios.delete("/api/v1/cart/items/" + item.cartItemId);
-      else await Axios.patch("/api/v1/cart/items/" + item.cartItemId, { quantity });
-      await refreshCart();
-    } catch (err) { toast.error(err.response?.data?.message || "Unable to update cart"); }
-    finally { setBusy(false); }
-  };
-
   const submitSearch = (event) => {
     event.preventDefault();
     setParams(query.trim() ? { q: query.trim() } : {});
@@ -159,7 +146,7 @@ export default function SearchPage() {
             </div>
             {loading ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{Array.from({length:8}, (_,i) => <div key={i} className="h-64 animate-pulse rounded-2xl bg-gray-200" />)}</div>
             : error ? <div className="rounded-2xl bg-white p-10 text-center"><p className="text-3xl">⚠️</p><h3 className="mt-2 font-bold">Could not load products</h3><p className="mt-1 text-sm text-gray-500">Check your connection and try again.</p><button onClick={() => window.location.reload()} className="mt-4 rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">Retry</button></div>
-            : visible.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{visible.map((product) => <SearchProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={add} onQuantity={changeQuantity} />)}</div>
+            : visible.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{visible.map((product) => <SearchProductCard key={product.id} product={product} quantity={cart[product.id]?.quantity || 0} onAdd={add} />)}</div>
             : <div className="rounded-2xl bg-white p-10 text-center"><span className="text-4xl">🔎</span><h3 className="mt-3 font-bold">No matching products</h3><p className="mt-1 text-sm text-gray-500">Try a different search or choose another category.</p><button onClick={() => {setQuery("");setCategory("All");setParams({});}} className="mt-4 rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white">Clear filters</button></div>}
           </section>
         </div>
