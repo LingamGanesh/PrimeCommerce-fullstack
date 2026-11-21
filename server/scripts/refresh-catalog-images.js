@@ -160,7 +160,7 @@ async function main() {
         const queries = CATEGORY_QUERIES[category.name] || [category.name];
         let match = null;
         for (const query of queries) {
-          match = await findSuitableImage(query, "grocery category");
+          match = await findSuitableImage(category.name, query);
           if (match) break;
         }
         if (!match) {
