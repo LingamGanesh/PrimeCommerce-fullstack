@@ -15,6 +15,7 @@ const orderSchema = new mongoose.Schema(
     refund_amount: { type: Number, default: 0 },
     cancelledAt: { type: Date, default: null },
     inventoryReleased: { type: Boolean, default: false },
+    inventoryReleaseInProgress: { type: Boolean, default: false, index: true },
     delivery_address: { type: Object, required: true },
     pickerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     riderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },

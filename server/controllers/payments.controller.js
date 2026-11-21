@@ -6,6 +6,7 @@ import AddressModel from "../models/address.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
 import { verifyHmacHex, isValidRazorpayAmount } from "../utils/paymentSecurity.js";
+import { releaseOrderInventory } from "../utils/inventoryRelease.js";
 
 const roundMoney = (value) => Math.round(Number(value) * 100) / 100;
 const razorpayAuth = () => {
@@ -51,11 +52,6 @@ const reserveStock = async (items) => {
     throw error;
   }
 };
-const restoreOrderStock = async (order) => {
-  let items = [];
-  try { items = JSON.parse(order.product_details || "[]"); } catch { return; }
-  await Promise.all(items.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: Number(item.quantity) || 0 } })));
-};
 
 export async function createRazorpayOrder(req, res) {
   let reserved = []; let savedOrder = null;
@@ -98,9 +94,44 @@ export async function verifyRazorpayPayment(req, res) {
     const payment = await gatewayRequest(`/payments/${encodeURIComponent(paymentId)}`);
     if (payment.order_id !== gatewayOrderId || !["authorized", "captured"].includes(payment.status) || Number(payment.amount) !== Math.round(Number(order.totalAmt) * 100) || payment.currency !== "INR") return res.status(400).json({ success: false, message: "Payment amount, currency or status could not be verified" });
     if (payment.status === "captured") {
-      if (order.payment_status === "expired" || order.inventoryReleased) { order.payment_status = "paid_review_required"; order.payment_id = paymentId; await order.save(); return res.status(200).json({ success: true, reviewRequired: true, message: "Payment received after stock reservation expired. Support will review this order." }); }
-      order.payment_status = "paid"; order.payment_id = paymentId; await order.save();
-    } else { if (order.payment_status === "expired" || order.inventoryReleased) return res.status(409).json({ success: false, message: "This payment reservation has expired. Please start a new checkout." }); order.payment_status = "authorized"; order.payment_id = paymentId; await order.save(); }
+      if (order.payment_status === "paid" && order.payment_id === paymentId) {
+        return res.json({ success: true, paymentStatus: "paid", message: "Payment already verified" });
+      }
+      const paidOrder = await OrderModel.findOneAndUpdate(
+        {
+          _id: order._id,
+          payment_status: { $in: ["pending", "authorized"] },
+          inventoryReleased: false,
+          inventoryReleaseInProgress: false,
+          delivery_status: { $ne: "cancelled" }
+        },
+        { $set: { payment_status: "paid", payment_id: paymentId } },
+        { new: true }
+      );
+      if (!paidOrder) {
+        const reviewOrder = await OrderModel.findOneAndUpdate(
+          {
+            _id: order._id,
+            payment_status: { $in: ["pending", "authorized", "failed", "expired", "paid_review_required"] }
+          },
+          { $set: { payment_status: "paid_review_required", payment_id: paymentId } },
+          { new: true }
+        );
+        if (!reviewOrder) return res.status(409).json({ success: false, message: "This order is no longer eligible for automatic payment confirmation." });
+        return res.status(200).json({ success: true, reviewRequired: true, message: "Payment was captured while the order was being cancelled or its stock reservation was being released. Support will review this payment." });
+      }
+      order.payment_status = paidOrder.payment_status;
+      order.payment_id = paidOrder.payment_id;
+    } else {
+      const authorizedOrder = await OrderModel.findOneAndUpdate(
+        { _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, inventoryReleaseInProgress: false, delivery_status: { $ne: "cancelled" } },
+        { $set: { payment_status: "authorized", payment_id: paymentId } },
+        { new: true }
+      );
+      if (!authorizedOrder) return res.status(409).json({ success: false, message: "This payment reservation is no longer active. Please start a new checkout." });
+      order.payment_status = authorizedOrder.payment_status;
+      order.payment_id = authorizedOrder.payment_id;
+    }
     return res.json({ success: true, paymentStatus: order.payment_status, message: order.payment_status === "paid" ? "Payment verified" : "Payment authorized; final confirmation is pending" });
   } catch (error) { return res.status(400).json({ success: false, message: error.message || "Unable to verify payment" }); }
 }
@@ -118,7 +149,10 @@ export async function handleRazorpayWebhook(req, res) {
       if (!refund?.payment_id) return res.json({ success: true, ignored: true });
       const refundOrder = await OrderModel.findOne({ payment_id: refund.payment_id, refund_status: { $in: ["initiating", "pending", "failed"] } });
       if (!refundOrder) return res.json({ success: true, ignored: true });
-      await OrderModel.updateOne({ _id: refundOrder._id, refund_status: { $in: ["pending", "failed"] } }, { $set: { refund_status: event.event === "refund.processed" ? "processed" : "failed", refund_id: refund.id || refundOrder.refund_id } });
+      await OrderModel.updateOne(
+        { _id: refundOrder._id, refund_status: { $in: ["initiating", "pending", "failed"] } },
+        { $set: { refund_status: event.event === "refund.processed" ? "processed" : "failed", refund_id: refund.id || refundOrder.refund_id } }
+      );
       return res.json({ success: true });
     }
     if (!["payment.captured", "order.paid", "payment.failed"].includes(event.event)) return res.json({ success: true, ignored: true });
@@ -129,17 +163,24 @@ export async function handleRazorpayWebhook(req, res) {
     const order = await OrderModel.findOne({ razorpayOrderId: gatewayOrderId });
     if (!order) return res.json({ success: true, ignored: true });
     if (event.event === "payment.failed") {
-      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false }, { $set: { payment_status: "failed", inventoryReleased: true } }, { new: true });
-      if (claimed) await restoreOrderStock(claimed);
+      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, inventoryReleaseInProgress: false }, { $set: { payment_status: "failed", inventoryReleased: false, inventoryReleaseInProgress: true } }, { new: true });
+      if (claimed) await releaseOrderInventory(claimed);
     } else {
       const paidEntity = payment || (gatewayOrder ? { amount: gatewayOrder.amount_paid, currency: gatewayOrder.currency, status: gatewayOrder.status, id: null } : null);
       const amountIsValid = isValidRazorpayAmount(paidEntity, Math.round(Number(order.totalAmt) * 100));
       const captured = event.event === "payment.captured" ? payment?.status === "captured" : gatewayOrder?.status === "paid" || payment?.status === "captured";
       if (!paidEntity || !amountIsValid || !captured) return res.status(400).json({ success: false, message: "Webhook payment amount, currency or capture state is invalid" });
-      if (order.payment_status === "expired" || order.inventoryReleased) {
-        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["expired", "pending", "authorized"] } }, { $set: { payment_status: "paid_review_required", payment_id: payment?.id || order.payment_id } });
-      } else {
-        await OrderModel.updateOne({ _id: order._id, payment_status: { $in: ["pending", "authorized"] } }, { $set: { payment_status: "paid", payment_id: payment?.id || order.payment_id } });
+      const paymentId = payment?.id || order.payment_id;
+      const confirmed = await OrderModel.findOneAndUpdate(
+        { _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, inventoryReleaseInProgress: false, delivery_status: { $ne: "cancelled" } },
+        { $set: { payment_status: "paid", payment_id: paymentId } },
+        { new: true }
+      );
+      if (!confirmed) {
+        await OrderModel.updateOne(
+          { _id: order._id, payment_status: { $in: ["pending", "authorized", "failed", "expired", "paid_review_required"] } },
+          { $set: { payment_status: "paid_review_required", payment_id: paymentId } }
+        );
       }
     }
     return res.json({ success: true });
@@ -149,7 +190,7 @@ export async function handleRazorpayWebhook(req, res) {
 export async function expireRazorpayReservations() {
   const expired = await OrderModel.find({ paymentMethod: "RAZORPAY", payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }).limit(100);
   for (const order of expired) {
-    const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }, { $set: { payment_status: "expired", inventoryReleased: true } }, { new: true });
-    if (claimed) await restoreOrderStock(claimed);
+    const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, inventoryReleaseInProgress: false, paymentReservationExpiresAt: { $lte: new Date() } }, { $set: { payment_status: "expired", inventoryReleased: false, inventoryReleaseInProgress: true } }, { new: true });
+    if (claimed) await releaseOrderInventory(claimed);
   }
 }

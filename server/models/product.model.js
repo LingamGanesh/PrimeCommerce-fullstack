@@ -33,7 +33,10 @@ const productSchema = new mongoose.Schema(
     stock: {
       type: Number,
       default: 0,
+      min: 0,
     },
+    // Idempotency keys retained to prevent duplicate stock restoration on retries.
+    inventoryReleaseKeys: { type: [String], default: [], select: false },
     price: {
       type: Number,
       required: [true, "Price is required"],

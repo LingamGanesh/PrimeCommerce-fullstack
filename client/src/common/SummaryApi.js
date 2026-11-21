@@ -1,5 +1,5 @@
 
- export const baseUrl = 'http://localhost:8080'
+ export const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '')
  const SummaryApi  = {
         register:{
             url:'/api/user/register',
@@ -7,6 +7,14 @@
         },
         login:{
             url:'/api/user/login',
+            method:'post'
+        },
+        verifyEmail:{
+            url:'/api/user/verify-email',
+            method:'post'
+        },
+        resendVerification:{
+            url:'/api/user/resend-verification',
             method:'post'
         },
         forgot_password:{

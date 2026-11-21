@@ -156,7 +156,16 @@ export default function AdminDashboard() {
     finally { setBusy(""); }
   };
 
-  const signOut = () => { dispatch(logout()); localStorage.clear(); navigate("/login"); };
+  const signOut = async () => {
+    try {
+      await Axios.get("/api/user/logout");
+    } catch {
+      // Always clear the local admin session even if the network is unavailable.
+    } finally {
+      dispatch(logout());
+      navigate("/login", { replace: true });
+    }
+  };
   const navItems = [{ id: "overview", label: "Overview", icon: "▦" }, { id: "products", label: "Products & stock", icon: "▤" }, { id: "catalog", label: "Catalogue setup", icon: "＋" }, { id: "orders", label: "Orders", icon: "▣" }, { id: "customers", label: "Customers", icon: "♙" }, { id: "reports", label: "Sales reports", icon: "↗" }, { id: "fulfilment", label: "Picker & rider", icon: "⇢" }, { id: "refunds", label: "Refunds", icon: "↩" }, { id: "support", label: "Support inbox", icon: "?" }];
   const metrics = [
     { label: "Total orders", value: overview?.orders ?? "—", note: "All recorded orders", icon: "▣" },

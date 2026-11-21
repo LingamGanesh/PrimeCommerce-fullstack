@@ -112,7 +112,7 @@ const Profile = () => {
 
           {/* Cart */}
           <div
-            onClick={() => navigate("/dashboard/myorders")}
+            onClick={() => navigate("/cart")}
             className="cursor-pointer bg-yellow-100 hover:bg-yellow-200 p-4 rounded-lg text-center"
           >
             <p className="font-bold text-lg">

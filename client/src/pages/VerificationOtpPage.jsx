@@ -15,7 +15,7 @@ const VerificationOtpPage = () => {
     if (!location?.state?.email) {
       navigate('/forgot-password')
     }
-  }, [])
+  }, [location?.state?.email, navigate])
 
   const [data, setData] = useState(['', '', '', '', '', ''])
 

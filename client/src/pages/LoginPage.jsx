@@ -25,6 +25,23 @@ const Login = () => {
     setData(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleResendVerification = async () => {
+    const email = data.email.trim().toLowerCase();
+    if (!email) {
+      toast.error("Enter your email address first.");
+      return;
+    }
+    try {
+      const response = await Axios({
+        ...SummaryApi.resendVerification,
+        data: { email }
+      });
+      toast.success(response.data?.message || "If verification is required, a new link will be sent.");
+    } catch (error) {
+      AxiosToastError(error);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -50,11 +67,13 @@ const Login = () => {
       if (response.data?.success) {
 
         toast.success(response.data.message)
-         localStorage.setItem('accesstoken',response.data.data.accessToken)
-            localStorage.setItem('refreshtoken',response.data.data.refreshToken)
-            const userDetails =  await fetchUserDetails()
-            dispatch(setUserDetails(userDetails.data))
-        navigate(userDetails.data?.role === 'admin' ? '/admin' : userDetails.data?.role === 'picker' ? '/picker' : userDetails.data?.role === 'rider' ? '/rider' : '/')
+        const userDetails = await fetchUserDetails()
+        if (!userDetails?.data) {
+          toast.error('Login succeeded, but your profile could not be loaded. Please refresh the page.')
+          return
+        }
+        dispatch(setUserDetails(userDetails.data))
+        navigate(userDetails.data.role === 'admin' ? '/admin' : userDetails.data.role === 'picker' ? '/picker' : userDetails.data.role === 'rider' ? '/rider' : '/')
       }
 
     } catch (error) {
@@ -122,6 +141,16 @@ const Login = () => {
             >
               Forgot password?
             </Link>
+          </div>
+
+          <div className="text-left">
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Resend verification email
+            </button>
           </div>
 
           {/* Button */}

@@ -1,28 +1,23 @@
-import { Resend } from 'resend';
-import dotenv from 'dotenv';
-dotenv.config();
-
-if (!process.env.RESEND_API) {
-  console.error("Please provide RESEND_API in your .env file");
-  process.exit(1);
-}
-
-const resend = new Resend(process.env.RESEND_API);
+import { Resend } from "resend";
 
 const sendEmail = async ({ sendTo, subject, html }) => {
-  try {
-    const data = await resend.emails.send({
-      from: 'Binkeyit <onboarding@resend.dev>',
-      to: sendTo,
-      subject,
-      html,
-    });
-    console.log('Email sent successfully:', data);
-    return data;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw error;
+  const apiKey = process.env.RESEND_API_KEY || process.env.RESEND_API;
+  const from = process.env.EMAIL_FROM || "PrimeCommerce <onboarding@resend.dev>";
+
+  if (!apiKey) {
+    throw new Error("Email service is not configured. Set RESEND_API_KEY.");
   }
+  if (!sendTo || !subject || !html) {
+    throw new Error("Recipient, subject and email content are required.");
+  }
+
+  const resend = new Resend(apiKey);
+  const result = await resend.emails.send({ from, to: sendTo, subject, html });
+  if (result.error) {
+    console.error("Email provider rejected the message:", result.error.message);
+    throw new Error("Unable to send email right now.");
+  }
+  return result;
 };
 
 export default sendEmail;

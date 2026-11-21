@@ -3,7 +3,6 @@ import UserModel from "../models/user.model.js";
 import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import OrderModel from "../models/order.model.js";
-import { isFulfilmentPaymentEligible } from "../utils/paymentSecurity.js";
 
 export async function getAdminOverview(req, res) {
   try {
@@ -41,22 +40,12 @@ export async function listAdminOrders(req, res) {
 }
 
 export async function updateAdminOrderStatus(req, res) {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid order id" });
-    const allowed = ["processing", "shipped", "delivered"];
-    const status = String(req.body.delivery_status || "");
-    if (!allowed.includes(status)) return res.status(400).json({ success: false, message: "Unsupported order status" });
-    const order = await OrderModel.findById(req.params.id);
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-    if (!isFulfilmentPaymentEligible(order)) return res.status(409).json({ success: false, message: "Online payment must be captured before fulfilment" });
-    const transitions = { processing: ["shipped"], shipped: ["delivered"] };
-    if (!transitions[order.delivery_status]?.includes(status)) return res.status(409).json({ success: false, message: `Cannot move an order from ${order.delivery_status} to ${status}` });
-    order.delivery_status = status;
-    await order.save();
-    return res.json({ success: true, message: "Order status updated", data: order });
-  } catch {
-    return res.status(500).json({ success: false, message: "Unable to update order status" });
-  }
+  // Order completion is intentionally not an admin-editable status. The picker/rider
+  // workflow owns each transition, and only the rider may complete delivery via OTP.
+  return res.status(409).json({
+    success: false,
+    message: "Manual order status changes are disabled. Assign a picker/rider and use the fulfilment workflow; delivery requires customer OTP verification."
+  });
 }
 
 export async function listAdminCustomers(req, res) {

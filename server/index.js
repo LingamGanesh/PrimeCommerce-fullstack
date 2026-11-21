@@ -16,6 +16,7 @@ import fulfilmentRouter from "./routes/fulfilment.routes.js";
 import paymentsRouter from "./routes/payments.routes.js";
 import supportRouter from "./routes/support.routes.js";
 import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers/payments.controller.js";
+import { recoverPendingInventoryReleases } from "./utils/inventoryRelease.js";
 
 dotenv.config();
 
@@ -48,4 +49,9 @@ connectDB().then(() => {
     expireRazorpayReservations().catch(error => console.error("Payment reservation cleanup failed:", error.message));
   }, 60 * 1000);
   reservationSweep.unref?.();
+  const inventoryRecovery = setInterval(() => {
+    recoverPendingInventoryReleases().catch(error => console.error("Inventory release recovery failed:", error.message));
+  }, 60 * 1000);
+  inventoryRecovery.unref?.();
+  recoverPendingInventoryReleases().catch(error => console.error("Initial inventory release recovery failed:", error.message));
 });
