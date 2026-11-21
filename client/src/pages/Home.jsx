@@ -37,24 +37,25 @@ function ProductCard({ product, quantity, onAdd, onChange }) {
   const image = product.images?.[0] || product.image?.[0];
   const discount = product.discountPercent || 0;
   return (
-    <article className="group min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className={`relative flex h-36 items-center justify-center overflow-hidden sm:h-40 ${visual.color}`}>
-        {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-green-700 px-2 py-1 text-[10px] font-bold text-white">{discount}% OFF</span>}
-        {image ? <img src={image} alt={product.name} className="h-full w-full object-contain p-3" loading="lazy" /> : <span className="text-6xl" role="img" aria-label={product.name}>{visual.emoji}</span>}
+    <article className="group relative min-w-0 overflow-hidden rounded-[24px] border border-slate-100/90 bg-white shadow-[0_8px_28px_rgba(15,23,42,.055)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-100 hover:shadow-[0_20px_44px_rgba(15,23,42,.12)]">
+      <div className={`relative flex h-36 items-center justify-center overflow-hidden bg-gradient-to-br ${visual.color} sm:h-44`}>
+        <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/45 blur-2xl" />
+        {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#176b3b] px-3 py-1.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">{discount}% SAVING</span>}
+        {image ? <img src={image} alt={product.name} className="relative h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110" loading="lazy" /> : <span className="relative text-6xl drop-shadow-sm transition-transform duration-500 group-hover:scale-110" role="img" aria-label={product.name}>{visual.emoji}</span>}
+        <span className="absolute bottom-3 right-3 rounded-full border border-white/70 bg-white/75 px-2.5 py-1 text-[9px] font-bold text-slate-600 backdrop-blur">{product.unit || "Everyday pick"}</span>
       </div>
-      <div className="p-3">
-        <p className="mb-1 line-clamp-1 text-[11px] font-medium text-green-700">{product.categoryName || "Daily essentials"}</p>
-        <h3 className="min-h-10 text-sm font-semibold leading-5 text-gray-800">{product.name}</h3>
-        <p className="mt-1 text-xs text-gray-500">{product.unit}</p>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div><p className="text-sm font-bold text-gray-900">₹{product.price}</p>{product.mrp > product.price && <p className="text-[11px] text-gray-400 line-through">₹{product.mrp}</p>}</div>
+      <div className="p-3.5 sm:p-4">
+        <p className="mb-1.5 line-clamp-1 text-[9px] font-extrabold uppercase tracking-[.16em] text-emerald-700">{product.categoryName || "Daily essentials"}</p>
+        <h3 className="min-h-10 text-[13px] font-extrabold leading-5 text-slate-900 sm:text-sm">{product.name}</h3>
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+          <div className="min-w-0"><p className="text-base font-black tracking-tight text-slate-950">₹{product.price}</p>{product.mrp > product.price && <p className="text-[10px] font-medium text-slate-400 line-through">₹{product.mrp}</p>}</div>
           {quantity > 0 ? (
-            <div className="flex items-center gap-3 rounded-lg border border-green-700 bg-green-700 px-2 py-1 text-white">
+            <div className="flex items-center gap-3 rounded-xl bg-[#176b3b] px-3 py-2 text-white shadow-sm">
               <button aria-label={`Remove one ${product.name}`} onClick={() => onChange(product.id, -1)} className="font-bold">−</button>
-              <span className="min-w-3 text-center text-sm font-bold">{quantity}</span>
+              <span className="min-w-3 text-center text-xs font-extrabold">{quantity}</span>
               <button aria-label={`Add one ${product.name}`} onClick={() => onChange(product.id, 1)} className="font-bold">+</button>
             </div>
-          ) : <button onClick={() => onAdd(product)} className="rounded-lg border border-green-700 bg-green-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-green-800 transition hover:bg-green-700 hover:text-white">ADD</button>}
+          ) : <button onClick={() => onAdd(product)} className="rounded-xl border border-emerald-700/20 bg-emerald-50 px-4 py-2 text-[10px] font-extrabold tracking-[.12em] text-emerald-800 transition hover:border-emerald-700 hover:bg-emerald-700 hover:text-white">ADD +</button>}
         </div>
       </div>
     </article>
@@ -239,8 +240,33 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="pb-8 pt-9 sm:pt-12">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Explore the good stuff</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Your daily essentials, sorted.</h2><p className="mt-1 text-sm text-slate-500">A quick look through the Prime Commerce collection.</p></div>
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[.15em] text-slate-500">Category preview</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { name: "Fresh produce", note: "Bright & seasonal", icon: "🥑", style: "from-lime-50 via-green-50 to-emerald-100", accent: "text-emerald-800" },
+              { name: "Dairy & eggs", note: "Everyday goodness", icon: "🥛", style: "from-sky-50 via-blue-50 to-indigo-100", accent: "text-blue-800" },
+              { name: "Snacks & munchies", note: "Little treats", icon: "🍿", style: "from-orange-50 via-amber-50 to-yellow-100", accent: "text-orange-800" },
+              { name: "Drinks & juices", note: "Sip something fresh", icon: "🧃", style: "from-cyan-50 via-teal-50 to-emerald-100", accent: "text-teal-800" },
+              { name: "Bakery favourites", note: "Oven fresh picks", icon: "🥐", style: "from-amber-50 via-yellow-50 to-orange-100", accent: "text-amber-900" },
+              { name: "Home essentials", note: "For every corner", icon: "🧺", style: "from-violet-50 via-fuchsia-50 to-pink-100", accent: "text-violet-800" },
+            ].map((category) => (
+              <article key={category.name} className={`group relative overflow-hidden rounded-[24px] border border-white bg-gradient-to-br ${category.style} p-4 shadow-[0_8px_24px_rgba(15,23,42,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(15,23,42,.10)] sm:p-5`}>
+                <div className="absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/35 blur-xl transition group-hover:scale-125" />
+                <div className="relative flex items-start justify-between gap-2"><span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-white/65 text-3xl shadow-sm">{category.icon}</span><span className="rounded-full bg-white/65 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-slate-500">Sample</span></div>
+                <h3 className={`relative mt-5 text-sm font-black leading-5 ${category.accent}`}>{category.name}</h3>
+                <p className="relative mt-1 text-[10px] font-medium text-slate-500">{category.note}</p>
+              </article>
+            ))}
+          </div>
+          <p className="mt-3 text-[10px] text-slate-400">Illustrative category cards. Live store categories appear below when configured by the admin.</p>
+        </section>
+
         <section className="py-8 sm:py-10">
-          <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-green-700">Browse by department</p><h2 className="mt-1 text-2xl font-black tracking-tight">Shop by category</h2></div><button onClick={() => setActiveCategory("All")} className="text-xs font-bold text-green-800">View all</button></div>
+          <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-emerald-700">From your store catalogue</p><h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Shop live categories</h2></div><button onClick={() => setActiveCategory("All")} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-extrabold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-800">View all</button></div>
           {categories.length ? <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {categories.map((category) => { const visual = visualFor(category.name); return <button key={category._id} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group flex flex-col items-center gap-2 rounded-2xl border border-transparent p-3 text-center transition hover:border-gray-100 hover:bg-white hover:shadow-md"><span className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl text-3xl transition group-hover:scale-105 ${visual.color}`}>{category.image ? <img src={category.image} alt="" className="h-full w-full object-cover" /> : visual.emoji}</span><span className="text-[11px] font-semibold leading-4 text-gray-700">{category.name}</span></button>; })}
           </div> : <p className="rounded-xl bg-white p-5 text-sm text-gray-500">Categories will appear here when the store catalogue is configured.</p>}
