@@ -368,7 +368,7 @@ export async function forgotPasswordController(request,response) {
         }
 
         const otp = generatedOtp()
-        const expireTime = new Date(Date.now() + 60 * 60 * 1000);
+        const expireTime = new Date(Date.now() + 10 * 60 * 1000);
 
         await UserModel.findByIdAndUpdate(user._id, {
             forgot_password_otp: otp,
