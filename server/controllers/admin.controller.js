@@ -3,7 +3,6 @@ import UserModel from "../models/user.model.js";
 import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import OrderModel from "../models/order.model.js";
-import { isFulfilmentPaymentEligible } from "../utils/paymentSecurity.js";
 
 export async function getAdminOverview(req, res) {
   try {
