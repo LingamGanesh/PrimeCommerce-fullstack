@@ -70,7 +70,7 @@ function ProductCard({ product, quantity, onAdd, onChange }) {
             <p className="text-[10px] text-slate-500">{quantity || 0} in basket</p>
           </div>
           {quantity > 0
-            ? <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-1"><button type="button" onClick={() => onChange(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-white font-bold text-emerald-800">−</button><span className="min-w-5 text-center text-sm font-black text-emerald-900">{quantity}</span><button type="button" onClick={() => onAdd(product)} aria-label={`Add one more ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-700 font-bold text-white">+</button></div>
+            ? <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-1"><button type="button" onClick={() => onChange(product.id, -1)} aria-label={`Remove one ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-white font-bold text-emerald-800">−</button><span className="min-w-5 text-center text-sm font-black text-emerald-900">{quantity}</span><button type="button" onClick={() => onChange(product.id, 1)} aria-label={`Add one more ${product.name}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-700 font-bold text-white">+</button></div>
             : <button type="button" onClick={() => onAdd(product)} className="rounded-xl bg-[#176b3b] px-5 py-2.5 text-[11px] font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#0f4e2a]">ADD +</button>}
         </div>
       </div>
