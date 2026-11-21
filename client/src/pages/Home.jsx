@@ -86,10 +86,12 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([Axios.get("/api/v1/products?limit=60"), Axios.get("/api/v1/categories")])
-      .then(([productResponse, categoryResponse]) => {
+    const loadCatalogue = async () => {
+      try {
+        const productResponse = await Axios.get("/api/v1/products?limit=60");
         if (!active) return;
-        const rows = productResponse.data?.data || [];
+        const rows = productResponse.data?.data;
+        if (!Array.isArray(rows)) throw new Error("Products response is not a valid list");
         setProducts(rows.map((product) => ({
           ...product,
           id: product.id || product._id,
@@ -97,11 +99,27 @@ export default function Home() {
           discountPercent: Number(product.discountPercent ?? product.discount ?? 0),
           images: product.images || product.image || [],
         })));
-        setCategories(categoryResponse.data?.data || []);
         setLoadError(false);
-      })
-      .catch(() => { if (active) setLoadError(true); })
-      .finally(() => { if (active) setLoading(false); });
+      } catch (error) {
+        if (active) {
+          setLoadError(true);
+          console.error("Store products could not be loaded:", error.response?.status, error.response?.data || error.message);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+
+      try {
+        const categoryResponse = await Axios.get("/api/v1/categories");
+        if (active) setCategories(Array.isArray(categoryResponse.data?.data) ? categoryResponse.data.data : []);
+      } catch (error) {
+        if (active) {
+          setCategories([]);
+          console.error("Store categories could not be loaded:", error.response?.status, error.response?.data || error.message);
+        }
+      }
+    };
+    loadCatalogue();
     return () => { active = false; };
   }, []);
 
