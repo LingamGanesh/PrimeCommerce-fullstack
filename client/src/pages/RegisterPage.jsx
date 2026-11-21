@@ -19,6 +19,7 @@ const RegisterPage = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,17 +29,23 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (data.password.length < 8 || data.password.length > 128) {
+      toast.error('Password must be between 8 and 128 characters');
+      return;
+    }
+
     if (data.password !== data.confirmPassword) {
       toast.error("Password and Confirm Password must match");
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const response = await Axios({
         ...SummaryApi.register,
         data: {
-          name: data.name,
-          email: data.email,
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
           password: data.password
         }
       });
@@ -53,7 +60,17 @@ const RegisterPage = () => {
       }
 
     } catch (error) {
+      const message = error?.response?.data?.message;
       AxiosToastError(error);
+      if (error?.response?.data?.data?.verificationRequired) {
+        toast('This email already has an unverified account. Use the resend verification option on the login page.');
+        navigate('/login', { state: { email: data.email.trim().toLowerCase(), verificationRequired: true } });
+      } else if (message && error?.response?.status === 503) {
+        toast.error('Account was created, but email delivery failed. Configure Resend and resend verification from login.');
+        navigate('/login', { state: { email: data.email.trim().toLowerCase(), verificationRequired: true } });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -146,9 +163,10 @@ const RegisterPage = () => {
           {/* Button */}
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Register
+            {isSubmitting ? 'Creating account…' : 'Register'}
           </button>
         </form>
 
