@@ -5,7 +5,7 @@ import Footer from './components/Footer'
 import { Toaster } from 'react-hot-toast'
 import fetchUserDetails from './utils/fetchUserDetails'
 import { useEffect } from 'react'
-import { setUserDetails } from './store/userSlice'
+import { setUserDetails } from './store/UserSlice'
 import { useDispatch } from 'react-redux'
 
 function App() {
