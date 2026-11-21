@@ -147,7 +147,7 @@ export default function Checkout() {
                 <input required placeholder="State" value={form.state} onChange={e => setForm({...form,state:e.target.value})} className="rounded-lg border p-3 text-sm" />
                 <input required maxLength="6" placeholder="6-digit pincode" value={form.pincode} onChange={e => setForm({...form,pincode:e.target.value})} className="rounded-lg border p-3 text-sm" />
                 <input required placeholder="Mobile number" maxLength="10" value={form.mobile} onChange={e => setForm({...form,mobile:e.target.value})} className="rounded-lg border p-3 text-sm" />
-                <button disabled={saving} className="rounded-lg bg-[#c9f24a] text-[#1c2715] p-3 text-sm font-bold text-white disabled:opacity-60 sm:col-span-2">{saving ? "Saving…" : "Save address"}</button>
+                <button disabled={saving} className="rounded-lg bg-[#c9f24a] p-3 text-sm font-bold text-[#1c2715] disabled:opacity-60 sm:col-span-2">{saving ? "Saving…" : "Save address"}</button>
               </form>}
               <div className="mt-4 space-y-3">
                 {addresses.map(address => <label key={address._id} className={"flex cursor-pointer gap-3 rounded-xl border p-4 " + (selected === address._id ? "border-[#9acb28] bg-[#f4fbe5]" : "border-gray-200")}>
