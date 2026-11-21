@@ -37,7 +37,7 @@ Status meanings:
 | Phase 3 — order state machine and Socket.IO | PENDING | Legacy delivery_status transitions only; no status history or sockets |
 | Phase 3 — payment ledger and refund reconciliation | PARTIAL | Razorpay verification/webhooks/full refund logic exist; Payment model is unused and sandbox tests are absent |
 | Phase 4 — customer website | PARTIAL | Home/search/cart/address/checkout/orders/profile/support exist; serviceability, variant selector, product detail, wishlist, guest cart, full pricing and other flows are absent |
-| Phase 5 — same-app admin | PARTIAL | client contains an admin dashboard/catalog; role coverage and screens are incomplete. A separate mock-only admin app also exists and is not production-connected |
+| Phase 5 — same-app admin | PARTIAL | Same-app admin dashboard currently covers overview, product/catalogue CRUD, stock, orders, customers, sales reports, picker/rider assignment, refund monitoring and support replies. Permissions/role coverage, CMS/coupons, audit logs and full workflow tests remain incomplete; standalone mock admin remains excluded from the production path |
 | Phase 6 — rider/picker | PARTIAL | Assigned work queues, picker pack action, rider pickup/delivery, GPS while open and OTP completion exist; dispatch automation, availability, earnings and payouts are absent |
 | Phase 7 — security hardening and tests | PARTIAL | Six pure backend unit tests and CI lint/build exist; critical/high npm advisories, API/component/E2E tests and security regression tests remain |
 | Phase 8 — Docker, compose, deployment, CI E2E and full docs | PARTIAL | Deployment guide, architecture blueprint, Dependabot and CI for lint/build/unit tests exist; Docker, compose, Redis, E2E and complete API docs are absent |
@@ -92,10 +92,11 @@ All audit items below remain OPEN unless a later row records a fix commit and te
 | AUD-031 | MEDIUM | PENDING | Required domain models and migration tests |
 | AUD-032 | MEDIUM | PENDING | Unit, integration, component and Playwright suites; CI gates |
 | AUD-033 | LOW | DONE | Removed duplicate dotenv.config() calls from app and connectDB; index.js imports dotenv/config once before dynamic imports |
+| AUD-034 | HIGH | PARTIAL | AdminCatalog sent the Publish checkbox on product creation, but createProduct ignored it and always relied on the schema default. The controller now validates and persists publish/isActive together; regression tests added for default-published, explicitly hidden and invalid values. CI/local execution still pending |
 
 ## Test evidence log
 
-Latest fix commit: 0b306fc25eade66a3985b5b287de34f59f000482. An earlier CI attempt exposed a syntax error in the newly added test; the test was corrected and the latest run passes. No failed run is being represented as a pass.
+Latest catalog publication fix commits on `fix/full-repository-audit`: `9e2100b1739b0974b3989b1304d81f8e22e3b2e4` (helper), `929e506ecbf24e5d6e5859234d07eb03b0e7b443` (controller fix), `0a82aaad2ded0c63ae844e169b135d0ca6dca4a0` (regression tests). The new tests have not yet been executed in CI or on the user's machine.
 
 Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/actions/runs/44778178598
 
@@ -105,7 +106,7 @@ Latest verified CI run: https://github.com/LingamGanesh/PrimeCommerce-fullstack/
 | client: npm run lint | PASS (latest CI 44778178598) |
 | client: npm run build | PASS (baseline and latest CI 44775373218) |
 | server: npm ci | PASS |
-| server: npm test | PASS — latest CI 44778178598: 20 tests, 20 passed, 0 failed |
+| server: npm test | PASS — latest CI 44778178598: 20 tests, 20 passed, 0 failed; new catalog publication tests added after this run and are pending execution |
 | client: npm audit | PASS — 0 vulnerabilities after compatible audit fix (workflow 44777349844) |
 | server: npm audit | PASS — 0 vulnerabilities after compatible audit fix (workflow 44777349844) |
 | server: npm run seed against the user’s Atlas database | NOT VERIFIED |
