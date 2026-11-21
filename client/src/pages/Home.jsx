@@ -62,7 +62,7 @@ function getProductVariants(product) {
   const configured = product.more_details?.packOptions;
   if (Array.isArray(configured) && configured.length) return configured.filter((v) => v?.label && Number.isFinite(Number(v.price))).map((v) => ({ label: v.label, price: Number(v.price) }));
   const unit = String(product.unit || "").trim();
-  const match = unit.match(/^([\\d.]+)\\s*(kg|g|l|ml)$/i);
+  const match = unit.match(/^([\d.]+)\s*(kg|g|l|ml)$/i);
   if (!match) return [{ label: unit || "1 item", price: Number(product.price || 0) }];
   const amount = Number(match[1]);
   const measure = match[2].toLowerCase();
@@ -73,7 +73,7 @@ function getProductVariants(product) {
   const variants = choices.map((amountValue, index) => ({ label: labels[index], price: Math.max(1, Math.round((Number(product.price || 0) * amountValue / base) * 100) / 100) }));
   if (!variants.some((v) => v.label.toLowerCase() === unit.toLowerCase())) variants.push({ label: unit, price: Number(product.price || 0) });
   return variants.sort((a, b) => {
-    const parse = (label) => { const m = label.match(/^([\\d.]+)\\s*(kg|g|l|ml)$/i); return m ? Number(m[1]) * (/^(kg|l)$/i.test(m[2]) ? 1000 : 1) : 0; };
+    const parse = (label) => { const m = label.match(/^([\d.]+)\s*(kg|g|l|ml)$/i); return m ? Number(m[1]) * (/^(kg|l)$/i.test(m[2]) ? 1000 : 1) : 0; };
     return parse(a.label) - parse(b.label);
   });
 }
