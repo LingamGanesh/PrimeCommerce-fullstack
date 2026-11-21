@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import Axios from "../utils/Axios";
 import { Usermenu } from "./Usermenu";
 import Search from "./Search";
-import logo from "../assets/logo.png";
+import primeCommerceLogo from "../assets/prime-commerce-logo.svg";
 
 const Header = () => {
   const location = useLocation();
@@ -31,7 +31,7 @@ const Header = () => {
     <header className="sticky top-0 z-50 border-b border-[#eee9df] bg-white">
       <div className="mx-auto flex max-w-[1440px] items-center gap-4 px-4 py-3 sm:px-6 lg:gap-8 lg:px-8">
         <Link to="/" aria-label="Go to homepage" className="flex shrink-0 items-center">
-          <img src={logo} alt="PrimeCommerce" className="h-10 w-auto max-w-[132px] object-contain sm:h-12 sm:max-w-[156px]" />
+          <img src={primeCommerceLogo} alt="Prime Commerce" className="h-10 w-auto max-w-[176px] object-contain sm:h-12 sm:max-w-[196px]" />
         </Link>
 
         <div className="hidden min-w-[150px] shrink-0 border-l border-gray-200 pl-5 md:block">
@@ -61,11 +61,11 @@ const Header = () => {
               <FaChevronDown className="hidden text-[10px] lg:inline" />
             </button>
             {openMenu && (
-              <div className="absolute right-0 top-[calc(100%+12px)] z-[60] min-w-[210px]">
+              <div className="absolute right-0 top-[calc(100%+12px)] z-[60] w-[min(360px,calc(100vw-2rem))]">
                 {user?._id ? (
-                  <Usermenu />
+                  <Usermenu onNavigate={() => setOpenMenu(false)} onClose={() => setOpenMenu(false)} />
                 ) : (
-                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-xl">
+                  <div className="relative rounded-2xl border border-gray-100 bg-white p-4 pr-12 shadow-xl">\n                    <button type="button" onClick={() => setOpenMenu(false)} aria-label="Close profile menu" className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-gray-100 text-lg text-gray-600 hover:bg-gray-200">×</button>
                     <p className="mb-3 text-sm font-semibold text-gray-800">Welcome to PrimeCommerce</p>
                     <Link to="/login" className="block rounded-xl bg-[#176b36] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-[#10572b]">Login / Sign up</Link>
                   </div>
