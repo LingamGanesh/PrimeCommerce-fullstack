@@ -306,8 +306,12 @@ export default function Home() {
               const count = products.filter((product) => (product.categoryId || []).some((entry) => String(typeof entry === "object" ? entry?._id : entry) === String(category._id))).length;
               const categoryImage = categoryImageFor(category);
               const gradients = ["from-emerald-100 to-lime-50", "from-sky-100 to-indigo-50", "from-orange-100 to-amber-50", "from-violet-100 to-fuchsia-50", "from-rose-100 to-pink-50", "from-yellow-100 to-lime-50"];
-              return <button key={category._id} type="button" aria-pressed={selected} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className={`group relative min-h-[190px] overflow-hidden rounded-[26px] border bg-white text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] ${selected ? "border-emerald-500 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.15)]" : "border-slate-100 shadow-[0_12px_30px_rgba(15,23,42,.06)] hover:border-emerald-200 hover:shadow-[0_22px_44px_rgba(15,23,42,.12)]"}`}>
-                <div className={`absolute inset-0 bg-gradient-to-br ${gradients[index % gradients.length]}`}>
+              const cardClass = selected
+                ? "group relative min-h-[190px] overflow-hidden rounded-[26px] border bg-white text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] border-emerald-500 ring-2 ring-emerald-100 shadow-[0_18px_42px_rgba(16,90,53,.15)]"
+                : "group relative min-h-[190px] overflow-hidden rounded-[26px] border bg-white text-left transition-all duration-300 hover:-translate-y-1.5 sm:min-h-[220px] sm:rounded-[30px] border-slate-100 shadow-[0_12px_30px_rgba(15,23,42,.06)] hover:border-emerald-200 hover:shadow-[0_22px_44px_rgba(15,23,42,.12)]";
+              const imageBackgroundClass = "absolute inset-0 bg-gradient-to-br " + gradients[index % gradients.length];
+              return <button key={category._id} type="button" aria-pressed={selected} onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className={cardClass}>
+                <div className={imageBackgroundClass}>
                   {categoryImage ? <img src={categoryImage} alt={category.name} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-110" /> : <div className="grid h-full w-full place-items-center"><span className="text-7xl opacity-80 transition duration-500 group-hover:scale-110">{visual.emoji}</span></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#10251b]/90 via-[#10251b]/10 to-black/5" />
                 </div>
