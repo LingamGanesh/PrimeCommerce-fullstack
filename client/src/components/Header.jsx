@@ -35,6 +35,9 @@ const Header = () => {
     document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const displayName = user?.name?.trim()?.split(/\s+/)[0] || "My profile";
+  const avatarLetter = (user?.name || user?.email || "U").trim().charAt(0).toUpperCase();
+
   return (
     <header className="sticky top-0 z-50 border-b border-[#e9e8df] bg-[#fffefa]/95 shadow-[0_5px_24px_rgba(20,40,28,.045)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-3 sm:px-6 lg:gap-7 lg:px-8">
@@ -57,15 +60,17 @@ const Header = () => {
               type="button"
               onClick={() => setOpenMenu((value) => !value)}
               aria-expanded={openMenu}
-              aria-label={user?._id ? "Open account menu" : "Login"}
+              aria-label={user?._id ? `Open profile menu for ${user.name || "your account"}` : "Login"}
               className="group flex items-center gap-2 rounded-2xl border border-[#e7e4d8] bg-gradient-to-br from-white to-[#f7f7ef] px-2 py-2 shadow-[0_3px_12px_rgba(28,55,35,.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#b9cbb8] hover:shadow-[0_7px_18px_rgba(28,75,43,.13)] sm:gap-2.5 sm:px-3 sm:py-2"
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#287b48] to-[#124b2c] text-white shadow-[0_3px_8px_rgba(18,75,44,.25)] ring-1 ring-white/70 transition group-hover:from-[#328653] group-hover:to-[#17623a]">
-                <FaUserCircle className="text-[19px]" />
+              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-[#287b48] to-[#124b2c] text-white shadow-[0_3px_8px_rgba(18,75,44,.25)] ring-1 ring-white/70 transition group-hover:from-[#328653] group-hover:to-[#17623a]">
+                {user?._id && user?.avatar?.startsWith("http")
+                  ? <img src={user.avatar} alt={user.name ? `${user.name} profile` : "Profile"} className="h-full w-full object-cover" />
+                  : user?._id ? <span className="text-sm font-black">{avatarLetter}</span> : <FaUserCircle className="text-[19px]" />}
               </span>
-              <span className="hidden text-left sm:block">
-                <span className="block text-[12px] font-extrabold leading-4 text-[#203629]">{user?._id ? "Account" : "Login"}</span>
-                <span className="mt-0.5 block text-[9px] font-semibold leading-3 tracking-wide text-[#879184]">{user?._id ? "Profile & orders" : "Welcome back"}</span>
+              <span className="hidden max-w-[112px] text-left sm:block">
+                <span className="block truncate text-[12px] font-extrabold leading-4 text-[#203629]">{user?._id ? displayName : "Login"}</span>
+                <span className="mt-0.5 block text-[9px] font-semibold leading-3 tracking-wide text-[#879184]">{user?._id ? "View your profile" : "Welcome back"}</span>
               </span>
               <span className="hidden h-6 w-6 place-items-center rounded-full bg-[#edf2e9] text-[#477451] transition group-hover:bg-[#e0ecdf] sm:grid">
                 <FaChevronDown className="text-[9px]" />
