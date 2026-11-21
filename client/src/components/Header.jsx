@@ -65,7 +65,8 @@ const Header = () => {
                 {user?._id ? (
                   <Usermenu onNavigate={() => setOpenMenu(false)} onClose={() => setOpenMenu(false)} />
                 ) : (
-                  <div className="relative rounded-2xl border border-gray-100 bg-white p-4 pr-12 shadow-xl">\n                    <button type="button" onClick={() => setOpenMenu(false)} aria-label="Close profile menu" className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-gray-100 text-lg text-gray-600 hover:bg-gray-200">×</button>
+                  <div className="relative rounded-2xl border border-gray-100 bg-white p-4 pr-12 shadow-xl">
+                    <button type="button" onClick={() => setOpenMenu(false)} aria-label="Close profile menu" className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-gray-100 text-lg text-gray-600 hover:bg-gray-200">×</button>
                     <p className="mb-3 text-sm font-semibold text-gray-800">Welcome to PrimeCommerce</p>
                     <Link to="/login" className="block rounded-xl bg-[#176b36] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-[#10572b]">Login / Sign up</Link>
                   </div>
