@@ -5,13 +5,13 @@ const verifyEmailTemplate = ({ name, url }) => {
 
       <div style="text-align: center; margin-bottom: 25px;">
         <h1 style="margin: 0; font-size: 28px; color: #111; font-weight: 700;">
-          Welcome to <span style="color:#FFD700;">BinkeyIT</span>
+          Welcome to <span style="color:#FFD700;">PrimeCommerce</span>
         </h1>
       </div>
 
       <p style="font-size: 17px; color:#333; line-height: 1.6;">
         Hello <b>${name}</b>,<br><br>
-        Thank you for joining <b>BinkeyIT</b>.  
+        Thank you for joining <b>PrimeCommerce</b>.  
         To keep your account secure and activate your profile, please verify your email address.
       </p>
 
@@ -35,7 +35,7 @@ const verifyEmailTemplate = ({ name, url }) => {
 
       <p style="font-size: 15px; color:#333; margin-top: 30px;">
         Warm Regards,<br>
-        <b style="color:#FFD700;">BinkeyIT Support Team</b>
+        <b style="color:#FFD700;">PrimeCommerce Support Team</b>
       </p>
 
     </div>
