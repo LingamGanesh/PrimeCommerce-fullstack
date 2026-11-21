@@ -71,11 +71,11 @@ async function main() {
         if (!result) {
           await ProductModel.updateOne(
             { _id: product._id },
-            { $pull: { image: /^https:\/\/picsum\.photos\//i } }
+            { $set: { image: [], publish: false } }
           );
           unmatched += 1;
-          report.push({ product: product.name, status: "NO_CONFIDENT_PRODUCT_TITLE_MATCH", randomPlaceholderRemoved: true });
-          console.log("No confident product photo: " + product.name + " (removed random Picsum placeholder; no unrelated image assigned)");
+          report.push({ product: product.name, status: "UNPUBLISHED_NO_CONFIDENT_IMAGE_MATCH", removedFromStorefront: true });
+          console.log("Unpublished product without a confident matching image: " + product.name);
         } else {
           const info = result.info;
           const metadata = info.extmetadata || {};
@@ -89,7 +89,7 @@ async function main() {
           };
           await ProductModel.updateOne(
             { _id: product._id },
-            { $set: { image: [info.thumburl], "more_details.imageAttribution": attribution } }
+            { $set: { image: [info.thumburl], publish: true, "more_details.imageAttribution": attribution } }
           );
           updated += 1;
           report.push({ product: product.name, status: "MATCHED", image: info.thumburl, ...attribution });
@@ -97,7 +97,7 @@ async function main() {
         }
       } catch (error) {
         unmatched += 1;
-        report.push({ product: product.name, status: "SEARCH_ERROR", error: error.message, imagePreserved: true });
+        report.push({ product: product.name, status: "SEARCH_ERROR", error: error.message, productVisibilityUnchanged: true });
         console.error(`Image search failed for ${product.name}: ${error.message}`);
       }
       await sleep(250);
@@ -108,8 +108,9 @@ async function main() {
 
   const fs = await import("node:fs/promises");
   await fs.writeFile("catalog-product-image-report.json", JSON.stringify(report, null, 2));
-  console.log(`Finished product image search: ${updated}/${products.length} matched; ${unmatched} unmatched/failed. Existing images were preserved for unmatched products.`);
-  console.log("Review catalog-product-image-report.json and verify the image title and license before publishing.");
+  console.log(`Finished product image search: ${updated}/${products.length} matched; ${unmatched} unmatched/failed.`);
+  console.log("Matched products are published with the selected image. Products with no confident title match are unpublished and have their image cleared. Search errors leave product visibility unchanged.");
+  console.log("Review catalog-product-image-report.json and visually verify image relevance and license.");
 }
 
 main().catch(async (error) => {
