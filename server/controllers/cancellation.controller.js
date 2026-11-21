@@ -30,8 +30,17 @@ export async function cancelMyOrder(req, res) {
         });
         const refund = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(refund.error?.description || "Refund request failed");
-        await OrderModel.updateOne({ _id: order._id, refund_status: "initiating" }, { $set: { refund_status: refund.status === "processed" ? "processed" : "pending" } });
-        const updated = await OrderModel.findOneAndUpdate({ _id: order._id, delivery_status: "processing", refund_status: { $in: ["initiating", "pending", "processed", "failed"] } }, { $set: { refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100, delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } }, { new: true });
+        // A webhook may already have advanced refund_status; only update an initiating refund.
+        await OrderModel.updateOne(
+          { _id: order._id, refund_status: "initiating" },
+          { $set: { refund_status: refund.status === "processed" ? "processed" : "pending", refund_id: refund.id } }
+        );
+        // Do not overwrite a newer status delivered by a webhook.
+        const updated = await OrderModel.findOneAndUpdate(
+          { _id: order._id, delivery_status: "processing", refund_status: { $in: ["initiating", "pending", "processed", "failed"] } },
+          { $set: { refund_id: refund.id, refund_amount: Number(refund.amount || 0) / 100, delivery_status: "cancelled", cancelledAt: new Date(), inventoryReleased: true } },
+          { new: true }
+        );
         if (!updated) return res.status(409).json({ success: false, message: "Refund was accepted but order state needs support reconciliation" });
         await restoreReservedInventory(updated);
         return res.json({ success: true, message: "Order cancelled. Your Razorpay refund status is being tracked.", data: { orderId: updated.orderId, refundStatus: updated.refund_status, refundId: updated.refund_id } });
