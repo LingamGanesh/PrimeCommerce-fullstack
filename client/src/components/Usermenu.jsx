@@ -32,7 +32,8 @@ export const Usermenu = ({ onNavigate = () => {}, onClose = onNavigate }) => {
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,.06)]">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#14251c] via-[#1e3828] to-[#31532d] p-5 pr-14 text-white">\n        <button type="button" onClick={onClose} aria-label="Close profile menu" className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-white/10 text-xl leading-none text-white transition hover:bg-white/20">×</button>
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#14251c] via-[#1e3828] to-[#31532d] p-5 pr-14 text-white">
+        <button type="button" onClick={onClose} aria-label="Close profile menu" className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-white/10 text-xl leading-none text-white transition hover:bg-white/20">×</button>
         <div className="absolute -right-12 -top-16 h-44 w-44 rounded-full border-[22px] border-lime-200/10" />
         <div className="relative flex items-center gap-3">
           <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 text-lg font-black text-lime-200">
