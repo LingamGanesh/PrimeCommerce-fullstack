@@ -45,8 +45,10 @@ function App() {
         toastOptions={{
           duration: 3600,
           className: 'pc-toast',
-          success: { duration: 2800, className: 'pc-toast pc-toast-success' },
-          error: { duration: 4200, className: 'pc-toast pc-toast-error' },
+          style: { background: '#ffffff', color: '#172033' },
+          success: { duration: 2800, className: 'pc-toast pc-toast-success', iconTheme: { primary: '#15803d', secondary: '#ecfdf5' } },
+          error: { duration: 4500, className: 'pc-toast pc-toast-error', iconTheme: { primary: '#dc2626', secondary: '#fef2f2' } },
+          loading: { className: 'pc-toast pc-toast-loading' },
         }}
       />
     </>
