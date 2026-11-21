@@ -19,6 +19,8 @@ const Login = () => {
   })
 
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [verificationRequired, setVerificationRequired] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -33,11 +35,13 @@ const Login = () => {
       return
     }
 
+    setIsSubmitting(true)
+    setVerificationRequired(false)
     try {
       const response = await Axios.post(
         SummaryApi.login.url,
         {
-          email: data.email,
+          email: data.email.trim().toLowerCase(),
           password: data.password
         }
       )
@@ -48,17 +52,31 @@ const Login = () => {
       }
 
       if (response.data?.success) {
-
-        toast.success(response.data.message)
-         localStorage.setItem('accesstoken',response.data.data.accessToken)
-            localStorage.setItem('refreshtoken',response.data.data.refreshToken)
-            const userDetails =  await fetchUserDetails()
-            dispatch(setUserDetails(userDetails.data))
-        navigate(userDetails.data?.role === 'admin' ? '/admin' : userDetails.data?.role === 'picker' ? '/picker' : userDetails.data?.role === 'rider' ? '/rider' : '/')
+        const accessToken = response.data?.data?.accessToken
+        const refreshToken = response.data?.data?.refreshToken
+        if (!accessToken || !refreshToken) {
+          throw new Error('Login response did not include authentication tokens')
+        }
+        localStorage.setItem('accesstoken', accessToken)
+        localStorage.setItem('refreshtoken', refreshToken)
+        const userDetails = await fetchUserDetails()
+        if (!userDetails?.success || !userDetails?.data) {
+          localStorage.removeItem('accesstoken')
+          localStorage.removeItem('refreshtoken')
+          throw new Error('Login succeeded but user details could not be loaded. Please try again.')
+        }
+        dispatch(setUserDetails(userDetails.data))
+        toast.success(response.data.message || 'Login successful')
+        const role = userDetails.data.role
+        navigate(role === 'admin' ? '/admin' : role === 'picker' ? '/picker' : role === 'rider' ? '/rider' : '/')
       }
-
     } catch (error) {
-      AxiosToastError(error)
+      const responseData = error?.response?.data
+      if (responseData?.data?.verificationRequired) setVerificationRequired(true)
+      if (error.message && !error.response) toast.error(error.message)
+      else AxiosToastError(error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -127,11 +145,14 @@ const Login = () => {
           {/* Button */}
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Login
+            {isSubmitting ? 'Signing in…' : 'Login'}
           </button>
         </form>
+
+        {verificationRequired && <button type="button" onClick={async () => { try { const result = await Axios({ ...SummaryApi.resendVerification, data: { email: data.email.trim().toLowerCase() } }); toast.success(result.data.message || 'Verification email sent') } catch (error) { AxiosToastError(error) } }} className="mt-4 w-full text-sm text-blue-600 underline">Resend verification email</button>}
 
         <p className="text-sm text-center text-gray-600 mt-6">
           Don’t have an account?
