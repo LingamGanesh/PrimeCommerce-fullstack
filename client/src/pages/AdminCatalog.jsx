@@ -32,7 +32,7 @@ export default function AdminCatalog({ products = [], onRefresh }) {
   const submitProduct = async (event) => {
     event.preventDefault();
     if (!productForm.categoryId || !productForm.sub_categoryId) return toast.error("Choose a category and subcategory");
-    const payload = { name: productForm.name.trim(), unit: productForm.unit.trim(), price: Number(productForm.price), discount: Number(productForm.discount), stock: Number(productForm.stock), description: productForm.description, image: productForm.image.split(/\\r?\\n|,/).map((url) => url.trim()).filter(Boolean), categoryId: [productForm.categoryId], sub_categoryId: [productForm.sub_categoryId], publish: productForm.publish };
+    const payload = { name: productForm.name.trim(), unit: productForm.unit.trim(), price: Number(productForm.price), discount: Number(productForm.discount), stock: Number(productForm.stock), description: productForm.description, image: productForm.image.split(/[\r\n,]+/).map((url) => url.trim()).filter(Boolean), categoryId: [productForm.categoryId], sub_categoryId: [productForm.sub_categoryId], publish: productForm.publish };
     if (!payload.name || !payload.unit || !Number.isFinite(payload.price) || payload.price < 0 || !Number.isFinite(payload.discount) || payload.discount < 0 || payload.discount > 100 || !Number.isInteger(payload.stock) || payload.stock < 0) return toast.error("Check product name, price, discount and stock values");
     setSaving(true);
     try {
