@@ -118,7 +118,10 @@ export async function handleRazorpayWebhook(req, res) {
       if (!refund?.payment_id) return res.json({ success: true, ignored: true });
       const refundOrder = await OrderModel.findOne({ payment_id: refund.payment_id, refund_status: { $in: ["initiating", "pending", "failed"] } });
       if (!refundOrder) return res.json({ success: true, ignored: true });
-      await OrderModel.updateOne({ _id: refundOrder._id, refund_status: { $in: ["pending", "failed"] } }, { $set: { refund_status: event.event === "refund.processed" ? "processed" : "failed", refund_id: refund.id || refundOrder.refund_id } });
+      await OrderModel.updateOne(
+        { _id: refundOrder._id, refund_status: { $in: ["initiating", "pending", "failed"] } },
+        { $set: { refund_status: event.event === "refund.processed" ? "processed" : "failed", refund_id: refund.id || refundOrder.refund_id } }
+      );
       return res.json({ success: true });
     }
     if (!["payment.captured", "order.paid", "payment.failed"].includes(event.event)) return res.json({ success: true, ignored: true });
