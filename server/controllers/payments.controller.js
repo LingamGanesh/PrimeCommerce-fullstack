@@ -6,6 +6,7 @@ import AddressModel from "../models/address.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
 import { verifyHmacHex, isValidRazorpayAmount } from "../utils/paymentSecurity.js";
+import { releaseOrderInventory } from "../utils/inventoryRelease.js";
 
 const roundMoney = (value) => Math.round(Number(value) * 100) / 100;
 const razorpayAuth = () => {
@@ -50,13 +51,7 @@ const reserveStock = async (items) => {
     await Promise.all(reserved.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })));
     throw error;
   }
-};
-const restoreOrderStock = async (order) => {
-  let items = [];
-  try { items = JSON.parse(order.product_details || "[]"); } catch { return; }
-  await Promise.all(items.map(item => ProductModel.updateOne({ _id: item.productId }, { $inc: { stock: Number(item.quantity) || 0 } })));
-};
-
+};\n
 export async function createRazorpayOrder(req, res) {
   let reserved = []; let savedOrder = null;
   try {
@@ -132,8 +127,8 @@ export async function handleRazorpayWebhook(req, res) {
     const order = await OrderModel.findOne({ razorpayOrderId: gatewayOrderId });
     if (!order) return res.json({ success: true, ignored: true });
     if (event.event === "payment.failed") {
-      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false }, { $set: { payment_status: "failed", inventoryReleased: true } }, { new: true });
-      if (claimed) await restoreOrderStock(claimed);
+      const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false }, { $set: { payment_status: "failed", inventoryReleased: false } }, { new: true });
+      if (claimed) await releaseOrderInventory(claimed);
     } else {
       const paidEntity = payment || (gatewayOrder ? { amount: gatewayOrder.amount_paid, currency: gatewayOrder.currency, status: gatewayOrder.status, id: null } : null);
       const amountIsValid = isValidRazorpayAmount(paidEntity, Math.round(Number(order.totalAmt) * 100));
@@ -152,7 +147,7 @@ export async function handleRazorpayWebhook(req, res) {
 export async function expireRazorpayReservations() {
   const expired = await OrderModel.find({ paymentMethod: "RAZORPAY", payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }).limit(100);
   for (const order of expired) {
-    const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }, { $set: { payment_status: "expired", inventoryReleased: true } }, { new: true });
-    if (claimed) await restoreOrderStock(claimed);
+    const claimed = await OrderModel.findOneAndUpdate({ _id: order._id, payment_status: { $in: ["pending", "authorized"] }, inventoryReleased: false, paymentReservationExpiresAt: { $lte: new Date() } }, { $set: { payment_status: "expired", inventoryReleased: false } }, { new: true });
+    if (claimed) await releaseOrderInventory(claimed);
   }
 }
