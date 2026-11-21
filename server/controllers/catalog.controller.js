@@ -3,6 +3,7 @@ import ProductModel from "../models/product.model.js";
 import CategoryModel from "../models/category.model.js";
 import SubCategoryModel from "../models/subCategory.model.js";
 import { buildPublicProductFilter, buildPublicSubCategoryFilter } from "../utils/catalogVisibility.js";
+import { normalizeProductPublication } from "../utils/catalogPublication.js";
 
 async function getActiveCatalogRefs() {
   const activeCategories = await CategoryModel.find({ isActive: { $ne: false } }).select("_id").lean();
@@ -100,7 +101,7 @@ export async function listSubCategories(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [] } = req.body || {};
+    const { name, categoryId, sub_categoryId, unit, price, discount = 0, stock = 0, description = "", image = [], publish = true } = req.body || {};
     if (!name?.trim() || !unit?.trim() || !Array.isArray(categoryId) || !categoryId.length || !Array.isArray(sub_categoryId) || !sub_categoryId.length || price === undefined) {
       return res.status(400).json({ success: false, error: true, message: "Name, category, subcategory, unit and price are required" });
     }
@@ -128,9 +129,11 @@ export async function createProduct(req, res) {
       return res.status(400).json({ success: false, error: true, message: "Product name, unit and description must be valid text" });
     }
     const images = normalizeProductImages(image);
+    const publication = normalizeProductPublication(publish);
     const product = await ProductModel.create({
       name: name.trim(), categoryId, sub_categoryId, unit: unit.trim(), price: values[0],
-      discount: values[1], stock: values[2], description: description.trim(), image: images
+      discount: values[1], stock: values[2], description: description.trim(), image: images,
+      ...publication
     });
     return res.status(201).json({ success: true, error: false, message: "Product created", data: productPayload(product) });
   } catch (error) {
