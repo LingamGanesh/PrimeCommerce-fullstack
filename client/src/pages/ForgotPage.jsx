@@ -9,9 +9,8 @@ const ForgotPage = () => {
 
   const navigate = useNavigate()
 
-  const [data, setData] = useState({
-    email: ''
-  })
+  const [data, setData] = useState({ email: '' })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -26,10 +25,11 @@ const ForgotPage = () => {
       return
     }
 
+    setIsSubmitting(true)
     try {
       const response = await Axios({
         ...SummaryApi.forgot_password,
-        data
+        data: { email: data.email.trim().toLowerCase() }
       })
 
       if (response.data?.error) {
@@ -39,12 +39,14 @@ const ForgotPage = () => {
       if (response.data?.success) {
         toast.success(response.data.message)
         navigate('/verification-page', {
-          state: data
+          state: { email: data.email.trim().toLowerCase() }
         })
       }
 
     } catch (error) {
       AxiosToastError(error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -80,9 +82,10 @@ const ForgotPage = () => {
           {/* Button */}
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Send OTP
+            {isSubmitting ? 'Sending OTP…' : 'Send OTP'}
           </button>
         </form>
 
