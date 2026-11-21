@@ -348,7 +348,7 @@ export async function updateUserDetails(request, response) {
 
     if (mobile !== undefined) {
       const normalizedMobile = String(mobile).trim();
-      if (normalizedMobile && !/^\\d{10,15}$/.test(normalizedMobile)) {
+      if (normalizedMobile && !/^\d{10,15}$/.test(normalizedMobile)) {
         return response.status(400).json({ message: "Enter a valid mobile number", error: true, success: false });
       }
       updates.mobile = normalizedMobile ? Number(normalizedMobile) : null;
