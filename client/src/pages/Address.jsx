@@ -87,7 +87,7 @@ export default function Address() {
     }
   };
 
-  const fieldClass = "w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-lime-500 focus:ring-4 focus:ring-lime-100";
+  const fieldClass = "w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-100";
 
   return <section className="mx-auto max-w-4xl p-2 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
