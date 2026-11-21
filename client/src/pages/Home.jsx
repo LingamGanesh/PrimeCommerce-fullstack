@@ -198,33 +198,59 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#fafaf7] pb-28 text-gray-900">
-      <section className="relative isolate overflow-hidden bg-[#102b20] text-white">
-        <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-36 left-1/3 h-72 w-72 rounded-full bg-lime-300/10 blur-3xl" />
-        <div className="relative mx-auto flex max-w-7xl flex-col items-start px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-          <span className="inline-flex items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold tracking-[.2em] text-lime-200"><span className="h-1.5 w-1.5 rounded-full bg-lime-300" /> PRIME COMMERCE</span>
-          <h1 className="mt-6 max-w-3xl text-4xl font-black leading-[1.04] tracking-tight sm:text-6xl lg:text-7xl">Everyday essentials.<br /><span className="text-lime-300">A better way to shop.</span></h1>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">Fresh groceries and home essentials, all in one place. Find what you need and make your everyday shopping simple.</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })} className="rounded-xl bg-lime-300 px-6 py-3 text-sm font-extrabold text-[#102b20] shadow-lg shadow-black/10 transition hover:bg-lime-200">Shop now <span className="ml-2">→</span></button>
-            {user?.name && <span className="text-xs font-semibold text-emerald-50/70">Welcome back, {user.name.split(" ")[0]}</span>}
+      <section className="relative isolate mx-auto mt-5 max-w-[1400px] overflow-hidden rounded-[30px] bg-[#102b20] text-white shadow-[0_24px_65px_rgba(16,43,32,.18)] sm:mt-7 sm:rounded-[38px]">
+        <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1800&q=85" alt="Fresh colourful vegetables and produce at a market" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#102b20] via-[#102b20]/95 to-[#102b20]/35" />
+        <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full bg-lime-300/20 blur-3xl" />
+        <div className="relative grid min-h-[390px] items-center gap-8 px-6 py-12 sm:px-10 sm:py-16 lg:min-h-[465px] lg:grid-cols-[1.15fr_.85fr] lg:px-16">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-4 py-2 text-[9px] font-extrabold uppercase tracking-[.24em] text-lime-200 backdrop-blur"><span className="h-1.5 w-1.5 rounded-full bg-lime-300" /> THE PRIME EVERYDAY EDITION</span>
+            <h1 className="mt-6 text-[42px] font-black leading-[1.02] tracking-[-.045em] sm:text-6xl lg:text-[68px]">Good food.<br /><span className="text-lime-300">Better days.</span></h1>
+            <p className="mt-5 max-w-lg text-sm leading-7 text-emerald-50/80 sm:text-base">Discover fresh groceries, everyday essentials and little things that make home feel special — all in one easy place.</p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })} className="rounded-full bg-lime-300 px-7 py-3.5 text-xs font-black text-[#102b20] shadow-lg shadow-black/15 transition hover:-translate-y-0.5 hover:bg-lime-200">Explore the store <span className="ml-2">↗</span></button>
+              <span className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-[10px] font-bold text-white/85 backdrop-blur">Fresh picks · Daily essentials</span>
+            </div>
+            <div className="mt-9 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/15 pt-5 text-[10px] font-semibold tracking-wide text-emerald-50/80"><span>✦ Carefully selected essentials</span><span>✦ Simple, secure checkout</span>{user?.name && <span>Welcome back, {user.name.split(" ")[0]}</span>}</div>
           </div>
-          <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/10 pt-5 text-xs font-semibold text-emerald-50/75">
-            <span><span className="mr-2 text-lime-300">✓</span>Everyday essentials</span>
-            <span><span className="mr-2 text-lime-300">✓</span>Simple checkout</span>
-            <span><span className="mr-2 text-lime-300">✓</span>Track your orders</span>
+          <div className="relative hidden min-h-[310px] items-center justify-center lg:flex">
+            <div className="absolute right-5 top-2 h-[290px] w-[290px] rounded-full border border-white/20 bg-white/10 backdrop-blur-sm" />
+            <div className="absolute right-12 top-9 h-[230px] w-[230px] rounded-full border border-lime-100/20" />
+            <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=900&q=85" alt="Fresh salad ingredients" className="relative z-10 h-[285px] w-[285px] rounded-full border-[10px] border-white/15 object-cover shadow-2xl" />
+            <div className="absolute bottom-5 left-0 z-20 rounded-2xl border border-white/20 bg-white/95 px-4 py-3 text-[#183725] shadow-xl backdrop-blur"><p className="text-[9px] font-extrabold uppercase tracking-[.18em] text-emerald-700">A fresher routine</p><p className="mt-1 text-sm font-black">Made for everyday</p></div>
+            <div className="absolute right-0 top-8 z-20 rounded-full bg-lime-300 px-4 py-2 text-[10px] font-black text-[#173523] shadow-lg">FRESH • SIMPLE • PRIME</div>
           </div>
         </div>
       </section>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        <section className="py-8 sm:py-10">
+        <section id="categories" className="scroll-mt-36 py-9 sm:py-12">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-emerald-700">Explore the good stuff</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Shop by category <span>✳</span></h2><p className="mt-1 text-sm text-slate-500">Your everyday favourites, thoughtfully brought together.</p></div>
+            <button type="button" onClick={() => { setActiveCategory("All"); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="rounded-full border border-[#e5e9df] bg-white px-4 py-2.5 text-[10px] font-extrabold text-[#315b3f] shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50">View all products ↗</button>
+          </div>
+          {categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
+            {categories.map((category, index) => {
+              const visual = visualFor(category.name);
+              const tones = ["from-[#edf7eb] to-[#f8fbf4]", "from-[#eff5fb] to-[#f8fbff]", "from-[#fff3e8] to-[#fffaf4]", "from-[#f1f0fb] to-[#faf9ff]", "from-[#fff5e8] to-[#fffdf7]", "from-[#fceef1] to-[#fff9fa]"];
+              return <button key={category._id} type="button" onClick={() => { setActiveCategory(category._id); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="group relative overflow-hidden rounded-[22px] border border-[#edf0e8] bg-white p-3 text-left shadow-[0_6px_22px_rgba(25,50,30,.045)] transition duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_16px_35px_rgba(25,70,40,.11)] sm:rounded-[26px] sm:p-4">
+                <div className={`relative mb-3 grid aspect-[1.25/1] place-items-center overflow-hidden rounded-[17px] bg-gradient-to-br ${tones[index % tones.length]}`}>
+                  <span className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/60 blur-xl" />
+                  {category.image ? <img src={category.image} alt={category.name} loading="lazy" className="relative h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <span className="relative text-5xl transition duration-500 group-hover:scale-110" aria-hidden="true">{visual.emoji}</span>}
+                </div>
+                <div className="flex items-center justify-between gap-1"><span className="line-clamp-1 text-[11px] font-extrabold text-slate-800 sm:text-xs">{category.name}</span><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#edf5ec] text-[11px] font-black text-[#28613d] transition group-hover:bg-[#176b3b] group-hover:text-white">↗</span></div>
+              </button>;
+            })}
+          </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-7 text-center text-sm text-slate-500">Categories added by your store admin will appear here.</div>}
+        </section>
+
+        <section id="fresh-arrivals" className="scroll-mt-36 py-8 sm:py-10">
           <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-700">Just landed in store</p><h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Fresh arrivals <span>🌿</span></h2><p className="mt-1 text-sm text-slate-500">The latest products added by our store team.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-800">NEW IN</span></div>
           {loading ? <div className="h-64 animate-pulse rounded-2xl bg-slate-100" /> : <ProductCarousel id="fresh-arrivals-carousel" products={freshArrivals} cart={cart} onAdd={addProduct} onChange={updateCart} emptyTitle="Fresh picks are on the way" emptyText="New products added by the admin will appear here." />}
         </section>
 
-        <section className="relative isolate mb-7 overflow-hidden rounded-[30px] bg-[#102b20] px-4 py-7 text-white shadow-[0_22px_55px_rgba(16,43,32,.16)] sm:px-7 sm:py-9">
+        <section id="live-offers" className="scroll-mt-36 relative isolate mb-7 overflow-hidden rounded-[30px] bg-[#102b20] px-4 py-7 text-white shadow-[0_22px_55px_rgba(16,43,32,.16)] sm:px-7 sm:py-9">
           <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-lime-300/15 blur-3xl" />
           <div className="relative mb-2 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-lime-300">Lovely deals, live right now</p><h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Offers you’ll love <span>💚</span></h2><p className="mt-1 text-sm text-emerald-50/70">Current discounts published by your store team.</p></div><span className="rounded-full border border-lime-200/20 bg-lime-300/10 px-3 py-1.5 text-[10px] font-bold text-lime-200">LIVE OFFERS</span></div>
           <ProductCarousel id="live-offers-carousel" products={offerProducts} cart={cart} onAdd={addProduct} onChange={updateCart} emptyTitle="Fresh deals are on their way" emptyText="Admin-published discounts will appear here while they are active." />
