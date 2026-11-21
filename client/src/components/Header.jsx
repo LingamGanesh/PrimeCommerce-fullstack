@@ -99,13 +99,6 @@ const Header = () => {
         </div>
       </div>
 
-      <nav aria-label="Main navigation" className="hidden border-t border-gray-100 bg-[#fffdf7] md:block">
-        <div className="mx-auto flex max-w-[1440px] items-center gap-7 px-6 py-2.5 text-xs font-semibold text-gray-600 lg:px-8">
-          <Link to="/" className={location.pathname === "/" ? "text-[#176b36]" : "transition hover:text-[#176b36]"}>Home</Link>
-          <Link to="/search" className="transition hover:text-[#176b36]">Shop all</Link>
-          <Link to="/dashboard/myorders" className="transition hover:text-[#176b36]">My orders</Link>
-        </div>
-      </nav>
     </header>
   );
 };
