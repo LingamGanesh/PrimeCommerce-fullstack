@@ -20,10 +20,30 @@ import { handleRazorpayWebhook, expireRazorpayReservations } from "./controllers
 dotenv.config();
 
 const app = express();
-app.use(cors({
+const configuredOrigins = (process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:5174")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const corsOptions = {
   credentials: true,
-  origin: process.env.FRONTEND_URL || "http://localhost:5173"
-}));
+  origin(origin, callback) {
+    // Requests from tools such as curl/Postman may not send an Origin header.
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    const isConfiguredOrigin = configuredOrigins.includes(normalizedOrigin);
+    const isLocalDevelopmentOrigin = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(normalizedOrigin);
+
+    if (isConfiguredOrigin || isLocalDevelopmentOrigin) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked request from origin: ${origin}`));
+  },
+};
+
+app.use(cors(corsOptions));
 app.post("/api/v1/payments/razorpay/webhook", express.raw({ type: "application/json" }), handleRazorpayWebhook);
 app.use(express.json());
 app.use(cookieParser());
