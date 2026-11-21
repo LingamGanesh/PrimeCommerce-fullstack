@@ -63,7 +63,8 @@ async function main() {
       try {
         const match = await findSuitableImage(product.name, "food grocery product");
         if (!match) {
-          report.push({ type: "product", name: product.name, status: "NO CONFIDENT MATCH" });
+          await ProductModel.updateOne({ _id: product._id }, { $set: { image: [] } });
+          report.push({ type: "product", name: product.name, status: "NO CONFIDENT MATCH - image cleared" });
           console.warn(`No confident matching photo found: ${product.name}`);
         } else {
           const metadata = {
@@ -94,7 +95,8 @@ async function main() {
       try {
         const match = await findSuitableImage(category.name, "grocery category food");
         if (!match) {
-          report.push({ type: "category", name: category.name, status: "NO CONFIDENT MATCH" });
+          await CategoryModel.updateOne({ _id: category._id }, { $set: { image: "" } });
+          report.push({ type: "category", name: category.name, status: "NO CONFIDENT MATCH - image cleared" });
           console.warn(`No confident category photo found: ${category.name}`);
         } else {
           await CategoryModel.updateOne({ _id: category._id }, { $set: { image: match.url } });
