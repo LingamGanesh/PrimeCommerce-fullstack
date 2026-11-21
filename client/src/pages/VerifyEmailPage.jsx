@@ -6,16 +6,13 @@ import SummaryApi from "../common/SummaryApi"
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState("verifying")
+  const code = searchParams.get("code")
+  const [status, setStatus] = useState(code ? "verifying" : "invalid")
 
   useEffect(() => {
     let active = true
-    const code = searchParams.get("code")
 
-    if (!code) {
-      setStatus("invalid")
-      return () => { active = false }
-    }
+    if (!code) return () => { active = false }
 
     Axios({ ...SummaryApi.verifyEmail, data: { code } })
       .then(({ data }) => {
@@ -35,7 +32,7 @@ export default function VerifyEmailPage() {
       })
 
     return () => { active = false }
-  }, [searchParams])
+  }, [code])
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
